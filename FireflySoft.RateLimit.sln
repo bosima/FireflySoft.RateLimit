@@ -5,6 +5,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FireflySoft.RateLimit.Core"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FireflySoft.RateLimit.Core.Sample", "FireflySoft.RateLimit.Core.Sample\FireflySoft.RateLimit.Core.Sample.csproj", "{27FF49FD-09AD-4ABE-B8B9-F387034D3AF6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FireflySoft.RateLimit.AspNetCore", "FireflySoft.RateLimit.AspNetCore\FireflySoft.RateLimit.AspNetCore.csproj", "{265730D4-995C-4228-9BD7-AE902A82284D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FireflySoft.RateLimit.AspNetCore.Sample", "FireflySoft.RateLimit.AspNetCore.Sample\FireflySoft.RateLimit.AspNetCore.Sample.csproj", "{4DDD46C7-81AF-443E-BEB1-2DBF0F467229}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -19,5 +23,13 @@ Global
 		{27FF49FD-09AD-4ABE-B8B9-F387034D3AF6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{27FF49FD-09AD-4ABE-B8B9-F387034D3AF6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{27FF49FD-09AD-4ABE-B8B9-F387034D3AF6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{265730D4-995C-4228-9BD7-AE902A82284D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{265730D4-995C-4228-9BD7-AE902A82284D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{265730D4-995C-4228-9BD7-AE902A82284D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{265730D4-995C-4228-9BD7-AE902A82284D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4DDD46C7-81AF-443E-BEB1-2DBF0F467229}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4DDD46C7-81AF-443E-BEB1-2DBF0F467229}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4DDD46C7-81AF-443E-BEB1-2DBF0F467229}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4DDD46C7-81AF-443E-BEB1-2DBF0F467229}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
