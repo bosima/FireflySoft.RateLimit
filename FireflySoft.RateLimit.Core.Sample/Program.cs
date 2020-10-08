@@ -28,6 +28,7 @@ namespace FireflySoft.RateLimit.Core.Sample
                             };
 
             var processor = new RateLimitProcessor<SimulationRequest>.Builder()
+                                //.WithStorage(new RedisStorage(StackExchange.Redis.ConnectionMultiplexer.Connect("localhost")))
                                 .WithRules(rules)
                                 .Build();
 
