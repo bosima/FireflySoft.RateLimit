@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
+
 namespace FireflySoft.RateLimit.Core
 {
-    public interface IRateLimitAlgorithm
+    public interface IRateLimitAlgorithm<TRequest>
     {
-        bool Check(string target, IRateLimitStorage storage, RateLimitRuleBase rule);
+        List<RateLimitCheckResult<TRequest>> Check(TRequest Request, IRateLimitStorage storage);
     }
 }

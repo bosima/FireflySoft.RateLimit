@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using StackExchange.Redis;
@@ -30,9 +32,9 @@ namespace FireflySoft.RateLimit.Core
             _redisClient = redisClient;
         }
 
-        public bool CheckIsLocked(string target)
+        public bool CheckLocking(string target)
         {
-            if (Get(target) == "1")
+            if (GetString($"lock-{target}") == "1")
             {
                 return true;
             }
@@ -47,7 +49,7 @@ namespace FireflySoft.RateLimit.Core
 
         public void Lock(string target, TimeSpan expireTimeSpan)
         {
-            Set(target, "1", expireTimeSpan);
+            Set($"lock-{target}", "1", expireTimeSpan);
         }
 
         /// <summary>
@@ -66,12 +68,40 @@ namespace FireflySoft.RateLimit.Core
         /// <summary>
         /// 范型数据的查询
         /// </summary>
-        /// <param name="key"></param>
+        /// <param name="target"></param>
         /// <returns>value</returns>
-        private string Get(string key)
+        public long Get(string target)
         {
             IDatabase database = _redisClient.GetDatabase();
-            return database.StringGet(key);
+            return (long)database.StringGet(target);
+        }
+
+        /// <summary>
+        /// 获取多个目标对应的数值
+        /// </summary>
+        /// <param name="targets"></param>
+        /// <returns></returns>
+        public long MGet(IEnumerable<string> targets)
+        {
+            IDatabase database = _redisClient.GetDatabase();
+            var values = database.StringGetAsync(targets.Select(d=>(RedisKey)d).ToArray()).ConfigureAwait(false).GetAwaiter().GetResult();
+            if (values != null && values.Length > 0)
+            {
+                return values.Where(d => d.HasValue).Select(d => (long)d).Sum();
+            }
+
+            return 0;
+        }
+
+        /// <summary>
+        /// 范型数据的查询
+        /// </summary>
+        /// <param name="target"></param>
+        /// <returns>value</returns>
+        public string GetString(string target)
+        {
+            IDatabase database = _redisClient.GetDatabase();
+            return database.StringGet(target);
         }
 
         /// <summary>

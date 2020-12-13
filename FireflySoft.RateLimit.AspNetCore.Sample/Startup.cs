@@ -45,8 +45,8 @@ namespace FireflySoft.RateLimit.AspNetCore.Sample
                 {
                     Message = "The system is busy, please try again later"
                 })
-                .WithRules(new [] {
-                    new RateLimitRule<HttpContext>()
+                .WithAlgorithm(new FixedWindowAlgorithm<HttpContext>( new[] {
+                    new FixedWindowRateLimitRule<HttpContext>()
                     {
                         ExtractTarget = context =>
                         {
@@ -59,9 +59,9 @@ namespace FireflySoft.RateLimit.AspNetCore.Sample
                         Id=Guid.NewGuid().ToString(),
                         Name="general limit rule",
                         LimitNumber=30,
-                        TimeWindow=1
+                        StatWindow=TimeSpan.FromSeconds(1)
                     }
-                })
+                }))
                 .Build());
 
             app.UseRouting();
