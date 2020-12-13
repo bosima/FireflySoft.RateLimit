@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.Caching;
 
 namespace FireflySoft.RateLimit.Core
@@ -35,9 +36,36 @@ namespace FireflySoft.RateLimit.Core
         /// 检查目标是否被锁定
         /// </summary>
         /// <param name="target"></param>
-        public bool CheckIsLocked(string target)
+        public bool CheckLocking(string target)
         {
             return _cache.Get($"lock-{target}") == null ? false : true;
+        }
+
+        public long Get(string target)
+        {
+            var result = _cache.GetCacheItem(target);
+            if (result != null)
+            {
+                var countValue = (CountValue)result.Value;
+                return countValue.Value;
+            }
+            return -1;
+        }
+
+        /// <summary>
+        /// 获取多个目标对应的数值
+        /// </summary>
+        /// <param name="targets"></param>
+        /// <returns></returns>
+        public long MGet(IEnumerable<string> targets)
+        {
+            var values = _cache.GetValues(targets);
+            if (values != null && values.Count > 0)
+            {
+                return values.Where(d => d.Value != null).Select(d => ((CountValue)d.Value).Value).Sum();
+            }
+
+            return 0;
         }
 
         /// <summary>

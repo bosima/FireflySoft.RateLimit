@@ -1,26 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Runtime.Caching;
 
 namespace FireflySoft.RateLimit.Core
 {
-    /// <summary>
-    /// 固定窗口算法
-    /// </summary>
-    public class FixedWindowAlgorithm<TRequest> : IRateLimitAlgorithm<TRequest>
+    public class SlidingWindowAlgorithm<TRequest> : IRateLimitAlgorithm<TRequest>
     {
-        IEnumerable<FixedWindowRateLimitRule<TRequest>> _rules;
+        IEnumerable<SlidingWindowRateLimitRule<TRequest>> _rules;
 
-        public FixedWindowAlgorithm(IEnumerable<FixedWindowRateLimitRule<TRequest>> rules)
+        public SlidingWindowAlgorithm(IEnumerable<SlidingWindowRateLimitRule<TRequest>> rules)
         {
             _rules = rules;
         }
 
         public List<RateLimitCheckResult<TRequest>> Check(TRequest request, IRateLimitStorage storage)
         {
-            List<RateLimitCheckResult<TRequest>> results=new List<RateLimitCheckResult<TRequest>>();
+            List<RateLimitCheckResult<TRequest>> results = new List<RateLimitCheckResult<TRequest>>();
 
             foreach (var rule in _rules)
             {
@@ -32,10 +27,11 @@ namespace FireflySoft.RateLimit.Core
                         throw new NotSupportedException("不支持Target为空");
                     }
 
-                    bool result = CheckSingleRule(target,storage,rule);
-                    results.Add(new RateLimitCheckResult<TRequest>(){
-                         Rule=rule,
-                         IsLimit=result
+                    bool result = CheckSingleRule(target, storage, rule);
+                    results.Add(new RateLimitCheckResult<TRequest>()
+                    {
+                        Rule = rule,
+                        IsLimit = result
                     });
                 }
             }
@@ -43,18 +39,21 @@ namespace FireflySoft.RateLimit.Core
             return results;
         }
 
-        private bool CheckSingleRule(string target, IRateLimitStorage storage, FixedWindowRateLimitRule<TRequest> rule)
+        private bool CheckSingleRule(string target, IRateLimitStorage storage, SlidingWindowRateLimitRule<TRequest> rule)
         {
             if (storage.CheckLocking(target))
             {
                 return true;
             }
 
-            var countAmount = 1;
             var expireTimeSpan = rule.StatWindow;
-            var totalAmount = storage.Increment(target, countAmount, expireTimeSpan);
-            Debug.WriteLine("totalAmount:"+totalAmount);
-            
+            var statPeriodArray = rule.GetStatWindowPeriodArray();
+            var currentPeriod = statPeriodArray[0];
+            storage.Increment(currentPeriod, 1, expireTimeSpan);
+            var totalAmount = storage.MGet(statPeriodArray);
+            //Debug.WriteLine(string.Join(",",statPeriodArray));
+            //Debug.WriteLine("totalAmount:"+totalAmount);
+
             if (totalAmount >= rule.LimitNumber)
             {
                 if (rule.LockSeconds > 0)
@@ -69,4 +68,3 @@ namespace FireflySoft.RateLimit.Core
         }
     }
 }
-
