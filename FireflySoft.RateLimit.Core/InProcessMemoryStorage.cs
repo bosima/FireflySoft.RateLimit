@@ -11,7 +11,6 @@ namespace FireflySoft.RateLimit.Core
     /// </summary>
     public class InProcessMemoryStorage : IRateLimitStorage
     {
-        // 使用Memory可以自动移除过期的缓存，而不用自己实现这个逻辑
         readonly MemoryCache _cache;
         readonly object _cacheLocker;
 
@@ -21,24 +20,30 @@ namespace FireflySoft.RateLimit.Core
             _cacheLocker = new object();
         }
 
-        /// <summary>
-        /// 锁定目标
-        /// </summary>
-        /// <param name="target"></param>
-        /// <param name="expireTimeSpan"></param>
-        public void Lock(string target, TimeSpan expireTimeSpan)
+        public void TryLock(string target, TimeSpan expireTimeSpan)
         {
             var expireTime = DateTimeOffset.Now.Add(expireTimeSpan);
             _cache.Add($"lock-{target}", 1, expireTime);
         }
 
-        /// <summary>
-        /// 检查目标是否被锁定
-        /// </summary>
-        /// <param name="target"></param>
-        public bool CheckLocking(string target)
+        public bool CheckLocked(string target)
         {
             return _cache.Get($"lock-{target}") == null ? false : true;
+        }
+
+        public long GetCurrentTime()
+        {
+            return DateTimeOffset.Now.ToUnixTimeMilliseconds();
+        }
+
+        public long GetOrAdd(string target, Lazy<long> retrieveMethod)
+        {
+            var cachedValue = _cache.AddOrGetExisting(target, retrieveMethod.Value, DateTimeOffset.MaxValue);
+            if (cachedValue != null)
+            {
+                return (long)cachedValue;
+            }
+            return retrieveMethod.Value;
         }
 
         public long Get(string target)
@@ -52,11 +57,6 @@ namespace FireflySoft.RateLimit.Core
             return -1;
         }
 
-        /// <summary>
-        /// 获取多个目标对应的数值
-        /// </summary>
-        /// <param name="targets"></param>
-        /// <returns></returns>
         public long MGet(IEnumerable<string> targets)
         {
             var values = _cache.GetValues(targets);
@@ -68,13 +68,6 @@ namespace FireflySoft.RateLimit.Core
             return 0;
         }
 
-        /// <summary>
-        /// 增加限流目标的统计值，并在首次创建时设置过期时间
-        /// </summary>
-        /// <param name="target"></param>
-        /// <param name="amount"></param>
-        /// <param name="expireTimeSpan"></param>
-        /// <returns></returns>
         public long Increment(string target, long amount, TimeSpan expireTimeSpan)
         {
             lock (_cacheLocker)
@@ -87,9 +80,96 @@ namespace FireflySoft.RateLimit.Core
                     return countValue.Value;
                 }
 
-                var expireTime = DateTimeOffset.Now.Add(expireTimeSpan);
+                DateTimeOffset expireTime;
+                if (expireTimeSpan == TimeSpan.Zero)
+                {
+                    expireTime = DateTimeOffset.MaxValue;
+                }
+                else
+                {
+                    expireTime = DateTimeOffset.Now.Add(expireTimeSpan);
+                }
+
                 _cache.Add(target, new CountValue(amount), expireTime);
                 return amount;
+            }
+        }
+
+        public long LeakyBucketIncrement(string target, long amount, long capacity, int outflowUnit, int outflowQuantityPerUnit)
+        {
+            lock (_cacheLocker)
+            {
+                var now = DateTimeOffset.Now;
+
+                var result = _cache.GetCacheItem(target);
+                if (result != null)
+                {
+                    var countValue = (CountValue)result.Value;
+                    var lastTime = countValue.LastFlowTime;
+                    var pastTime = now - lastTime;
+                    var pastTimeMilliseconds = pastTime.TotalMilliseconds;
+                    if (pastTimeMilliseconds < outflowUnit)
+                    {
+                        countValue.Value += amount;
+                        return countValue.Value;
+                    }
+
+                    var pastOutflowUnitQuantity = (int)(pastTimeMilliseconds / outflowUnit);
+                    var newLastTime = lastTime.AddMilliseconds(pastOutflowUnitQuantity * outflowUnit);
+                    countValue.LastFlowTime = newLastTime;
+
+                    var pastOutflowQuantity = outflowQuantityPerUnit * pastOutflowUnitQuantity;
+                    var newCount = (countValue.Value > capacity ? capacity : countValue.Value) - pastOutflowQuantity + amount;
+                    countValue.Value = newCount > 0 ? newCount : amount;
+
+                    return countValue.Value;
+                }
+
+                _cache.Add(target, new CountValue(amount) { LastFlowTime = now }, DateTimeOffset.MaxValue);
+                return amount;
+            }
+        }
+
+        public long TokenBucketDecrement(string target, long amount, long capacity, int inflowUnit, int inflowQuantityPerUnit)
+        {
+            lock (_cacheLocker)
+            {
+                var now = DateTimeOffset.Now;
+
+                var result = _cache.GetCacheItem(target);
+                if (result != null)
+                {
+                    var countValue = (CountValue)result.Value;
+                    var lastTime = countValue.LastFlowTime;
+                    var pastTime = now - lastTime;
+                    var pastTimeMilliseconds = pastTime.TotalMilliseconds;
+                    if (pastTimeMilliseconds < inflowUnit)
+                    {
+                        countValue.Value -= amount;
+                        return countValue.Value;
+                    }
+
+                    var pastInflowUnitQuantity = (int)(pastTimeMilliseconds / inflowUnit);
+                    var newLastTime = lastTime.AddMilliseconds(pastInflowUnitQuantity * inflowUnit);
+                    countValue.LastFlowTime = newLastTime;
+
+                    var pastInflowQuantity = inflowQuantityPerUnit * pastInflowUnitQuantity;
+                    var newCount = (countValue.Value < 0 ? 0 : countValue.Value) + pastInflowQuantity - amount;
+                    if (newCount >= capacity)
+                    {
+                        countValue.Value = capacity - amount;
+                    }
+                    else
+                    {
+                        countValue.Value = newCount;
+                    }
+
+                    return countValue.Value;
+                }
+
+                var bucketAmount = capacity - amount;
+                _cache.Add(target, new CountValue(bucketAmount) { LastFlowTime = now }, DateTimeOffset.MaxValue);
+                return bucketAmount;
             }
         }
 
@@ -101,6 +181,8 @@ namespace FireflySoft.RateLimit.Core
             }
 
             public long Value { get; set; }
+
+            public DateTimeOffset LastFlowTime { get; set; }
         }
     }
 }

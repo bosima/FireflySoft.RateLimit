@@ -45,7 +45,7 @@ namespace FireflySoft.RateLimit.Core
 
         private bool CheckSingleRule(string target, IRateLimitStorage storage, FixedWindowRateLimitRule<TRequest> rule)
         {
-            if (storage.CheckLocking(target))
+            if (storage.CheckLocked(target))
             {
                 return true;
             }
@@ -55,11 +55,11 @@ namespace FireflySoft.RateLimit.Core
             var totalAmount = storage.Increment(target, countAmount, expireTimeSpan);
             Debug.WriteLine("totalAmount:"+totalAmount);
             
-            if (totalAmount >= rule.LimitNumber)
+            if (totalAmount > rule.LimitNumber)
             {
                 if (rule.LockSeconds > 0)
                 {
-                    storage.Lock(target, TimeSpan.FromSeconds(rule.LockSeconds));
+                    storage.TryLock(target, TimeSpan.FromSeconds(rule.LockSeconds));
                 }
 
                 return true;

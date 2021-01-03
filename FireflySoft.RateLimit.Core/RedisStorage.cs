@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using Newtonsoft.Json;
 using StackExchange.Redis;
 
 namespace FireflySoft.RateLimit.Core
@@ -13,28 +14,27 @@ namespace FireflySoft.RateLimit.Core
     /// </summary>
     public class RedisStorage : IRateLimitStorage
     {
-        /// <summary>
-        /// Redis客户端
-        /// </summary>
         private readonly ConnectionMultiplexer _redisClient;
 
-        /// <summary>
-        /// 服务端已加载的Lua脚本
-        /// </summary>
         private readonly ConcurrentDictionary<string, Lazy<byte[]>> _loadedLuaScriptsOnServer = new ConcurrentDictionary<string, Lazy<byte[]>>();
 
-        /// <summary>
-        /// 初始化Redis存储的一个新实例
-        /// </summary>
-        /// <param name="redisClient"></param>
         public RedisStorage(ConnectionMultiplexer redisClient)
         {
             _redisClient = redisClient;
         }
 
-        public bool CheckLocking(string target)
+        public void TryLock(string target, TimeSpan expireTimeSpan)
         {
-            if (GetString($"lock-{target}") == "1")
+            IDatabase database = _redisClient.GetDatabase();
+            database.StringSet($"lock-{target}", 1, expireTimeSpan, when: When.NotExists);
+        }
+
+        public bool CheckLocked(string target)
+        {
+            IDatabase database = _redisClient.GetDatabase();
+            long state = (long)database.StringGet($"lock-{target}");
+
+            if (state == 1)
             {
                 return true;
             }
@@ -42,49 +42,43 @@ namespace FireflySoft.RateLimit.Core
             return false;
         }
 
-        public long Increment(string target, long amount, TimeSpan expireTimeSpan)
+        public long GetCurrentTime()
         {
-            return Increment(target, amount, (int)expireTimeSpan.TotalSeconds);
+            var endPoints = _redisClient.GetEndPoints();
+            foreach (var endPoint in endPoints)
+            {
+                var server = _redisClient.GetServer(_redisClient.GetEndPoints()[0]);
+                if (server.IsConnected)
+                {
+                    var redisTime = server.Time();
+                    DateTimeOffset utcTime = redisTime;
+                    return utcTime.ToUnixTimeMilliseconds();
+                }
+            }
+
+            return 0;
         }
 
-        public void Lock(string target, TimeSpan expireTimeSpan)
-        {
-            Set($"lock-{target}", "1", expireTimeSpan);
-        }
-
-        /// <summary>
-        /// 范型数据的新增或修改
-        /// </summary>
-        /// <param name="key">key</param>
-        /// <param name="value">value</param>
-        /// <param name="expireTimeSpan">过期时间</param>
-        /// <returns>true or false</returns>
-        private bool Set(string key, string value, TimeSpan expireTimeSpan)
+        public long GetOrAdd(string target, Lazy<long> retrieveMethod)
         {
             IDatabase database = _redisClient.GetDatabase();
-            return database.StringSet(key, value, expireTimeSpan);
+            if (!database.StringSet(target, retrieveMethod.Value, when: When.NotExists))
+            {
+                return (long)database.StringGet(target);
+            }
+            return retrieveMethod.Value;
         }
 
-        /// <summary>
-        /// 范型数据的查询
-        /// </summary>
-        /// <param name="target"></param>
-        /// <returns>value</returns>
         public long Get(string target)
         {
             IDatabase database = _redisClient.GetDatabase();
             return (long)database.StringGet(target);
         }
 
-        /// <summary>
-        /// 获取多个目标对应的数值
-        /// </summary>
-        /// <param name="targets"></param>
-        /// <returns></returns>
         public long MGet(IEnumerable<string> targets)
         {
             IDatabase database = _redisClient.GetDatabase();
-            var values = database.StringGetAsync(targets.Select(d=>(RedisKey)d).ToArray()).ConfigureAwait(false).GetAwaiter().GetResult();
+            var values = database.StringGetAsync(targets.Select(d => (RedisKey)d).ToArray()).ConfigureAwait(false).GetAwaiter().GetResult();
             if (values != null && values.Length > 0)
             {
                 return values.Where(d => d.HasValue).Select(d => (long)d).Sum();
@@ -93,26 +87,14 @@ namespace FireflySoft.RateLimit.Core
             return 0;
         }
 
-        /// <summary>
-        /// 范型数据的查询
-        /// </summary>
-        /// <param name="target"></param>
-        /// <returns>value</returns>
-        public string GetString(string target)
+        public long Increment(string target, long amount, TimeSpan expireTimeSpan)
         {
-            IDatabase database = _redisClient.GetDatabase();
-            return database.StringGet(target);
-        }
+            var expireSeconds = (int)expireTimeSpan.TotalSeconds;
+            if (expireSeconds < 1)
+            {
+                expireSeconds = 1;
+            }
 
-        /// <summary>
-        /// 数值增加指定的数量，并在创建时设置过期秒数
-        /// </summary>
-        /// <param name="key">要操作数据的Key</param>
-        /// <param name="amount">要增加的数量</param>
-        /// <param name="expireSeconds">kv创建时设置的过期秒数</param>
-        /// <returns>增加后的数值</returns>
-        private long Increment(string key, long amount, int expireSeconds)
-        {
             string luaScript = @"local amount=tonumber(ARGV[1])
                                 local current
                                 current = redis.call('incrby',KEYS[1],amount)
@@ -122,20 +104,120 @@ namespace FireflySoft.RateLimit.Core
                                 end
                                 return current";
 
-            return (int)EvaluateScript("Src-IncrWithExpireSec", luaScript, new RedisKey[] { key },
+            return (long)EvaluateScript("Src-IncrWithExpireSec", luaScript, new RedisKey[] { target },
                 new RedisValue[] { amount, expireSeconds });
-
         }
 
-        /// <summary>
-        /// 执行指定lua脚本
-        /// </summary>
-        /// <param name="scriptName"></param>
-        /// <param name="luaScript"></param>
-        /// <param name="keys"></param>
-        /// <param name="values"></param>
-        /// <returns></returns>
-        public RedisResult EvaluateScript(string scriptName, string luaScript, RedisKey[] keys, RedisValue[] values)
+        public long LeakyBucketIncrement(string target, long amount, long capacity, int outflowUnit, int outflowQuantityPerUnit)
+        {
+            // todo:maybe need a global timestamp
+            // but can not call redis TIME command in script
+            var currentTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+
+            string luaScript = @"local amount=tonumber(ARGV[1])
+                                local capacity=tonumber(ARGV[2])
+                                local outflow_unit=tonumber(ARGV[3])
+                                local outflow_quantity_per_unit=tonumber(ARGV[4])
+                                local current_time=tonumber(ARGV[5])
+                                local last_time
+                                last_time=redis.call('get',KEYS[2])
+                                if(last_time==false)
+                                then
+                                    redis.call('mset',KEYS[1],amount,KEYS[2],current_time)
+                                    return amount
+                                end
+                                
+                                local current_value = redis.call('get',KEYS[1])
+                                current_value = tonumber(current_value)
+                                last_time=tonumber(last_time)
+                                local past_time=current_time-last_time
+                                if(past_time<outflow_unit)
+                                then
+                                    current_value=current_value+amount
+                                    redis.call('set',KEYS[1],current_value)
+                                    return current_value
+                                end
+
+                                local past_outflow_unit_quantity = past_time/outflow_unit
+                                past_outflow_unit_quantity=math.floor(past_outflow_unit_quantity)
+                                last_time=last_time+past_outflow_unit_quantity*outflow_unit
+
+                                local past_outflow_quantity=past_outflow_unit_quantity*outflow_quantity_per_unit
+                                
+                                if(current_value>capacity)
+                                then
+                                    current_value=capacity
+                                end
+
+                                local new_value=current_value-past_outflow_quantity+amount
+                                if(new_value<=0)
+                                then
+                                    current_value=amount
+                                else
+                                    current_value=new_value
+                                end
+                                
+                                redis.call('mset',KEYS[1],current_value,KEYS[2],last_time)
+                                return current_value";
+
+            return (long)EvaluateScript("Src-IncrWithLeakyBucket", luaScript, new RedisKey[] { target, "lb_" + target },
+                new RedisValue[] { amount, capacity, outflowUnit, outflowQuantityPerUnit, currentTime });
+        }
+
+        public long TokenBucketDecrement(string target, long amount, long capacity, int inflowUnit, int inflowQuantityPerUnit)
+        {
+            // todo:maybe need a global timestamp
+            // but can not call redis TIME command in script
+            var currentTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+
+            string luaScript = @"local amount=tonumber(ARGV[1])
+                                local capacity=tonumber(ARGV[2])
+                                local inflow_unit=tonumber(ARGV[3])
+                                local inflow_quantity_per_unit=tonumber(ARGV[4])
+                                local current_time=tonumber(ARGV[5])
+                                local last_time=redis.call('get',KEYS[2])
+                                if(last_time==false)
+                                then
+                                    local bucket_amount = capacity - amount;
+                                    redis.call('mset',KEYS[1],bucket_amount,KEYS[2],current_time)
+                                    return bucket_amount
+                                end
+                                
+                                local current_value = redis.call('get',KEYS[1])
+                                current_value = tonumber(current_value)
+                                last_time=tonumber(last_time)
+                                local past_time=current_time-last_time
+                                if(past_time<inflow_unit)
+                                then
+                                    current_value=current_value-amount
+                                    redis.call('set',KEYS[1],current_value)
+                                    return current_value
+                                end
+
+                                local past_inflow_unit_quantity = past_time/inflow_unit
+                                past_inflow_unit_quantity=math.floor(past_inflow_unit_quantity)
+                                last_time=last_time+past_inflow_unit_quantity*inflow_unit
+
+                                local past_inflow_quantity=past_inflow_unit_quantity*inflow_quantity_per_unit
+                                if(current_value<0)
+                                then
+                                    current_value=0
+                                end
+                                local new_value=current_value+past_inflow_quantity-amount
+                                if(new_value>=capacity)
+                                then
+                                    current_value=capacity-amount
+                                else
+                                    current_value=new_value
+                                end
+                                redis.call('mset',KEYS[1],current_value,KEYS[2],last_time)
+                                return current_value";
+
+            return (long)EvaluateScript("Src-DecrWithLeakyBucket", luaScript, new RedisKey[] { target, "tb_" + target },
+                new RedisValue[] { amount, capacity, inflowUnit, inflowQuantityPerUnit, currentTime });
+        }
+
+        private RedisResult EvaluateScript(string scriptName, string luaScript, RedisKey[] keys, RedisValue[] values)
         {
             byte[] sha1 = _loadedLuaScriptsOnServer.GetOrAdd(scriptName, s =>
             {
