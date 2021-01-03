@@ -41,24 +41,24 @@ namespace FireflySoft.RateLimit.Core
 
         private bool CheckSingleRule(string target, IRateLimitStorage storage, SlidingWindowRateLimitRule<TRequest> rule)
         {
-            if (storage.CheckLocking(target))
+            if (storage.CheckLocked(target))
             {
                 return true;
             }
 
             var expireTimeSpan = rule.StatWindow;
-            var statPeriodArray = rule.GetStatWindowPeriodArray();
+            var startTime = storage.GetOrAdd($"swst_{target}", new Lazy<long>(() => { return storage.GetCurrentTime(); }));
+            var statPeriodArray = rule.GetStatWindowPeriodArray(startTime);
             var currentPeriod = statPeriodArray[0];
+            Console.WriteLine("currentPeriod:" + currentPeriod);
             storage.Increment(currentPeriod, 1, expireTimeSpan);
             var totalAmount = storage.MGet(statPeriodArray);
-            //Debug.WriteLine(string.Join(",",statPeriodArray));
-            //Debug.WriteLine("totalAmount:"+totalAmount);
-
-            if (totalAmount >= rule.LimitNumber)
+            Console.WriteLine("totalAmount:" + totalAmount);
+            if (totalAmount > rule.LimitNumber)
             {
                 if (rule.LockSeconds > 0)
                 {
-                    storage.Lock(target, TimeSpan.FromSeconds(rule.LockSeconds));
+                    storage.TryLock(target, TimeSpan.FromSeconds(rule.LockSeconds));
                 }
 
                 return true;
