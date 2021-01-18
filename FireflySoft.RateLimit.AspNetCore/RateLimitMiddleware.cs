@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 namespace FireflySoft.RateLimit.AspNetCore
 {
     /// <summary>
-    /// 限流处理中间件
+    /// Rate Limit Middleware
     /// </summary>
     public class RateLimitMiddleware
     {
@@ -18,10 +18,10 @@ namespace FireflySoft.RateLimit.AspNetCore
         private readonly RateLimitProcessor<HttpContext> _processor;
 
         /// <summary>
-        /// 构造函数
+        /// Create a new instance
         /// </summary>
         /// <param name="next"></param>
-        /// <param name="options"></param>
+        /// <param name="processor"></param>
         /// <param name="loggerFactory"></param>
         public RateLimitMiddleware(RequestDelegate next, RateLimitProcessor<HttpContext> processor, ILoggerFactory loggerFactory)
         {
@@ -36,7 +36,7 @@ namespace FireflySoft.RateLimit.AspNetCore
         }
 
         /// <summary>
-        /// 中间件的异步处理
+        /// Asynchronous processing of Middleware
         /// </summary>
         /// <param name="context"></param>
         /// <returns></returns>
@@ -66,12 +66,12 @@ namespace FireflySoft.RateLimit.AspNetCore
     }
 
     /// <summary>
-    /// 限流中间件扩展
+    /// Rate Limit Middleware Extensions
     /// </summary>
     public static class RateLimitMiddlewareExtensions
     {
         /// <summary>
-        /// 使用限流处理器
+        /// Using rate limit processor
         /// </summary>
         /// <param name="builder"></param>
         /// <param name="processor"></param>

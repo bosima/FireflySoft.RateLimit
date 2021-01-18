@@ -17,7 +17,7 @@ namespace FireflySoft.RateLimit.AspNet
         /// <summary>
         /// 构造函数
         /// </summary>
-        /// <param name="options"></param>
+        /// <param name="processor"></param>
         public RateLimitHandler(RateLimitProcessor<HttpRequestMessage> processor)
         {
             _processor = processor;
