@@ -1,13 +1,14 @@
-
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FireflySoft.RateLimit.Core", "FireflySoft.RateLimit.Core\FireflySoft.RateLimit.Core.csproj", "{EC3C2079-1284-49F1-8F38-67B5A71B0483}"
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30804.86
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FireflySoft.RateLimit.Core", "FireflySoft.RateLimit.Core\FireflySoft.RateLimit.Core.csproj", "{EC3C2079-1284-49F1-8F38-67B5A71B0483}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FireflySoft.RateLimit.Core.Sample", "FireflySoft.RateLimit.Core.Sample\FireflySoft.RateLimit.Core.Sample.csproj", "{27FF49FD-09AD-4ABE-B8B9-F387034D3AF6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FireflySoft.RateLimit.Core.Sample", "FireflySoft.RateLimit.Core.Sample\FireflySoft.RateLimit.Core.Sample.csproj", "{27FF49FD-09AD-4ABE-B8B9-F387034D3AF6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FireflySoft.RateLimit.AspNetCore", "FireflySoft.RateLimit.AspNetCore\FireflySoft.RateLimit.AspNetCore.csproj", "{265730D4-995C-4228-9BD7-AE902A82284D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FireflySoft.RateLimit.AspNetCore", "FireflySoft.RateLimit.AspNetCore\FireflySoft.RateLimit.AspNetCore.csproj", "{265730D4-995C-4228-9BD7-AE902A82284D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FireflySoft.RateLimit.AspNetCore.Sample", "FireflySoft.RateLimit.AspNetCore.Sample\FireflySoft.RateLimit.AspNetCore.Sample.csproj", "{4DDD46C7-81AF-443E-BEB1-2DBF0F467229}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FireflySoft.RateLimit.AspNetCore.Sample", "FireflySoft.RateLimit.AspNetCore.Sample\FireflySoft.RateLimit.AspNetCore.Sample.csproj", "{4DDD46C7-81AF-443E-BEB1-2DBF0F467229}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FireflySoft.RateLimit.AspNet", "FireflySoft.RateLimit.AspNet\FireflySoft.RateLimit.AspNet.csproj", "{9CBEAEB7-8BE1-4824-9F0F-98B206B3A549}"
 EndProject
@@ -43,5 +44,11 @@ Global
 		{3D7CF23D-24FE-4526-9159-2301EBB81170}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3D7CF23D-24FE-4526-9159-2301EBB81170}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3D7CF23D-24FE-4526-9159-2301EBB81170}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {FC338DEA-C8F5-4E27-B00C-3DF079B86A9D}
 	EndGlobalSection
 EndGlobal
