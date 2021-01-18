@@ -7,20 +7,30 @@ using System.Runtime.Caching;
 namespace FireflySoft.RateLimit.Core
 {
     /// <summary>
-    /// 固定窗口算法
+    /// Fixed Window Algorithm
     /// </summary>
     public class FixedWindowAlgorithm<TRequest> : IRateLimitAlgorithm<TRequest>
     {
         IEnumerable<FixedWindowRateLimitRule<TRequest>> _rules;
 
+        /// <summary>
+        /// create a new instance
+        /// </summary>
+        /// <param name="rules">rate limit rules</param>
         public FixedWindowAlgorithm(IEnumerable<FixedWindowRateLimitRule<TRequest>> rules)
         {
             _rules = rules;
         }
 
+        /// <summary>
+        /// check a request for rate limit
+        /// </summary>
+        /// <param name="request">a request</param>
+        /// <param name="storage">a instance of IRateLimitStorage</param>
+        /// <returns>the list of check result</returns>
         public List<RateLimitCheckResult<TRequest>> Check(TRequest request, IRateLimitStorage storage)
         {
-            List<RateLimitCheckResult<TRequest>> results=new List<RateLimitCheckResult<TRequest>>();
+            List<RateLimitCheckResult<TRequest>> results = new List<RateLimitCheckResult<TRequest>>();
 
             foreach (var rule in _rules)
             {
@@ -32,10 +42,11 @@ namespace FireflySoft.RateLimit.Core
                         throw new NotSupportedException("不支持Target为空");
                     }
 
-                    bool result = CheckSingleRule(target,storage,rule);
-                    results.Add(new RateLimitCheckResult<TRequest>(){
-                         Rule=rule,
-                         IsLimit=result
+                    bool result = CheckSingleRule(target, storage, rule);
+                    results.Add(new RateLimitCheckResult<TRequest>()
+                    {
+                        Rule = rule,
+                        IsLimit = result
                     });
                 }
             }
@@ -52,9 +63,9 @@ namespace FireflySoft.RateLimit.Core
 
             var countAmount = 1;
             var expireTimeSpan = rule.StatWindow;
-            var totalAmount = storage.Increment(target, countAmount, expireTimeSpan);
-            Debug.WriteLine("totalAmount:"+totalAmount);
-            
+            var totalAmount = storage.SimpleIncrement(target, countAmount, expireTimeSpan);
+            //Debug.WriteLine("totalAmount:" + totalAmount);
+
             if (totalAmount > rule.LimitNumber)
             {
                 if (rule.LockSeconds > 0)

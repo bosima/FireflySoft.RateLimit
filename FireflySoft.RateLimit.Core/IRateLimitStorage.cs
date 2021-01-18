@@ -4,74 +4,74 @@ using System.Collections.Generic;
 namespace FireflySoft.RateLimit.Core
 {
     /// <summary>
-    /// 限流存储接口
+    /// Defines a mechanism for access the rate limit data.
     /// </summary>
     public interface IRateLimitStorage
     {
         /// <summary>
-        /// 触发限流条件后锁定目标，直到设置的过期时间
+        /// Lock the rate limit target until the expiration time, when triggering the rate limit rule.
         /// </summary>
         /// <param name="target"></param>
         /// <param name="expireTimeSpan"></param>
         void TryLock(string target, TimeSpan expireTimeSpan);
 
         /// <summary>
-        /// 检查是否限流锁定中
+        /// Check whether the rate limit target is locked
         /// </summary>
         /// <param name="target"></param>
         /// <returns></returns>
         bool CheckLocked(string target);
 
         /// <summary>
-        /// 获取当前时间
+        /// Get the current unified time
         /// </summary>
         /// <returns></returns>
         long GetCurrentTime();
 
         /// <summary>
-        /// 数据不存在时添加
+        /// Adds a rate limit target to the storage by using the specified function if the target does not already exist. Returns the new value, or the existing value if the target exists.
         /// </summary>
-        /// <param name="target"></param>
-        /// <param name="retrieveMethod"></param>
+        /// <param name="target">The target to add.</param>
+        /// <param name="retrieveMethod">The function used to generate a value for the target.</param>
         /// <returns></returns>
-        long GetOrAdd(string target,Lazy<long> retrieveMethod);
+        long GetOrAdd(string target, Lazy<long> retrieveMethod);
 
         /// <summary>
-        /// 获取多个目标对应的数值
+        /// Gets the sum of the counts of multiple rate limit targets
         /// </summary>
-        /// <param name="targets"></param>
+        /// <param name="targets">The targets</param>
         /// <returns></returns>
-        long MGet(IEnumerable<string> targets);
+        long Sum(IEnumerable<string> targets);
 
         /// <summary>
-        /// 增加限流目标的统计值，限流目标不存在时先创建再增加指定的值，并可在首次创建时设置过期时间
+        /// Increase the count value of the rate limit target. When the target does not exist, create it first and increase the specified value, then set its expiration time.
         /// </summary>
-        /// <param name="target">限流目标</param>
-        /// <param name="amount">增加的数量</param>
-        /// <param name="expireTimeSpan">首次创建限流目标时设置的过期时间，设置为0时没有过期时间</param>
-        /// <returns></returns>
-        long Increment(string target, long amount, TimeSpan expireTimeSpan);
+        /// <param name="target">The target</param>
+        /// <param name="amount">amount of increase</param>
+        /// <param name="expireTimeSpan">The expiration time is set when the target is created</param>
+        /// <returns>amount of requests</returns>
+        long SimpleIncrement(string target, long amount, TimeSpan expireTimeSpan);
 
         /// <summary>
-        /// 漏桶值增加
+        /// Increase the count value of the rate limit target for leaky bucket algorithm.
         /// </summary>
-        /// <param name="target">限流目标</param>
-        /// <param name="amount">增加的数量</param>
-        /// <param name="capacity">漏桶容量</param>
-        /// <param name="outflowUnit">漏出时间单位</param>
-        /// <param name="outflowQuantityPerUnit">单位时间漏出量</param>
-        /// <returns></returns>
+        /// <param name="target">The target</param>
+        /// <param name="amount">amount of increase</param>
+        /// <param name="capacity">The capacity of leaky bucket</param>
+        /// <param name="outflowUnit">The time unit of outflow from the leaky bucket</param>
+        /// <param name="outflowQuantityPerUnit">The outflow quantity per unit time</param>
+        /// <returns>Amount of request in the bucket</returns>
         long LeakyBucketIncrement(string target, long amount, long capacity, int outflowUnit, int outflowQuantityPerUnit);
 
         /// <summary>
-        /// 令牌值减少
+        /// Decrease the count value of the rate limit target for token bucket algorithm.
         /// </summary>
-        /// <param name="target">限流目标</param>
-        /// <param name="amount">扣减的数量</param>
-        /// <param name="capacity">桶容量</param>
-        /// <param name="inflowUnit">流入时间单位</param>
-        /// <param name="inflowQuantityPerUnit">单位时间流入量</param>
-        /// <returns></returns>
+        /// <param name="target">The target</param>
+        /// <param name="amount">amount of decrease</param>
+        /// <param name="capacity">The capacity of token bucket</param>
+        /// <param name="inflowUnit">The time unit of inflow to the bucket bucket</param>
+        /// <param name="inflowQuantityPerUnit">The inflow quantity per unit time</param>
+        /// <returns>Amount of token in the bucket</returns>
         long TokenBucketDecrement(string target, long amount, long capacity, int inflowUnit, int inflowQuantityPerUnit);
     }
 }

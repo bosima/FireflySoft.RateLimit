@@ -4,24 +4,24 @@ using System.Collections.Generic;
 namespace FireflySoft.RateLimit.Core
 {
     /// <summary>
-    /// 滑动窗口限流规则
+    /// The rule of sliding window algorithm
     /// </summary>
     public class SlidingWindowRateLimitRule<T> : RateLimitRule<T>
     {
         private int _periodNumber;
 
         /// <summary>
-        /// 统计时间窗口，在这个单位时间内统计访问次数。
+        /// Statistical time window, which counts the number of requests in this time.
         /// </summary>
         public TimeSpan StatWindow { get; set; }
 
         /// <summary>
-        /// 统计时间窗口内触发限流的访问计数阈值。
+        /// The threshold of triggering rate limit in the statistical time window。
         /// </summary>
         public int LimitNumber { get; set; }
 
         /// <summary>
-        /// stat period
+        /// Small period length in statistical time window
         /// </summary>
         public TimeSpan StatPeriod { get; private set; }
 
@@ -53,6 +53,11 @@ namespace FireflySoft.RateLimit.Core
             _periodNumber = (int)(StatWindow.TotalMilliseconds / StatPeriod.TotalMilliseconds);
         }
 
+        /// <summary>
+        /// Gets all small periods in statistical time window
+        /// </summary>
+        /// <param name="startTime"></param>
+        /// <returns></returns>
         public List<string> GetStatWindowPeriodArray(long startTime)
         {
             var currentPeriod = GetCurrentPeriod(startTime);

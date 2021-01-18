@@ -2,6 +2,18 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <PackageId>FireflySoft.RateLimit.Core</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>bossma</Authors>
+    <PackageProjectUrl>https://github.com/bosima/FireflySoft.RateLimit</PackageProjectUrl>
+    <PackageReleaseNotes>first version.</PackageReleaseNotes>
+    <PackageTags>Rate Limit;Fixed Window;Sliding Window;Leaky Bucket;Token Bucket</PackageTags>
+    <Description>
+      A rate limit library, support .NET Framework and .NET Core.
+    </Description>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>

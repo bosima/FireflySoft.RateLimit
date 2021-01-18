@@ -2,17 +2,17 @@
 namespace FireflySoft.RateLimit.Core
 {
     /// <summary>
-    /// 限流错误信息
+    /// Defines the error message of rate limit
     /// </summary>
     public class RateLimitError
     {
         /// <summary>
-        /// 达到阈值及限流锁定时返回的Code，默认429=TooManyRequests
+        /// The error code returned when the request is limited. The default value is 429 = TooManyRequests
         /// </summary>
         public int Code { get; set; } = 429;
 
         /// <summary>
-        /// 达到阈值及限流锁定时返回的消息内容，默认不返回内容
+        /// The error message returned when the request is limited.
         /// </summary>
         public string Message { get; set; }
     }

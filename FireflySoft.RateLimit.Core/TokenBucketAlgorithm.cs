@@ -3,15 +3,29 @@ using System.Collections.Generic;
 
 namespace FireflySoft.RateLimit.Core
 {
+    /// <summary>
+    /// Token Bucket Algorithm
+    /// </summary>
+    /// <typeparam name="TRequest"></typeparam>
     public class TokenBucketAlgorithm<TRequest> : IRateLimitAlgorithm<TRequest>
     {
         IEnumerable<TokenBucketRateLimitRule<TRequest>> _rules;
 
+        /// <summary>
+        /// Create a new instance
+        /// </summary>
+        /// <param name="rules"></param>
         public TokenBucketAlgorithm(IEnumerable<TokenBucketRateLimitRule<TRequest>> rules)
         {
             _rules = rules;
         }
 
+        /// <summary>
+        /// Check the request and return the rate limit result
+        /// </summary>
+        /// <param name="request"></param>
+        /// <param name="storage"></param>
+        /// <returns></returns>
         public List<RateLimitCheckResult<TRequest>> Check(TRequest request, IRateLimitStorage storage)
         {
             List<RateLimitCheckResult<TRequest>> results = new List<RateLimitCheckResult<TRequest>>();
@@ -46,7 +60,7 @@ namespace FireflySoft.RateLimit.Core
             }
 
             var bucketAmount = storage.TokenBucketDecrement(target, 1, rule.Capacity, (int)rule.InflowUnit.TotalMilliseconds, rule.InflowQuantityPerUnit);
-            Console.WriteLine("bucketAmount"+bucketAmount);
+            //Debug.WriteLine("bucketAmount" + bucketAmount);
 
             if (bucketAmount < 0)
             {

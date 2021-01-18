@@ -3,32 +3,33 @@
 namespace FireflySoft.RateLimit.Core
 {
     /// <summary>
-    /// 限流规则
+    /// The rule of rate limit
     /// </summary>
     public class RateLimitRule<TRequest>
     {
         /// <summary>
-        /// 限流规则Id
+        /// identity
         /// </summary>
-        public string Id { get; set; }
+        public string Id { get; set; } = Guid.NewGuid().ToString();
 
         /// <summary>
-        /// 限流规则名称
+        /// name
         /// </summary>
         public string Name { get; set; }
 
         /// <summary>
-        /// 触发限流后锁定的秒数，0代表不锁定
+        /// The number of seconds locked after triggering rate limiting. 0 means not locked
         /// </summary>
         public int LockSeconds { get; set; }
 
         /// <summary>
-        /// 从T的实例中提取限流Target，比如HTTP Header中的某个值。可以返回一个固定值则是对所有用户的访问进行限制。
+        /// Extract the current limiting target from the instance of T, such as a value in HTTP Header. A fixed value can be returned to restrict the access of all users.
+        /// Different target need to be used in different rules.
         /// </summary>
         public Func<TRequest, string> ExtractTarget { get; set; }
 
         /// <summary>
-        /// 检查T的实例是否匹配规则，比如可以检查HttpContext中的路径、HTTP Header等。
+        /// Check whether the instance of T matches the rules. For example, you can check the path and HTTP Header in HttpContext.
         /// </summary>
         public Func<TRequest, bool> CheckRuleMatching { get; set; }
     }

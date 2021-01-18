@@ -4,22 +4,22 @@ using System.Collections.Generic;
 namespace FireflySoft.RateLimit.Core
 {
     /// <summary>
-    /// 令牌桶限流规则
+    /// The rule of token bucket algorithm
     /// </summary>
     public class TokenBucketRateLimitRule<T> : RateLimitRule<T>
     {
         /// <summary>
-        /// 令牌桶的容量。
+        /// Rhe capacity of token bucket
         /// </summary>
         public int Capacity { get; private set; }
 
         /// <summary>
-        /// 单位时间内的流入量
+        /// The inflow quantity per unit time
         /// </summary>
         public int InflowQuantityPerUnit { get; private set; }
 
         /// <summary>
-        /// 计算流入量的单位时间
+        /// The time unit of inflow to the bucket bucket
         /// </summary>
         public TimeSpan InflowUnit { get; private set; }
 
