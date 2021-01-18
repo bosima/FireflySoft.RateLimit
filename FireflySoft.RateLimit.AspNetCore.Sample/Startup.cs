@@ -56,7 +56,6 @@ namespace FireflySoft.RateLimit.AspNetCore.Sample
                         {
                             return true;
                         },
-                        Id=Guid.NewGuid().ToString(),
                         Name="general limit rule",
                         LimitNumber=30,
                         StatWindow=TimeSpan.FromSeconds(1)

@@ -4,15 +4,29 @@ using System.Diagnostics;
 
 namespace FireflySoft.RateLimit.Core
 {
+    /// <summary>
+    /// Sliding Window Algorithm
+    /// </summary>
+    /// <typeparam name="TRequest"></typeparam>
     public class SlidingWindowAlgorithm<TRequest> : IRateLimitAlgorithm<TRequest>
     {
         IEnumerable<SlidingWindowRateLimitRule<TRequest>> _rules;
 
+        /// <summary>
+        /// Create a new instance
+        /// </summary>
+        /// <param name="rules"></param>
         public SlidingWindowAlgorithm(IEnumerable<SlidingWindowRateLimitRule<TRequest>> rules)
         {
             _rules = rules;
         }
 
+        /// <summary>
+        /// Check the request and return the rate limit result
+        /// </summary>
+        /// <param name="request"></param>
+        /// <param name="storage"></param>
+        /// <returns></returns>
         public List<RateLimitCheckResult<TRequest>> Check(TRequest request, IRateLimitStorage storage)
         {
             List<RateLimitCheckResult<TRequest>> results = new List<RateLimitCheckResult<TRequest>>();
@@ -50,10 +64,10 @@ namespace FireflySoft.RateLimit.Core
             var startTime = storage.GetOrAdd($"swst_{target}", new Lazy<long>(() => { return storage.GetCurrentTime(); }));
             var statPeriodArray = rule.GetStatWindowPeriodArray(startTime);
             var currentPeriod = statPeriodArray[0];
-            Console.WriteLine("currentPeriod:" + currentPeriod);
-            storage.Increment(currentPeriod, 1, expireTimeSpan);
-            var totalAmount = storage.MGet(statPeriodArray);
-            Console.WriteLine("totalAmount:" + totalAmount);
+            //Debug.WriteLine("currentPeriod:" + currentPeriod);
+            storage.SimpleIncrement(currentPeriod, 1, expireTimeSpan);
+            var totalAmount = storage.Sum(statPeriodArray);
+            //Debug.WriteLine("totalAmount:" + totalAmount);
             if (totalAmount > rule.LimitNumber)
             {
                 if (rule.LockSeconds > 0)

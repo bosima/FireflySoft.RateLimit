@@ -4,31 +4,31 @@ using System.Collections.Generic;
 namespace FireflySoft.RateLimit.Core
 {
     /// <summary>
-    /// 漏斗限流规则
+    /// the rule of leaky bucket algorithm
     /// </summary>
     public class LeakyBucketRateLimitRule<T> : RateLimitRule<T>
     {
         /// <summary>
-        /// 漏斗的容量。
+        /// The capacity of current leaky bucket
         /// </summary>
         public int Capacity { get; private set; }
 
         /// <summary>
-        /// 单位时间内的流出量
+        /// The outflow quantity per unit time
         /// </summary>
         public int OutflowQuantityPerUnit { get; private set; }
 
         /// <summary>
-        /// 计算流出量的单位时间
+        /// The time unit of outflow from the leaky bucket
         /// </summary>
         public TimeSpan OutflowUnit { get; private set; }
 
         /// <summary>
         /// create a new instance
         /// </summary>
-        /// <param name="startTime"></param>
-        /// <param name="statWindow"></param>
-        /// <param name="statPeriod"></param>
+        /// <param name="capacity"></param>
+        /// <param name="outflowQuantityPerUnit"></param>
+        /// <param name="outflowUnit"></param>
         public LeakyBucketRateLimitRule(int capacity, int outflowQuantityPerUnit, TimeSpan outflowUnit)
         {
             if (capacity < 1)

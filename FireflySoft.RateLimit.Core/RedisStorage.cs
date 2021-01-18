@@ -10,7 +10,7 @@ using StackExchange.Redis;
 namespace FireflySoft.RateLimit.Core
 {
     /// <summary>
-    /// Redis存储
+    /// Redis Storage
     /// </summary>
     public class RedisStorage : IRateLimitStorage
     {
@@ -18,17 +18,31 @@ namespace FireflySoft.RateLimit.Core
 
         private readonly ConcurrentDictionary<string, Lazy<byte[]>> _loadedLuaScriptsOnServer = new ConcurrentDictionary<string, Lazy<byte[]>>();
 
+        /// <summary>
+        /// Create a new instance
+        /// </summary>
+        /// <param name="redisClient"></param>
         public RedisStorage(ConnectionMultiplexer redisClient)
         {
             _redisClient = redisClient;
         }
 
+        /// <summary>
+        /// Lock the rate limit target until the expiration time, when triggering the rate limit rule.
+        /// </summary>
+        /// <param name="target"></param>
+        /// <param name="expireTimeSpan"></param>
         public void TryLock(string target, TimeSpan expireTimeSpan)
         {
             IDatabase database = _redisClient.GetDatabase();
             database.StringSet($"lock-{target}", 1, expireTimeSpan, when: When.NotExists);
         }
 
+        /// <summary>
+        /// Check whether the rate limit target is locked
+        /// </summary>
+        /// <param name="target"></param>
+        /// <returns></returns>
         public bool CheckLocked(string target)
         {
             IDatabase database = _redisClient.GetDatabase();
@@ -42,6 +56,10 @@ namespace FireflySoft.RateLimit.Core
             return false;
         }
 
+        /// <summary>
+        /// Get the current unified time
+        /// </summary>
+        /// <returns></returns>
         public long GetCurrentTime()
         {
             var endPoints = _redisClient.GetEndPoints();
@@ -59,6 +77,12 @@ namespace FireflySoft.RateLimit.Core
             return 0;
         }
 
+        /// <summary>
+        /// Adds a rate limit target to the storage by using the specified function if the target does not already exist. Returns the new value, or the existing value if the target exists.
+        /// </summary>
+        /// <param name="target">The target to add.</param>
+        /// <param name="retrieveMethod">The function used to generate a value for the target.</param>
+        /// <returns></returns>
         public long GetOrAdd(string target, Lazy<long> retrieveMethod)
         {
             IDatabase database = _redisClient.GetDatabase();
@@ -69,13 +93,12 @@ namespace FireflySoft.RateLimit.Core
             return retrieveMethod.Value;
         }
 
-        public long Get(string target)
-        {
-            IDatabase database = _redisClient.GetDatabase();
-            return (long)database.StringGet(target);
-        }
-
-        public long MGet(IEnumerable<string> targets)
+        /// <summary>
+        /// Gets the sum of the counts of multiple rate limit targets
+        /// </summary>
+        /// <param name="targets">The targets</param>
+        /// <returns></returns>
+        public long Sum(IEnumerable<string> targets)
         {
             IDatabase database = _redisClient.GetDatabase();
             var values = database.StringGetAsync(targets.Select(d => (RedisKey)d).ToArray()).ConfigureAwait(false).GetAwaiter().GetResult();
@@ -87,7 +110,14 @@ namespace FireflySoft.RateLimit.Core
             return 0;
         }
 
-        public long Increment(string target, long amount, TimeSpan expireTimeSpan)
+        /// <summary>
+        /// Increase the count value of the rate limit target. When the target does not exist, create it first and increase the specified value, then set its expiration time.
+        /// </summary>
+        /// <param name="target">The target</param>
+        /// <param name="amount">amount of increase</param>
+        /// <param name="expireTimeSpan">The expiration time is set when the target is created</param>
+        /// <returns>amount of requests</returns>
+        public long SimpleIncrement(string target, long amount, TimeSpan expireTimeSpan)
         {
             var expireSeconds = (int)expireTimeSpan.TotalSeconds;
             if (expireSeconds < 1)
@@ -108,10 +138,19 @@ namespace FireflySoft.RateLimit.Core
                 new RedisValue[] { amount, expireSeconds });
         }
 
+        /// <summary>
+        /// Increase the count value of the rate limit target for leaky bucket algorithm.
+        /// </summary>
+        /// <param name="target">The target</param>
+        /// <param name="amount">amount of increase</param>
+        /// <param name="capacity">The capacity of leaky bucket</param>
+        /// <param name="outflowUnit">The time unit of outflow from the leaky bucket</param>
+        /// <param name="outflowQuantityPerUnit">The outflow quantity per unit time</param>
+        /// <returns>Amount of request in the bucket</returns>
         public long LeakyBucketIncrement(string target, long amount, long capacity, int outflowUnit, int outflowQuantityPerUnit)
         {
-            // todo:maybe need a global timestamp
-            // but can not call redis TIME command in script
+            // todo: need a global timestamp, but can not call redis TIME command in script
+            // GetCurrentTime() may be a good choice
             var currentTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
 
             string luaScript = @"local amount=tonumber(ARGV[1])
@@ -164,10 +203,19 @@ namespace FireflySoft.RateLimit.Core
                 new RedisValue[] { amount, capacity, outflowUnit, outflowQuantityPerUnit, currentTime });
         }
 
+        /// <summary>
+        /// Decrease the count value of the rate limit target for token bucket algorithm.
+        /// </summary>
+        /// <param name="target">The target</param>
+        /// <param name="amount">amount of decrease</param>
+        /// <param name="capacity">The capacity of token bucket</param>
+        /// <param name="inflowUnit">The time unit of inflow to the bucket bucket</param>
+        /// <param name="inflowQuantityPerUnit">The inflow quantity per unit time</param>
+        /// <returns>Amount of token in the bucket</returns>
         public long TokenBucketDecrement(string target, long amount, long capacity, int inflowUnit, int inflowQuantityPerUnit)
         {
-            // todo:maybe need a global timestamp
-            // but can not call redis TIME command in script
+            // todo: need a global timestamp, but can not call redis TIME command in script
+            // GetCurrentTime() may be a good choice
             var currentTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
 
             string luaScript = @"local amount=tonumber(ARGV[1])
