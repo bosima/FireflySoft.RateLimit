@@ -83,8 +83,13 @@ namespace FireflySoft.RateLimit.Core.Sample
                                 .WithAlgorithm(new SlidingWindowAlgorithm<SimulationRequest>(slidingWindowsRules))
                                 //.WithAlgorithm(new LeakyBucketAlgorithm<SimulationRequest>(leakyBucketRules))
                                 //.WithAlgorithm(new TokenBucketAlgorithm<SimulationRequest>(tokenBucketRules))
+                                .WithError(new RateLimitError()
+                                {
+                                    Code = 429,
+
+                                })
                                 .Build();
-            
+
             //FixedWindowTest(processor);
             SlidingWindowTest(processor);
             //LeakyBucketTest(processor);

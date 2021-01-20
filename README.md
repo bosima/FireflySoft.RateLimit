@@ -1,27 +1,185 @@
 # FireflySoft.RateLimit
-A .net rate limit class library, support .net framework and .net core.
+A rate limit library, support .NET Framework and .NET core.
 
-## 功能特点
-* 不仅可用于WebAPI限流，亦可应用于任何需要业务限流的场景。
-* 提供四种限流算法：固定窗口、滑动窗口、漏桶、令牌桶。
-* 支持分布式服务限流。
-* 支持触发限流后锁定一段时间。
-* 支持灵活的限流目标设定和规则匹配。
-* 支持扩展自己的算法和持久化方式。
-* 同时支持.net framework和.net core。
+## Features
+* Four algorithms: fixed window, sliding window, leaky bucket, token bucket.
+* Two counting storages: memory and redis.
+* Consistent rate-limit for distributed services.
+* Locking for a period of time after triggering the limit.
+* Flexible rate-limit target setting and rule matching.
+* Custom error number and message.
+* Custom rate-limit algorithms and persistence methods.
+* Any scenario that requires rate-limit.
 
-## 项目说明
-|项目|说明|
+## Projects
+|Project|Descriptioin|
 |---|---
-|FireflySoft.RateLmit.Core|限流算法、规则、持久化等核心程序。
-|FireflySoft.RateLmit.Core.Sample|使用FireflySoft.RateLmit的演示程序，可快速迁移到自己的项目中。
-|FireflySoft.RateLimit.AspNet|基于.NET Framework的ASP.NET限流中间件。
-|FireflySoft.RateLimit.AspNet.Sample|使用FireflySoft.RateLimit.AspNet的演示程序。
-|FireflySoft.RateLimit.AspNetCore|基于.NET Core的ASP.NET Core限流中间件。
-|FireflySoft.RateLimit.AspNetCore.Sample|使用FireflySoft.RateLimit.AspNetCore的演示程序。
+|FireflySoft.RateLmit.Core|algorithm, rules, persistence and other core codes.
+|FireflySoft.RateLmit.Core.Sample|FireflySoft.RateLmit.Core sample program.
+|FireflySoft.RateLimit.AspNet|ASP.NET rate-limit middleware based on .NET Framework.
+|FireflySoft.RateLimit.AspNet.Sample|FireflySoft.RateLimit.AspNet smample program.
+|FireflySoft.RateLimit.AspNetCore|ASP.NET Core rate-limit middleware.
+|FireflySoft.RateLimit.AspNetCore.Sample|FireflySoft.RateLimit.AspNetCore smample program.
 
+## Instructions
 
+### ASP.NET Core
 
+**1、Install Nuget Package**
 
+Package Manager:
 
+```shell
+Install-Package FireflySoft.RateLimit.AspNetCore -Version 1.0.0
+```
 
+Or .NET CLI:
+
+```shell
+dotnet add package FireflySoft.RateLimit.AspNetCore --version 1.0.0
+```
+
+Or Project file：
+```xml
+<ItemGroup>
+<PackageReference Include="FireflySoft.RateLimit.AspNetCore" Version="1.0.0" />
+</ItemGroup>
+```
+
+**2、Use Middleware**
+
+The following code calls the rate-limit [middleware](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/middleware/?view=aspnetcore-3.1) from Startup.Configure:
+
+```csharp
+public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+{
+    ...
+
+    app.UseRateLimit(new Core.RateLimitProcessor<HttpContext>.Builder()
+        // .WithError(new Core.RateLimitError()
+        // {
+        //     Code=429,
+        //     Message = "The system is busy, please try again later"
+        // })
+        // .WithStorage(new RedisStorage(StackExchange.Redis.ConnectionMultiplexer.Connect("localhost")))
+        .WithAlgorithm(new FixedWindowAlgorithm<HttpContext>( new[] {
+            new FixedWindowRateLimitRule<HttpContext>()
+            {
+                ExtractTarget = context =>
+                {
+                    // for all path, you can customize it
+                    return "rule1-" + context.Request.Path.Value;
+                },
+                CheckRuleMatching = context =>
+                {
+                    // limit every request, you can customize it
+                    return true;
+                },
+                Name="general limit rule",
+                LimitNumber=30,
+                StatWindow=TimeSpan.FromSeconds(1)
+            }
+        }))
+        .Build());
+
+    ...
+}
+```
+
+### ASP.NET
+
+***1、Install Nuget Package:***
+
+Package Manager:
+
+```shell
+Install-Package FireflySoft.RateLimit.AspNet -Version 1.0.0
+```
+
+***2、Register MessageHandler***
+
+Open Global.asax.cs, the following code adds the rate limit message handle:
+
+```csharp
+protected void Application_Start()
+{
+    ...
+
+    GlobalConfiguration.Configuration.MessageHandlers.Add(new RateLimitHandler(
+        new Core.RateLimitProcessor<HttpRequestMessage>.Builder()
+        // .WithError(new Core.RateLimitError()
+        // {
+        //     Code=429,
+        //     Message = "The system is busy, please try again later"
+        // })
+        // .WithStorage(new RedisStorage(StackExchange.Redis.ConnectionMultiplexer.Connect("localhost")))
+        .WithAlgorithm(new FixedWindowAlgorithm<HttpRequestMessage>( new[] {
+            new FixedWindowRateLimitRule<HttpRequestMessage>()
+            {
+                ExtractTarget = context =>
+                {
+                    // for all path, you can customize it
+                    return "rule1" + context.RequestUri.AbsolutePath;
+                },
+                CheckRuleMatching = context =>
+                {
+                    // limit every request, you can customize it
+                    return true;
+                },
+                Name="general limit rule",
+                LimitNumber=30,
+                StatWindow=TimeSpan.FromSeconds(1)
+            }
+        }))
+        .Build()
+        ));
+
+    ...
+}
+```
+
+### Others
+
+Use *RateLimitProcessor* to filter every request, process the return value of *Check* method.
+
+```csharp
+// Rule
+var fixedWindowRules = new FixedWindowRateLimitRule<SimulationRequest>[]
+    {
+        new FixedWindowRateLimitRule<SimulationRequest>()
+        {
+            StatWindow=TimeSpan.FromSeconds(1),
+            LimitNumber=30,
+            ExtractTarget = (request) =>
+            {
+                return request.RequestResource;
+            },
+            CheckRuleMatching = (request) =>
+            {
+                return true;
+            },
+        }
+    };
+
+// Processor
+var processor = new RateLimitProcessor<SimulationRequest>.Builder()
+    // .WithError(new RateLimitError(){
+    //         Code = 429,
+    //         Message = "The system is busy, please try again later"
+    // })
+    // .WithStorage(new RedisStorage(StackExchange.Redis.ConnectionMultiplexer.Connect("localhost")))
+    .WithAlgorithm(new FixedWindowAlgorithm<SimulationRequest>(fixedWindowRules))
+    .Build();
+
+/// Check
+var result = processor.Check(new SimulationRequest()
+    {
+        RequestId = Guid.NewGuid().ToString(),
+        RequestResource = "home",
+        Parameters = new Dictionary<string, string>() {
+                    { "from","sample" },
+            }
+    });
+```
+
+SimulationRequest is a custom request that you can modify to any type.
