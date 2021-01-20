@@ -1,4 +1,12 @@
-# FireflySoft.RateLimit
+* [Introduction](#introduction)
+* [Features](#features)
+* [Projects](#projects)
+* [Usage](#usage)
+    * [ASP.NET Core](#aspnet-core)
+    * [ASP.NET](#aspnet)
+    * [Others](#others)
+
+## Introduction
 A rate limit library, support .NET Framework and .NET core.
 
 ## Features
@@ -21,7 +29,7 @@ A rate limit library, support .NET Framework and .NET core.
 |FireflySoft.RateLimit.AspNetCore|ASP.NET Core rate-limit middleware.
 |FireflySoft.RateLimit.AspNetCore.Sample|FireflySoft.RateLimit.AspNetCore smample program.
 
-## Instructions
+## Usage
 
 ### ASP.NET Core
 
