@@ -148,6 +148,22 @@ protected void Application_Start()
 
 ### Others
 
+**1、Install Nuget Package**
+
+Package Manager:
+
+```shell
+Install-Package FireflySoft.RateLimit.Core -Version 1.0.0
+```
+
+Or .NET CLI:
+
+```shell
+dotnet add package FireflySoft.RateLimit.Core --version 1.0.0
+```
+
+**2、Use RateLimitProcessor**
+
 Use *RateLimitProcessor* to filter every request, process the return value of *Check* method.
 
 ```csharp
