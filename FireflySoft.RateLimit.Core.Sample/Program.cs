@@ -78,7 +78,7 @@ namespace FireflySoft.RateLimit.Core.Sample
                             };
 
             var processor = new RateLimitProcessor<SimulationRequest>.Builder()
-                                .WithStorage(new RedisStorage(StackExchange.Redis.ConnectionMultiplexer.Connect("localhost")))
+                                //.WithStorage(new RedisStorage(StackExchange.Redis.ConnectionMultiplexer.Connect("localhost")))
                                 //.WithAlgorithm(new FixedWindowAlgorithm<SimulationRequest>(fixedWindowRules))
                                 .WithAlgorithm(new SlidingWindowAlgorithm<SimulationRequest>(slidingWindowsRules))
                                 //.WithAlgorithm(new LeakyBucketAlgorithm<SimulationRequest>(leakyBucketRules))
@@ -114,7 +114,7 @@ namespace FireflySoft.RateLimit.Core.Sample
                 Console.WriteLine($"[{i}]check result:{result.IsLimit}.");
                 if (result.IsLimit)
                 {
-                    Console.WriteLine($"error code: {result.Target},{result.Error.Code}");
+                    Console.WriteLine($"error code: {result.Target}, {result.Error.Code}");
                 }
             }
         }
@@ -159,7 +159,7 @@ namespace FireflySoft.RateLimit.Core.Sample
                     Console.WriteLine($"[{i}]check result:{result.IsLimit}.");
                     if (result.IsLimit)
                     {
-                        Console.WriteLine($"error code: {result.Error.Code}");
+                        Console.WriteLine($"error code: {result.Target}, {result.Error.Code}");
                     }
                 }
 
