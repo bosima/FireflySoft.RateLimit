@@ -42,6 +42,7 @@ namespace FireflySoft.RateLimit.Core
                 var result = results[i];
                 if (result.IsLimit)
                 {
+                    response.Target = result.Target;
                     response.Rule = result.Rule;
                     response.IsLimit = true;
                     response.Error = _error;

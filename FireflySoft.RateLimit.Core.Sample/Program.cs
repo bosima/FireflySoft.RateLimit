@@ -114,7 +114,7 @@ namespace FireflySoft.RateLimit.Core.Sample
                 Console.WriteLine($"[{i}]check result:{result.IsLimit}.");
                 if (result.IsLimit)
                 {
-                    Console.WriteLine($"error code: {result.Error.Code}");
+                    Console.WriteLine($"error code: {result.Target},{result.Error.Code}");
                 }
             }
         }

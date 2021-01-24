@@ -46,6 +46,7 @@ namespace FireflySoft.RateLimit.Core
                     results.Add(new RateLimitCheckResult<TRequest>()
                     {
                         Rule = rule,
+                        Target=target,
                         IsLimit = result
                     });
                 }
