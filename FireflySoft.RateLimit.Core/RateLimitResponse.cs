@@ -14,6 +14,12 @@ namespace FireflySoft.RateLimit.Core
         public bool IsLimit { get; set; }
 
         /// <summary>
+        /// The rate limit target when rate limit is triggered
+        /// </summary>
+        /// <value></value>
+        public string Target { get; set; }
+
+        /// <summary>
         /// The error when the current request is limited
         /// </summary>
         /// <value></value>

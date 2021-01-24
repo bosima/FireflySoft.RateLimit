@@ -23,7 +23,7 @@ namespace FireflySoft.RateLimit.Core
         public int LockSeconds { get; set; }
 
         /// <summary>
-        /// Extract the current limiting target from the instance of T, such as a value in HTTP Header. A fixed value can be returned to restrict the access of all users.
+        /// Extract the rate limit target from the instance of T, such as a value in HTTP Header. A fixed value can be returned to restrict the access of all users.
         /// Different target need to be used in different rules.
         /// </summary>
         public Func<TRequest, string> ExtractTarget { get; set; }
