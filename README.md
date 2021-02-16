@@ -26,11 +26,9 @@ Project: FireflySoft.RateLimit.Core.UnitTest
 
 Code coverage:
 
-+----------------------------+--------+--------+--------+
 | Module                     | Line   | Branch | Method |
-+----------------------------+--------+--------+--------+
+|---|---|---|---|
 | FireflySoft.RateLimit.Core | 89.96% | 78.39% | 95.78% |
-+----------------------------+--------+--------+--------+
 
 ## Projects
 |Project|Descriptioin|
