@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace FireflySoft.RateLimit.Core
 {
@@ -37,6 +38,32 @@ namespace FireflySoft.RateLimit.Core
             var response = new RateLimitResponse<TRequest>();
 
             var results = _algorithm.Check(request, _storage);
+            for (int i = 0; i < results.Count; i++)
+            {
+                var result = results[i];
+                if (result.IsLimit)
+                {
+                    response.Target = result.Target;
+                    response.Rule = result.Rule;
+                    response.IsLimit = true;
+                    response.Error = _error;
+                    break;
+                }
+            }
+
+            return response;
+        }
+
+        /// <summary>
+        /// Check the request and return the rate limit result
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        public async Task<RateLimitResponse<TRequest>> CheckAsync(TRequest request)
+        {
+            var response = new RateLimitResponse<TRequest>();
+
+            var results = await _algorithm.CheckAsync(request, _storage);
             for (int i = 0; i < results.Count; i++)
             {
                 var result = results[i];

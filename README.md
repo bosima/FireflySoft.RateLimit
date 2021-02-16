@@ -1,5 +1,6 @@
 * [Introduction](#introduction)
 * [Features](#features)
+* [Unit Test](#unit-test)
 * [Projects](#projects)
 * [Usage](#usage)
     * [ASP.NET Core](#aspnet-core)
@@ -17,7 +18,19 @@ A rate limit library, support .NET Framework and .NET core.
 * Flexible rate-limit target setting and rule matching.
 * Custom error number and message.
 * Custom rate-limit algorithms and persistence methods.
+* Supports updating rules at runtime.
 * Any scenario that requires rate-limit.
+
+## Unit Test
+Project: FireflySoft.RateLimit.Core.UnitTest
+
+Code coverage:
+
++----------------------------+--------+--------+--------+
+| Module                     | Line   | Branch | Method |
++----------------------------+--------+--------+--------+
+| FireflySoft.RateLimit.Core | 89.96% | 78.39% | 95.78% |
++----------------------------+--------+--------+--------+
 
 ## Projects
 |Project|Descriptioin|
@@ -73,6 +86,7 @@ public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         .WithAlgorithm(new FixedWindowAlgorithm<HttpContext>( new[] {
             new FixedWindowRateLimitRule<HttpContext>()
             {
+                Id = "1",
                 ExtractTarget = context =>
                 {
                     // for all path, you can customize it
@@ -124,6 +138,7 @@ protected void Application_Start()
         .WithAlgorithm(new FixedWindowAlgorithm<HttpRequestMessage>( new[] {
             new FixedWindowRateLimitRule<HttpRequestMessage>()
             {
+                Id = "2",
                 ExtractTarget = context =>
                 {
                     // for all path, you can customize it
@@ -172,6 +187,7 @@ var fixedWindowRules = new FixedWindowRateLimitRule<SimulationRequest>[]
     {
         new FixedWindowRateLimitRule<SimulationRequest>()
         {
+            Id = "3",
             StatWindow=TimeSpan.FromSeconds(1),
             LimitNumber=30,
             ExtractTarget = (request) =>

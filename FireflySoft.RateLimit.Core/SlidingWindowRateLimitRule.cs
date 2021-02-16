@@ -11,6 +11,18 @@ namespace FireflySoft.RateLimit.Core
         private int _periodNumber;
 
         /// <summary>
+        /// small period number
+        /// </summary>
+        /// <value></value>
+        public int PeriodNumber
+        {
+            get
+            {
+                return _periodNumber;
+            }
+        }
+
+        /// <summary>
         /// Statistical time window, which counts the number of requests in this time.
         /// </summary>
         public TimeSpan StatWindow { get; set; }
@@ -51,50 +63,6 @@ namespace FireflySoft.RateLimit.Core
             StatPeriod = statPeriod;
 
             _periodNumber = (int)(StatWindow.TotalMilliseconds / StatPeriod.TotalMilliseconds);
-        }
-
-        /// <summary>
-        /// Gets all small periods in statistical time window
-        /// </summary>
-        /// <param name="startTime"></param>
-        /// <returns></returns>
-        public List<string> GetStatWindowPeriodArray(long startTime)
-        {
-            var currentPeriod = GetCurrentPeriod(startTime);
-            var periodSet = new List<string>() { currentPeriod.ToUnixTimeMilliseconds().ToString() };
-            for (int i = 1; i < _periodNumber; i++)
-            {
-                periodSet.Add(currentPeriod.AddMilliseconds(0 - StatPeriod.TotalMilliseconds * i).ToUnixTimeMilliseconds().ToString());
-            }
-
-            return periodSet;
-        }
-
-        private DateTimeOffset GetCurrentPeriod(long startTime)
-        {
-            var pastTotalTime = DateTimeOffset.Now.ToUnixTimeMilliseconds() - startTime;
-            var pastPeriodNumber = pastTotalTime / StatPeriod.TotalMilliseconds;
-            var pastPeriodNumberFloor = (long)Math.Floor(pastPeriodNumber);
-            var pastPeriodNUmberCeiling = (long)Math.Ceiling(pastPeriodNumber);
-
-            DateTimeOffset currentPeriod;
-            if (pastPeriodNUmberCeiling > pastPeriodNumberFloor)
-            {
-                currentPeriod = DateTimeOffset.FromUnixTimeMilliseconds(startTime + pastPeriodNUmberCeiling * (long)StatPeriod.TotalMilliseconds - 1);
-            }
-            else
-            {
-                if (pastPeriodNumberFloor > 0)
-                {
-                    currentPeriod = DateTimeOffset.FromUnixTimeMilliseconds(startTime + pastPeriodNumberFloor * (long)StatPeriod.TotalMilliseconds - 1);
-                }
-                else
-                {
-                    currentPeriod = DateTimeOffset.FromUnixTimeMilliseconds(startTime + (long)StatPeriod.TotalMilliseconds - 1);
-                }
-            }
-
-            return currentPeriod;
         }
     }
 }

@@ -5,12 +5,12 @@ namespace FireflySoft.RateLimit.Core
     /// <summary>
     /// The rule of rate limit
     /// </summary>
-    public class RateLimitRule<TRequest>
+    public abstract class RateLimitRule<TRequest>
     {
         /// <summary>
         /// identity
         /// </summary>
-        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string Id { get; set; }
 
         /// <summary>
         /// name
