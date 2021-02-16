@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace FireflySoft.RateLimit.Core
 {
@@ -16,5 +17,13 @@ namespace FireflySoft.RateLimit.Core
         /// <param name="storage"></param>
         /// <returns></returns>
         List<RateLimitCheckResult<TRequest>> Check(TRequest request, IRateLimitStorage storage);
+
+        /// <summary>
+        /// Check the request and return the rate limit result
+        /// </summary>
+        /// <param name="request"></param>
+        /// <param name="storage"></param>
+        /// <returns></returns>
+        Task<List<RateLimitCheckResult<TRequest>>> CheckAsync(TRequest request, IRateLimitStorage storage);
     }
 }

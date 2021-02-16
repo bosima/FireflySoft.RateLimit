@@ -1,4 +1,4 @@
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30804.86
 MinimumVisualStudioVersion = 10.0.40219.1
@@ -13,6 +13,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FireflySoft.RateLimit.AspNet", "FireflySoft.RateLimit.AspNet\FireflySoft.RateLimit.AspNet.csproj", "{9CBEAEB7-8BE1-4824-9F0F-98B206B3A549}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FireflySoft.RateLimit.AspNet.Sample", "FireflySoft.RateLimit.AspNet.Sample\FireflySoft.RateLimit.AspNet.Sample.csproj", "{3D7CF23D-24FE-4526-9159-2301EBB81170}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FireflySoft.RateLimit.Core.UnitTest", "FireflySoft.RateLimit.Core.UnitTest\FireflySoft.RateLimit.Core.UnitTest.csproj", "{977FB204-41B8-41AE-85A6-C2F865C98415}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FireflySoft.RateLmit.Core.BenchmarkTest", "FireflySoft.RateLmit.Core.BenchmarkTest\FireflySoft.RateLmit.Core.BenchmarkTest.csproj", "{0E94CBB5-31CF-46CD-B57F-D7D06741657A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -44,6 +48,14 @@ Global
 		{3D7CF23D-24FE-4526-9159-2301EBB81170}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3D7CF23D-24FE-4526-9159-2301EBB81170}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3D7CF23D-24FE-4526-9159-2301EBB81170}.Release|Any CPU.Build.0 = Release|Any CPU
+		{977FB204-41B8-41AE-85A6-C2F865C98415}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{977FB204-41B8-41AE-85A6-C2F865C98415}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{977FB204-41B8-41AE-85A6-C2F865C98415}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{977FB204-41B8-41AE-85A6-C2F865C98415}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0E94CBB5-31CF-46CD-B57F-D7D06741657A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0E94CBB5-31CF-46CD-B57F-D7D06741657A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0E94CBB5-31CF-46CD-B57F-D7D06741657A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0E94CBB5-31CF-46CD-B57F-D7D06741657A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

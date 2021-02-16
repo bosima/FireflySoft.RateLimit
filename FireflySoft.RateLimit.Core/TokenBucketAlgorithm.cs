@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace FireflySoft.RateLimit.Core
 {
@@ -7,73 +9,46 @@ namespace FireflySoft.RateLimit.Core
     /// Token Bucket Algorithm
     /// </summary>
     /// <typeparam name="TRequest"></typeparam>
-    public class TokenBucketAlgorithm<TRequest> : IRateLimitAlgorithm<TRequest>
+    public class TokenBucketAlgorithm<TRequest> : UpdatableRateLimitAlgorithm<TRequest>
     {
-        IEnumerable<TokenBucketRateLimitRule<TRequest>> _rules;
-
         /// <summary>
         /// Create a new instance
         /// </summary>
         /// <param name="rules"></param>
-        public TokenBucketAlgorithm(IEnumerable<TokenBucketRateLimitRule<TRequest>> rules)
+        /// <param name="updatable"></param>
+        public TokenBucketAlgorithm(IEnumerable<TokenBucketRateLimitRule<TRequest>> rules, bool updatable = false)
+        : base(rules, updatable)
         {
-            _rules = rules;
         }
 
         /// <summary>
-        /// Check the request and return the rate limit result
+        /// check single rule for target
         /// </summary>
-        /// <param name="request"></param>
+        /// <param name="target"></param>
         /// <param name="storage"></param>
+        /// <param name="rule"></param>
         /// <returns></returns>
-        public List<RateLimitCheckResult<TRequest>> Check(TRequest request, IRateLimitStorage storage)
+        protected override bool CheckSingleRule(string target, IRateLimitStorage storage, RateLimitRule<TRequest> rule)
         {
-            List<RateLimitCheckResult<TRequest>> results = new List<RateLimitCheckResult<TRequest>>();
-
-            foreach (var rule in _rules)
-            {
-                if (rule.CheckRuleMatching(request))
-                {
-                    var target = rule.ExtractTarget(request);
-                    if (string.IsNullOrWhiteSpace(target))
-                    {
-                        throw new NotSupportedException("不支持Target为空");
-                    }
-
-                    bool result = CheckSingleRule(target, storage, rule);
-                    results.Add(new RateLimitCheckResult<TRequest>()
-                    {
-                        Rule = rule,
-                        Target=target,
-                        IsLimit = result
-                    });
-                }
-            }
-
-            return results;
+            var currentRule = rule as TokenBucketRateLimitRule<TRequest>;
+            var result = storage.TokenBucketDecrement(target, 1, currentRule.Capacity, (int)currentRule.InflowUnit.TotalMilliseconds, currentRule.InflowQuantityPerUnit, currentRule.LockSeconds);
+            Debug.WriteLine("check result:" + result.Item1 + "," + result.Item2);
+            return result.Item1;
         }
 
-        private bool CheckSingleRule(string target, IRateLimitStorage storage, TokenBucketRateLimitRule<TRequest> rule)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="target"></param>
+        /// <param name="storage"></param>
+        /// <param name="rule"></param>
+        /// <returns></returns>
+        protected override async Task<bool> CheckSingleRuleAsync(string target, IRateLimitStorage storage, RateLimitRule<TRequest> rule)
         {
-            if (storage.CheckLocked(target))
-            {
-                return true;
-            }
-
-            var bucketAmount = storage.TokenBucketDecrement(target, 1, rule.Capacity, (int)rule.InflowUnit.TotalMilliseconds, rule.InflowQuantityPerUnit);
-            //Debug.WriteLine("bucketAmount" + bucketAmount);
-
-            if (bucketAmount < 0)
-            {
-                if (rule.LockSeconds > 0)
-                {
-                    storage.TryLock(target, TimeSpan.FromSeconds(rule.LockSeconds));
-                }
-
-                return true;
-            }
-
-            return false;
+            var currentRule = rule as TokenBucketRateLimitRule<TRequest>;
+            var result = await storage.TokenBucketDecrementAsync(target, 1, currentRule.Capacity, (int)currentRule.InflowUnit.TotalMilliseconds, currentRule.InflowQuantityPerUnit, currentRule.LockSeconds);
+            Debug.WriteLine("check result:" + result.Item1 + "," + result.Item2);
+            return result.Item1;
         }
     }
 }

@@ -1,83 +1,58 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Caching;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace FireflySoft.RateLimit.Core
 {
     /// <summary>
     /// Fixed Window Algorithm
     /// </summary>
-    public class FixedWindowAlgorithm<TRequest> : IRateLimitAlgorithm<TRequest>
+    public class FixedWindowAlgorithm<TRequest> : UpdatableRateLimitAlgorithm<TRequest>
     {
-        IEnumerable<FixedWindowRateLimitRule<TRequest>> _rules;
-
         /// <summary>
         /// create a new instance
         /// </summary>
         /// <param name="rules">rate limit rules</param>
-        public FixedWindowAlgorithm(IEnumerable<FixedWindowRateLimitRule<TRequest>> rules)
+        /// <param name="updatable">if rules can be updated</param>
+        public FixedWindowAlgorithm(IEnumerable<FixedWindowRateLimitRule<TRequest>> rules, bool updatable = false)
+        : base(rules, updatable)
         {
-            _rules = rules;
         }
 
         /// <summary>
-        /// check a request for rate limit
+        /// check single rule for target
         /// </summary>
-        /// <param name="request">a request</param>
-        /// <param name="storage">a instance of IRateLimitStorage</param>
-        /// <returns>the list of check result</returns>
-        public List<RateLimitCheckResult<TRequest>> Check(TRequest request, IRateLimitStorage storage)
+        /// <param name="target"></param>
+        /// <param name="storage"></param>
+        /// <param name="rule"></param>
+        /// <returns></returns>
+        protected override bool CheckSingleRule(string target, IRateLimitStorage storage, RateLimitRule<TRequest> rule)
         {
-            List<RateLimitCheckResult<TRequest>> results = new List<RateLimitCheckResult<TRequest>>();
-
-            foreach (var rule in _rules)
-            {
-                if (rule.CheckRuleMatching(request))
-                {
-                    var target = rule.ExtractTarget(request);
-                    if (string.IsNullOrWhiteSpace(target))
-                    {
-                        throw new NotSupportedException("不支持Target为空");
-                    }
-
-                    bool result = CheckSingleRule(target, storage, rule);
-                    results.Add(new RateLimitCheckResult<TRequest>()
-                    {
-                        Rule = rule,
-                        Target=target,
-                        IsLimit = result
-                    });
-                }
-            }
-
-            return results;
+            var currentRule = rule as FixedWindowRateLimitRule<TRequest>;
+            var countAmount = 1;
+            var expireTimeSpan = currentRule.StatWindow;
+            var result = storage.FixedWindowIncrement(target, countAmount, expireTimeSpan, currentRule.LimitNumber, rule.LockSeconds);
+            return result.Item1;
         }
 
-        private bool CheckSingleRule(string target, IRateLimitStorage storage, FixedWindowRateLimitRule<TRequest> rule)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="target"></param>
+        /// <param name="storage"></param>
+        /// <param name="rule"></param>
+        /// <returns></returns>
+        protected override async Task<bool> CheckSingleRuleAsync(string target, IRateLimitStorage storage, RateLimitRule<TRequest> rule)
         {
-            if (storage.CheckLocked(target))
-            {
-                return true;
-            }
-
+            var currentRule = rule as FixedWindowRateLimitRule<TRequest>;
             var countAmount = 1;
-            var expireTimeSpan = rule.StatWindow;
-            var totalAmount = storage.SimpleIncrement(target, countAmount, expireTimeSpan);
-            //Debug.WriteLine("totalAmount:" + totalAmount);
-
-            if (totalAmount > rule.LimitNumber)
-            {
-                if (rule.LockSeconds > 0)
-                {
-                    storage.TryLock(target, TimeSpan.FromSeconds(rule.LockSeconds));
-                }
-
-                return true;
-            }
-
-            return false;
+            var expireTimeSpan = currentRule.StatWindow;
+            var result = await storage.FixedWindowIncrementAsync(target, countAmount, expireTimeSpan, currentRule.LimitNumber, rule.LockSeconds);
+            return result.Item1;
         }
     }
 }
