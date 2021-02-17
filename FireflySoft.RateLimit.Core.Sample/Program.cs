@@ -19,9 +19,9 @@ namespace FireflySoft.RateLimit.Core.Sample
                 {
                     new FixedWindowRateLimitRule<SimulationRequest>()
                     {
-                        Id=Guid.NewGuid().ToString(),
+                        Id="1",
                         StatWindow=TimeSpan.FromSeconds(1),
-                        LimitNumber=50,
+                        LimitNumber=30,
                         ExtractTarget = (request) =>
                         {
                             return request.RequestResource;
@@ -33,8 +33,10 @@ namespace FireflySoft.RateLimit.Core.Sample
                     }
                 };
 
+            var algorithm = new FixedWindowAlgorithm<SimulationRequest>(fixedWindowRules, true);
+
             var processor = new RateLimitProcessor<SimulationRequest>.Builder()
-                .WithAlgorithm(new FixedWindowAlgorithm<SimulationRequest>(fixedWindowRules))
+                .WithAlgorithm(algorithm)
                 .WithStorage(storage)
                 .WithError(new RateLimitError()
                 {
@@ -42,7 +44,7 @@ namespace FireflySoft.RateLimit.Core.Sample
                 })
                 .Build();
 
-            for (int i = 0; i < 60; i++)
+            for (int i = 0; i < 80; i++)
             {
                 var result = processor.Check(new SimulationRequest()
                 {
@@ -53,11 +55,49 @@ namespace FireflySoft.RateLimit.Core.Sample
                         }
                 });
 
-                Console.WriteLine($"[{i}]check result:{result.IsLimit}.");
-                if (result.IsLimit)
+                if (i == 40)
                 {
-                    Console.WriteLine($"error code: {result.Target}, {result.Error.Code}");
+                    algorithm.UpdateRules(new FixedWindowRateLimitRule<SimulationRequest>[]
+                    {
+                        new FixedWindowRateLimitRule<SimulationRequest>()
+                        {
+                            Id="1",
+                            StatWindow=TimeSpan.FromSeconds(1),
+                            LimitNumber=60,
+                            ExtractTarget = (request) =>
+                            {
+                                return request.RequestResource;
+                            },
+                            CheckRuleMatching = (request) =>
+                            {
+                                return true;
+                            },
+                        }
+                    });
                 }
+
+                if (i == 60)
+                {
+                    algorithm.UpdateRules(new FixedWindowRateLimitRule<SimulationRequest>[]
+                    {
+                        new FixedWindowRateLimitRule<SimulationRequest>()
+                        {
+                            Id="1",
+                            StatWindow=TimeSpan.FromSeconds(1),
+                            LimitNumber=40,
+                            ExtractTarget = (request) =>
+                            {
+                                return request.RequestResource;
+                            },
+                            CheckRuleMatching = (request) =>
+                            {
+                                return true;
+                            },
+                        }
+                    });
+                }
+
+                Console.WriteLine($"[{i}]check result:{result.IsLimit}.");
             }
 
             Console.Read();

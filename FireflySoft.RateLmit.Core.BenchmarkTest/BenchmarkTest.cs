@@ -23,15 +23,15 @@ namespace FireflySoft.RateLmit.Core.BenchmarkTest
         }
 
         [Benchmark]
-        [Arguments("fixedWindow", "memory", 1000)]
-        [Arguments("slidingWindow", "memory", 1000)]
-        [Arguments("leakyBucket", "memory", 1000)]
-        [Arguments("tokenBucket", "memory", 1000)]
-        [Arguments("fixedWindow", "redis", 1000)]
-        [Arguments("slidingWindow", "redis", 1000)]
-        [Arguments("leakyBucket", "redis", 1000)]
-        [Arguments("tokenBucket", "redis", 1000)]
-        public void Test(string algorithm, string storageType, int limitNumber)
+        [Arguments("fixedWindow", "memory", 10000, 4)]
+        [Arguments("slidingWindow", "memory", 10000, 4)]
+        [Arguments("leakyBucket", "memory", 10000, 4)]
+        [Arguments("tokenBucket", "memory", 10000, 4)]
+        [Arguments("fixedWindow", "redis", 10000, 8)]
+        [Arguments("slidingWindow", "redis", 10000, 8)]
+        [Arguments("leakyBucket", "redis", 10000, 8)]
+        [Arguments("tokenBucket", "redis", 10000, 8)]
+        public void Test(string algorithm, string storageType, int limitNumber, int taskNumber)
         {
             RateLimitProcessor<SimulationRequest> processor;
             switch (algorithm)
@@ -50,34 +50,44 @@ namespace FireflySoft.RateLmit.Core.BenchmarkTest
                     break;
             }
 
-            for (int i = 0; i < limitNumber; i++)
+            var loopNumber = limitNumber / taskNumber;
+            Task[] tasks = new Task[taskNumber];
+            for (int k = 0; k < taskNumber; k++)
             {
-                var result = processor.Check(new SimulationRequest()
+                tasks[k] = Task.Run(() =>
                 {
-                    RequestId = Guid.NewGuid().ToString(),
-                    RequestResource = "home",
-                    Parameters = new Dictionary<string, string>() {
+                    for (int i = 0; i < loopNumber; i++)
+                    {
+                        var result = processor.Check(new SimulationRequest()
+                        {
+                            RequestId = Guid.NewGuid().ToString(),
+                            RequestResource = "home",
+                            Parameters = new Dictionary<string, string>() {
                                 { "from","sample" },
                         }
-                });
+                        });
 
-                if (result.IsLimit)
-                {
-                    Console.WriteLine($"error code: {result.Target}, {result.Error.Code}");
-                }
+                        if (result.IsLimit)
+                        {
+                            Console.WriteLine($"error code: {result.Target}, {result.Error.Code}");
+                        }
+                    }
+                });
             }
+
+            Task.WaitAll(tasks);
         }
 
         // [Benchmark]
-        // [Arguments("fixedWindow", "memory", 1000)]
-        // [Arguments("slidingWindow", "memory", 1000)]
-        // [Arguments("leakyBucket", "memory", 1000)]
-        // [Arguments("tokenBucket", "memory", 1000)]
-        // [Arguments("fixedWindow", "redis", 1000)]
-        // [Arguments("slidingWindow", "redis", 1000)]
-        // [Arguments("leakyBucket", "redis", 1000)]
-        // [Arguments("tokenBucket", "redis", 1000)]
-        public async Task TestAsync(string algorithm, string storageType, int limitNumber)
+        // [Arguments("fixedWindow", "memory", 10000, 4)]
+        // [Arguments("slidingWindow", "memory", 10000, 4)]
+        // [Arguments("leakyBucket", "memory", 10000, 4)]
+        // [Arguments("tokenBucket", "memory", 10000, 4)]
+        // [Arguments("fixedWindow", "redis", 10000, 8)]
+        // [Arguments("slidingWindow", "redis", 10000, 8)]
+        // [Arguments("leakyBucket", "redis", 10000, 8)]
+        // [Arguments("tokenBucket", "redis", 10000, 8)]
+        public async Task TestAsync(string algorithm, string storageType, int limitNumber, int taskNumber)
         {
             RateLimitProcessor<SimulationRequest> processor;
             switch (algorithm)
@@ -96,24 +106,34 @@ namespace FireflySoft.RateLmit.Core.BenchmarkTest
                     break;
             }
 
-            for (int i = 0; i < limitNumber; i++)
+            var loopNumber = limitNumber / taskNumber;
+            Task[] tasks = new Task[taskNumber];
+            for (int k = 0; k < taskNumber; k++)
             {
-                var result = await processor.CheckAsync(new SimulationRequest()
+                tasks[k] = Task.Run(async () =>
                 {
-                    RequestId = Guid.NewGuid().ToString(),
-                    RequestResource = "home",
-                    Parameters = new Dictionary<string, string>() {
+                    for (int i = 0; i < loopNumber; i++)
+                    {
+                        var result = await processor.CheckAsync(new SimulationRequest()
+                        {
+                            RequestId = Guid.NewGuid().ToString(),
+                            RequestResource = "home",
+                            Parameters = new Dictionary<string, string>() {
                                 { "from","sample" },
                         }
-                });
+                        });
 
-                if (result.IsLimit)
-                {
-                    Console.WriteLine($"error code: {result.Target}, {result.Error.Code}");
-                }
+                        if (result.IsLimit)
+                        {
+                            Console.WriteLine($"error code: {result.Target}, {result.Error.Code}");
+                        }
+                    }
+                });
             }
+
+            await Task.WhenAll(tasks);
         }
-        
+
         private RateLimitProcessor<SimulationRequest> GetTokenBucketProcessor(string storageType, int limitNumber)
         {
             IRateLimitStorage storage = memoryStorage;

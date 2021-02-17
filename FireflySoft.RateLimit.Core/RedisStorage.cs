@@ -46,16 +46,26 @@ namespace FireflySoft.RateLimit.Core
                 local amount=tonumber(ARGV[1])
                 local limit_number=tonumber(ARGV[3])
                 local lock_seconds=tonumber(ARGV[4])
+                local check_result=false
                 local current
-                current = redis.call('incrby',KEYS[1],amount)
-                current = tonumber(current)
-                if current == amount then
-                    redis.call('PEXPIRE',KEYS[1], ARGV[2])
+                current = redis.call('get',KEYS[1])
+                if current~=false then
+                    current = tonumber(current)
+                    if current>=limit_number then
+                        check_result=true
+                    else
+                        redis.call('incrby',KEYS[1],amount)
+                    end
+                else
+                    redis.call('set',KEYS[1],amount,'PX',ARGV[2])
+                    current=amount
                 end
                 ret[2]=current
-                if (lock_seconds>0 and current > limit_number) then
-                    redis.call('set',lock_key,'1','EX',lock_seconds,'NX')
+                if check_result then
                     ret[1]=1
+                    if lock_seconds>0 then
+                        redis.call('set',lock_key,'1','EX',lock_seconds,'NX')
+                    end
                 end
                 return ret");
 
@@ -123,8 +133,10 @@ namespace FireflySoft.RateLimit.Core
                 end
 
                 ret[2]=amount+periods_amount
-                if (lock_seconds>0 and ret[2] > limit_number) then
-                    redis.call('set',lock_key,'1','EX',lock_seconds,'NX')
+                if ret[2] > limit_number then
+                    if lock_seconds>0 then 
+                        redis.call('set',lock_key,'1','EX',lock_seconds,'NX')
+                    end
                     ret[1]=1
                     return ret
                 end
@@ -190,7 +202,9 @@ namespace FireflySoft.RateLimit.Core
                 ret[2]=current_value
                 if(current_value>capacity)
                 then
-                    redis.call('set',lock_key,'1','EX',lock_seconds,'NX')
+                    if lock_seconds>0 then
+                        redis.call('set',lock_key,'1','EX',lock_seconds,'NX')
+                    end
                     ret[1]=1
                     return ret
                 end
@@ -254,7 +268,9 @@ namespace FireflySoft.RateLimit.Core
 
                 if(bucket_amount<0)
                 then
-                    redis.call('set',lock_key,'1','EX',lock_seconds,'NX')
+                    if lock_seconds>0 then
+                        redis.call('set',lock_key,'1','EX',lock_seconds,'NX')
+                    end
                     ret[1]=1
                     return ret
                 end
