@@ -43,19 +43,24 @@ namespace FireflySoft.RateLimit.Core
                 return new Tuple<bool, long>(true, -1);
             }
 
-            long count = 0;
+            Tuple<bool, long> incrementResult;
             lock (target)
             {
-                count = SimpleIncrement(target, amount, statWindow);
+                incrementResult = SimpleIncrement(target, amount, statWindow, limitNumber);
             }
 
-            if (limitNumber > 0 && count > limitNumber)
+            var checkResult = false;
+            if (incrementResult.Item1)
             {
-                TryLock(target, TimeSpan.FromSeconds(lockSeconds));
-                return new Tuple<bool, long>(true, count);
+                checkResult = true;
+                if (lockSeconds > 0)
+                {
+                    TryLock(target, TimeSpan.FromSeconds(lockSeconds));
+                    return new Tuple<bool, long>(true, incrementResult.Item2);
+                }
             }
 
-            return new Tuple<bool, long>(false, count);
+            return new Tuple<bool, long>(checkResult, incrementResult.Item2);
         }
 
         /// <summary>
@@ -112,7 +117,10 @@ namespace FireflySoft.RateLimit.Core
 
                 if (limitNumber > 0 && totalAmount > limitNumber)
                 {
-                    TryLock(target, TimeSpan.FromSeconds(lockSeconds));
+                    if (lockSeconds > 0)
+                    {
+                        TryLock(target, TimeSpan.FromSeconds(lockSeconds));
+                    }
                     return new Tuple<bool, long>(true, totalAmount);
                 }
 
@@ -193,7 +201,10 @@ namespace FireflySoft.RateLimit.Core
 
                 if (newCount > capacity)
                 {
-                    TryLock(target, TimeSpan.FromSeconds(lockSeconds));
+                    if (lockSeconds > 0)
+                    {
+                        TryLock(target, TimeSpan.FromSeconds(lockSeconds));
+                    }
                     return new Tuple<bool, long>(true, newCount);
                 }
 
@@ -271,7 +282,11 @@ namespace FireflySoft.RateLimit.Core
 
                 if (bucketAmount < 0)
                 {
-                    TryLock(target, TimeSpan.FromSeconds(lockSeconds));
+                    if (lockSeconds > 0)
+                    {
+                        TryLock(target, TimeSpan.FromSeconds(lockSeconds));
+                    }
+                    
                     return new Tuple<bool, long>(true, bucketAmount);
                 }
 
@@ -358,14 +373,18 @@ namespace FireflySoft.RateLimit.Core
             return 0;
         }
 
-        private long SimpleIncrement(string target, long amount, TimeSpan expireTimeSpan)
+        private Tuple<bool, long> SimpleIncrement(string target, long amount, TimeSpan expireTimeSpan, int checkNumber = 0)
         {
             var result = _cache.GetCacheItem(target);
             if (result != null)
             {
                 var countValue = result.Value as CountValue;
+                if (checkNumber > 0 && countValue.Value >= checkNumber)
+                {
+                    return Tuple.Create(true, countValue.Value);
+                }
                 countValue.Value += amount;
-                return countValue.Value;
+                return Tuple.Create(false, countValue.Value);
             }
 
             DateTimeOffset expireTime;
@@ -379,7 +398,7 @@ namespace FireflySoft.RateLimit.Core
             }
 
             _cache.Add(target, new CountValue(amount), expireTime);
-            return amount;
+            return Tuple.Create(false, amount);
         }
 
         /// <summary>

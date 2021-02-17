@@ -6,6 +6,7 @@
     * [ASP.NET Core](#aspnet-core)
     * [ASP.NET](#aspnet)
     * [Others](#others)
+* [Todo List](#todo-list)
 
 ## Introduction
 A rate limit library, support .NET Framework and .NET core.
@@ -28,7 +29,7 @@ Code coverage:
 
 | Module                     | Line   | Branch | Method |
 |---|---|---|---|
-| FireflySoft.RateLimit.Core | 89.96% | 78.39% | 95.78% |
+| FireflySoft.RateLimit.Core | 90.53% | 80.23% | 95.78% |
 
 ## Projects
 |Project|Descriptioin|
@@ -88,7 +89,7 @@ public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
                 ExtractTarget = context =>
                 {
                     // for all path, you can customize it
-                    return "rule1-" + context.Request.Path.Value;
+                    return context.Request.Path.Value;
                 },
                 CheckRuleMatching = context =>
                 {
@@ -140,7 +141,7 @@ protected void Application_Start()
                 ExtractTarget = context =>
                 {
                     // for all path, you can customize it
-                    return "rule1" + context.RequestUri.AbsolutePath;
+                    return context.RequestUri.AbsolutePath;
                 },
                 CheckRuleMatching = context =>
                 {
@@ -221,3 +222,9 @@ var result = processor.Check(new SimulationRequest()
 ```
 
 SimulationRequest is a custom request that you can modify to any type.
+
+### Todo List
+
+* Add the current statistical value to the return value of Check method of RateLimitProcessor.
+* Add more unit tests.
+* Remove IRatelimitStorage and transfer related methods to corresponding algorithm classes.
