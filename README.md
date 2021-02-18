@@ -50,19 +50,19 @@ Code coverage:
 Package Manager:
 
 ```shell
-Install-Package FireflySoft.RateLimit.AspNetCore -Version 1.0.0
+Install-Package FireflySoft.RateLimit.AspNetCore -Version 1.2.0
 ```
 
 Or .NET CLI:
 
 ```shell
-dotnet add package FireflySoft.RateLimit.AspNetCore --version 1.0.0
+dotnet add package FireflySoft.RateLimit.AspNetCore --version 1.2.0
 ```
 
 Or Project file：
 ```xml
 <ItemGroup>
-<PackageReference Include="FireflySoft.RateLimit.AspNetCore" Version="1.0.0" />
+<PackageReference Include="FireflySoft.RateLimit.AspNetCore" Version="1.2.0" />
 </ItemGroup>
 ```
 
@@ -114,7 +114,7 @@ public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
 Package Manager:
 
 ```shell
-Install-Package FireflySoft.RateLimit.AspNet -Version 1.0.0
+Install-Package FireflySoft.RateLimit.AspNet -Version 1.2.0
 ```
 
 ***2、Register MessageHandler***
@@ -167,13 +167,13 @@ protected void Application_Start()
 Package Manager:
 
 ```shell
-Install-Package FireflySoft.RateLimit.Core -Version 1.0.0
+Install-Package FireflySoft.RateLimit.Core -Version 1.2.0
 ```
 
 Or .NET CLI:
 
 ```shell
-dotnet add package FireflySoft.RateLimit.Core --version 1.0.0
+dotnet add package FireflySoft.RateLimit.Core --version 1.2.0
 ```
 
 **2、Use RateLimitProcessor**
