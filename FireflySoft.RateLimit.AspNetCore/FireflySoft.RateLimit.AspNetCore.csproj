@@ -4,10 +4,10 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <OutputType>Library</OutputType>
     <PackageId>FireflySoft.RateLimit.AspNetCore</PackageId>
-    <Version>1.0.1</Version>
+    <Version>1.2.0</Version>
     <Authors>bossma</Authors>
     <PackageProjectUrl>https://github.com/bosima/FireflySoft.RateLimit</PackageProjectUrl>
-    <PackageReleaseNotes>change license.</PackageReleaseNotes>
+    <PackageReleaseNotes>upgrade reference sdk.</PackageReleaseNotes>
     <PackageTags>ASP.NET Core;Rate Limit;Fixed Window;Sliding Window;Leaky Bucket;Token Bucket</PackageTags>
     <Description>
       A rate limit library for ASP.NET Core.
@@ -16,7 +16,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <IsPackable>true</IsPackable>
-    <AssemblyVersion>1.0.1.0</AssemblyVersion>
+    <AssemblyVersion>1.2.0.0</AssemblyVersion>
   </PropertyGroup>
   
   <ItemGroup>
