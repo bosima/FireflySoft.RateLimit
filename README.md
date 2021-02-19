@@ -225,6 +225,7 @@ SimulationRequest is a custom request that you can modify to any type.
 
 ### Todo List
 
+* Add Time start type for rules: indicates whether the time starts from the current time or the start time of the natural period
 * Add the current statistical value to the return value of Check method of RateLimitProcessor.
 * Add more unit tests.
 * Remove IRatelimitStorage and transfer related methods to corresponding algorithm classes.
