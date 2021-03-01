@@ -8,12 +8,12 @@ namespace FireflySoft.RateLimit.Core
     public abstract class RateLimitRule<TRequest>
     {
         /// <summary>
-        /// identity
+        /// The identity of the rule, required and cannot be duplicated within the storage currently in use.
         /// </summary>
         public string Id { get; set; }
 
         /// <summary>
-        /// name
+        /// The name of the rule.
         /// </summary>
         public string Name { get; set; }
 
@@ -21,6 +21,11 @@ namespace FireflySoft.RateLimit.Core
         /// The number of seconds locked after triggering rate limiting. 0 means not locked
         /// </summary>
         public int LockSeconds { get; set; }
+
+        /// <summary>
+        /// The type of statistics start time
+        /// </summary>
+        public StartTimeType StartTimeType { get; set; }
 
         /// <summary>
         /// Extract the rate limit target from the instance of T, such as a value in HTTP Header. A fixed value can be returned to restrict the access of all users.

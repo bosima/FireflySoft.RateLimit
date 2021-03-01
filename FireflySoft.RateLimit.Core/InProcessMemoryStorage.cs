@@ -31,11 +31,12 @@ namespace FireflySoft.RateLimit.Core
         /// </summary>
         /// <param name="target">The target</param>
         /// <param name="amount">amount of increase</param>
-        /// <param name="statWindow">The expiration time is set when the target is created</param>
+        /// <param name="statWindow">Statistical time window</param>
+        /// <param name="startTimeType">The type of starting time of statistical time period</param>
         /// <param name="limitNumber">The number of rate limit</param>
         /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
         /// <returns>amount of requests</returns>
-        public Tuple<bool, long> FixedWindowIncrement(string target, long amount, TimeSpan statWindow, int limitNumber, int lockSeconds)
+        public Tuple<bool, long> FixedWindowIncrement(string target, long amount, TimeSpan statWindow, StartTimeType startTimeType, int limitNumber, int lockSeconds)
         {
             bool locked = CheckLocked(target);
             if (locked)
@@ -46,7 +47,7 @@ namespace FireflySoft.RateLimit.Core
             Tuple<bool, long> incrementResult;
             lock (target)
             {
-                incrementResult = SimpleIncrement(target, amount, statWindow, limitNumber);
+                incrementResult = SimpleIncrement(target, amount, statWindow, startTimeType, limitNumber);
             }
 
             var checkResult = false;
@@ -68,13 +69,14 @@ namespace FireflySoft.RateLimit.Core
         /// </summary>
         /// <param name="target">The target</param>
         /// <param name="amount">amount of increase</param>
-        /// <param name="statWindow">The expiration time is set when the target is created</param>
+        /// <param name="statWindow">Statistical time window</param>
+        /// <param name="startTimeType">The type of starting time of statistical time period</param>
         /// <param name="limitNumber">The number of rate limit</param>
         /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
         /// <returns>amount of requests</returns>
-        public async Task<Tuple<bool, long>> FixedWindowIncrementAsync(string target, long amount, TimeSpan statWindow, int limitNumber, int lockSeconds)
+        public async Task<Tuple<bool, long>> FixedWindowIncrementAsync(string target, long amount, TimeSpan statWindow, StartTimeType startTimeType, int limitNumber, int lockSeconds)
         {
-            return await Task.FromResult(FixedWindowIncrement(target, amount, statWindow, limitNumber, lockSeconds));
+            return await Task.FromResult(FixedWindowIncrement(target, amount, statWindow, startTimeType, limitNumber, lockSeconds));
         }
 
         /// <summary>
@@ -286,7 +288,7 @@ namespace FireflySoft.RateLimit.Core
                     {
                         TryLock(target, TimeSpan.FromSeconds(lockSeconds));
                     }
-                    
+
                     return new Tuple<bool, long>(true, bucketAmount);
                 }
 
@@ -373,7 +375,7 @@ namespace FireflySoft.RateLimit.Core
             return 0;
         }
 
-        private Tuple<bool, long> SimpleIncrement(string target, long amount, TimeSpan expireTimeSpan, int checkNumber = 0)
+        private Tuple<bool, long> SimpleIncrement(string target, long amount, TimeSpan statWindow, StartTimeType startTimeType = StartTimeType.FromCurrent, int checkNumber = 0)
         {
             var result = _cache.GetCacheItem(target);
             if (result != null)
@@ -388,17 +390,50 @@ namespace FireflySoft.RateLimit.Core
             }
 
             DateTimeOffset expireTime;
-            if (expireTimeSpan == TimeSpan.Zero)
+            if (statWindow == TimeSpan.Zero)
             {
                 expireTime = DateTimeOffset.MaxValue;
             }
             else
             {
-                expireTime = DateTimeOffset.Now.Add(expireTimeSpan);
+                expireTime = GetExpireAtTime(statWindow, startTimeType);
             }
 
             _cache.Add(target, new CountValue(amount), expireTime);
             return Tuple.Create(false, amount);
+        }
+
+        private static DateTimeOffset GetExpireAtTime(TimeSpan statWindow, StartTimeType startTimeType)
+        {
+            DateTimeOffset now = DateTimeOffset.Now;
+            DateTimeOffset startTime = now;
+            DateTimeOffset expireTime = startTime.Add(statWindow);
+
+            if (startTimeType == StartTimeType.FromNaturalPeriodBeign)
+            {
+                if (statWindow.Days > 0)
+                {
+                    startTime = new DateTimeOffset(now.Year, now.Month, now.Day, 0, 0, 0, TimeSpan.FromHours(8));
+                    expireTime = startTime.AddDays(statWindow.Days).AddMilliseconds(-1);
+                }
+                else if (statWindow.Hours > 0)
+                {
+                    startTime = new DateTimeOffset(now.Year, now.Month, now.Day, now.Hour, 0, 0, TimeSpan.FromHours(8));
+                    expireTime = startTime.AddHours(statWindow.Hours).AddMilliseconds(-1);
+                }
+                else if (statWindow.Minutes > 0)
+                {
+                    startTime = new DateTimeOffset(now.Year, now.Month, now.Day, now.Hour, now.Minute, 0, TimeSpan.FromHours(8));
+                    expireTime = startTime.AddMinutes(statWindow.Minutes).AddMilliseconds(-1);
+                }
+                else if (statWindow.Seconds > 0)
+                {
+                    startTime = new DateTimeOffset(now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second, TimeSpan.FromHours(8));
+                    expireTime = startTime.AddSeconds(statWindow.Seconds).AddMilliseconds(-1);
+                }
+            }
+
+            return expireTime;
         }
 
         /// <summary>

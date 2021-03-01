@@ -288,15 +288,17 @@ namespace FireflySoft.RateLimit.Core
         /// </summary>
         /// <param name="target">The target</param>
         /// <param name="amount">amount of increase</param>
-        /// <param name="expireTimeSpan">The expiration time is set when the target is created</param>
+        /// <param name="statWindow">Statistical time window</param>
+        /// <param name="startTimeType">The type of starting time of statistical time period</param>
         /// <param name="limitNumber">The number of rate limit</param>
         /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
         /// <returns>amount of requests</returns>
-        public Tuple<bool, long> FixedWindowIncrement(string target, long amount, TimeSpan expireTimeSpan, int limitNumber, int lockSeconds)
+        public Tuple<bool, long> FixedWindowIncrement(string target, long amount, TimeSpan statWindow, StartTimeType startTimeType, int limitNumber, int lockSeconds)
         {
+            long expireTime = GetExpireTime(statWindow, startTimeType);
             var ret = (long[])EvaluateScript(_fixedWindowIncrementLuaScript,
                 new RedisKey[] { target },
-                new RedisValue[] { amount, (long)expireTimeSpan.TotalMilliseconds, limitNumber, lockSeconds });
+                new RedisValue[] { amount, expireTime, limitNumber, lockSeconds });
 
             return new Tuple<bool, long>(ret[0] == 0 ? false : true, ret[1]);
         }
@@ -306,15 +308,17 @@ namespace FireflySoft.RateLimit.Core
         /// </summary>
         /// <param name="target">The target</param>
         /// <param name="amount">amount of increase</param>
-        /// <param name="expireTimeSpan">The expiration time is set when the target is created</param>
+        /// <param name="statWindow">Statistical time window</param>
+        /// <param name="startTimeType">The type of starting time of statistical time period</param>
         /// <param name="limitNumber">The number of rate limit</param>
         /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
         /// <returns>amount of requests</returns>
-        public async Task<Tuple<bool, long>> FixedWindowIncrementAsync(string target, long amount, TimeSpan expireTimeSpan, int limitNumber, int lockSeconds)
+        public async Task<Tuple<bool, long>> FixedWindowIncrementAsync(string target, long amount, TimeSpan statWindow, StartTimeType startTimeType, int limitNumber, int lockSeconds)
         {
+            long expireTime = await GetExpireTimeAsync(statWindow, startTimeType);
             var ret = (long[])await EvaluateScriptAsync(_fixedWindowIncrementLuaScript,
                 new RedisKey[] { target },
-                new RedisValue[] { amount, (long)expireTimeSpan.TotalMilliseconds, limitNumber, lockSeconds });
+                new RedisValue[] { amount, expireTime, limitNumber, lockSeconds });
             return new Tuple<bool, long>(ret[0] == 0 ? false : true, ret[1]);
         }
 
@@ -507,6 +511,62 @@ namespace FireflySoft.RateLimit.Core
             byte[] sha1 = luaScript.Load();
             IDatabase dataBase = _redisClient.GetDatabase();
             return dataBase.ScriptEvaluate(sha1, keys, values);
+        }
+
+        private long GetExpireTime(TimeSpan statWindow, StartTimeType startTimeType)
+        {
+            if (startTimeType == StartTimeType.FromNaturalPeriodBeign)
+            {
+                long nowUnixTs = GetCurrentTime();
+                return GetExpireTime(statWindow, nowUnixTs);
+            }
+
+            return (long)statWindow.TotalMilliseconds;
+        }
+
+        private async Task<long> GetExpireTimeAsync(TimeSpan statWindow, StartTimeType startTimeType)
+        {
+            if (startTimeType == StartTimeType.FromNaturalPeriodBeign)
+            {
+                long nowUnixTs = await GetCurrentTimeAsync();
+                return GetExpireTime(statWindow, nowUnixTs);
+            }
+
+            return (long)statWindow.TotalMilliseconds;
+        }
+
+        private static long GetExpireTime(TimeSpan statWindow, long nowUnixTs)
+        {
+            DateTimeOffset now = DateTimeOffset.FromUnixTimeMilliseconds(nowUnixTs);
+            DateTimeOffset endTime;
+            DateTimeOffset startTime;
+
+            if (statWindow.Days > 0)
+            {
+                startTime = new DateTimeOffset(now.Year, now.Month, now.Day, 0, 0, 0, TimeSpan.FromHours(8));
+                endTime = startTime.AddDays(statWindow.Days).AddMilliseconds(-1);
+            }
+            else if (statWindow.Hours > 0)
+            {
+                startTime = new DateTimeOffset(now.Year, now.Month, now.Day, now.Hour, 0, 0, TimeSpan.FromHours(8));
+                endTime = startTime.AddHours(statWindow.Hours).AddMilliseconds(-1);
+            }
+            else if (statWindow.Minutes > 0)
+            {
+                startTime = new DateTimeOffset(now.Year, now.Month, now.Day, now.Hour, now.Minute, 0, TimeSpan.FromHours(8));
+                endTime = startTime.AddMinutes(statWindow.Minutes).AddMilliseconds(-1);
+            }
+            else if (statWindow.Seconds > 0)
+            {
+                startTime = new DateTimeOffset(now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second, TimeSpan.FromHours(8));
+                endTime = startTime.AddSeconds(statWindow.Seconds).AddMilliseconds(-1);
+            }
+            else
+            {
+                return (long)statWindow.TotalMilliseconds;
+            }
+
+            return (long)endTime.Subtract(startTime).TotalMilliseconds;
         }
 
         private class RedisLuaScript

@@ -14,22 +14,24 @@ namespace FireflySoft.RateLimit.Core
         /// </summary>
         /// <param name="target">The target</param>
         /// <param name="amount">Amount of per increase</param>
-        /// <param name="expireTimeSpan">The expiration time is set when the target is created</param>
+        /// <param name="statWindow">Statistical time window</param>
+        /// <param name="startTimeType">The type of starting time of statistical time period</param>
         /// <param name="limitNumber">The number of rate limit</param>
         /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
         /// <returns>amount of requests</returns>
-        Tuple<bool, long> FixedWindowIncrement(string target, long amount, TimeSpan expireTimeSpan, int limitNumber, int lockSeconds);
+        Tuple<bool, long> FixedWindowIncrement(string target, long amount, TimeSpan statWindow, StartTimeType startTimeType, int limitNumber, int lockSeconds);
 
         /// <summary>
         /// Increase the count value of the rate limit target. When the target does not exist, create it first and increase the specified value, then set its expiration time.
         /// </summary>
         /// <param name="target">The target</param>
         /// <param name="amount">amount of increase</param>
-        /// <param name="expireTimeSpan">The expiration time is set when the target is created</param>
+        /// <param name="statWindow">Statistical time window</param>
+        /// <param name="startTimeType">The type of starting time of statistical time period</param>
         /// <param name="limitNumber">The number of rate limit</param>
         /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
         /// <returns>amount of requests</returns>
-        Task<Tuple<bool, long>> FixedWindowIncrementAsync(string target, long amount, TimeSpan expireTimeSpan, int limitNumber, int lockSeconds);
+        Task<Tuple<bool, long>> FixedWindowIncrementAsync(string target, long amount, TimeSpan statWindow, StartTimeType startTimeType, int limitNumber, int lockSeconds);
 
         /// <summary>
         /// Increase the count value of the rate limit target for sliding window algorithm.
