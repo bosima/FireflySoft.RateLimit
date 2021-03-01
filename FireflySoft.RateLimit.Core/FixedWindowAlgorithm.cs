@@ -34,8 +34,7 @@ namespace FireflySoft.RateLimit.Core
         {
             var currentRule = rule as FixedWindowRateLimitRule<TRequest>;
             var countAmount = 1;
-            var expireTimeSpan = currentRule.StatWindow;
-            var result = storage.FixedWindowIncrement(target, countAmount, expireTimeSpan, currentRule.LimitNumber, rule.LockSeconds);
+            var result = storage.FixedWindowIncrement(target, countAmount, currentRule.StatWindow, rule.StartTimeType, currentRule.LimitNumber, rule.LockSeconds);
             return result.Item1;
         }
 
@@ -50,8 +49,7 @@ namespace FireflySoft.RateLimit.Core
         {
             var currentRule = rule as FixedWindowRateLimitRule<TRequest>;
             var countAmount = 1;
-            var expireTimeSpan = currentRule.StatWindow;
-            var result = await storage.FixedWindowIncrementAsync(target, countAmount, expireTimeSpan, currentRule.LimitNumber, rule.LockSeconds);
+            var result = await storage.FixedWindowIncrementAsync(target, countAmount, currentRule.StatWindow, rule.StartTimeType, currentRule.LimitNumber, rule.LockSeconds);
             return result.Item1;
         }
     }
