@@ -31,8 +31,8 @@ namespace FireflySoft.RateLimit.Core
         protected override bool CheckSingleRule(string target, IRateLimitStorage storage, RateLimitRule<TRequest> rule)
         {
             var currentRule = rule as SlidingWindowRateLimitRule<TRequest>;
-            var result = storage.SlidingWindowIncrement(target, 1, currentRule.StatWindow, currentRule.StatPeriod, currentRule.PeriodNumber, currentRule.LimitNumber, currentRule.LockSeconds);
-            Debug.WriteLine("check result:" + result.Item1 + "," + result.Item2);
+            var result = storage.SlidingWindowIncrement(target, 1, currentRule.StatWindow, currentRule.StatPeriod, rule.StartTimeType, currentRule.PeriodNumber, currentRule.LimitNumber, currentRule.LockSeconds);
+            Debug.WriteLine($"check result:{result.Item1},{result.Item2},{DateTimeOffset.Now.ToUnixTimeMilliseconds()}");
             return result.Item1;
         }
 
@@ -46,8 +46,8 @@ namespace FireflySoft.RateLimit.Core
         protected override async Task<bool> CheckSingleRuleAsync(string target, IRateLimitStorage storage, RateLimitRule<TRequest> rule)
         {
             var currentRule = rule as SlidingWindowRateLimitRule<TRequest>;
-            var result = await storage.SlidingWindowIncrementAsync(target, 1, currentRule.StatWindow, currentRule.StatPeriod, currentRule.PeriodNumber, currentRule.LimitNumber, currentRule.LockSeconds);
-            Debug.WriteLine("check result:" + result.Item1 + "," + result.Item2);
+            var result = await storage.SlidingWindowIncrementAsync(target, 1, currentRule.StatWindow, currentRule.StatPeriod, rule.StartTimeType, currentRule.PeriodNumber, currentRule.LimitNumber, currentRule.LockSeconds);
+            Debug.WriteLine($"check result:{result.Item1},{result.Item2},{DateTimeOffset.Now.ToUnixTimeMilliseconds()}");
             return result.Item1;
         }
     }

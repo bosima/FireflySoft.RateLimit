@@ -15,15 +15,17 @@ namespace FireflySoft.RateLimit.Core
         /// </summary>
         /// <param name="request"></param>
         /// <param name="storage"></param>
+        /// <param name="timeProvider"></param>
         /// <returns></returns>
-        List<RateLimitCheckResult<TRequest>> Check(TRequest request, IRateLimitStorage storage);
+        List<RateLimitCheckResult<TRequest>> Check(TRequest request, IRateLimitStorage storage, ITimeProvider timeProvider);
 
         /// <summary>
         /// Check the request and return the rate limit result
         /// </summary>
         /// <param name="request"></param>
         /// <param name="storage"></param>
+        /// <param name="timeProvider"></param>
         /// <returns></returns>
-        Task<List<RateLimitCheckResult<TRequest>>> CheckAsync(TRequest request, IRateLimitStorage storage);
+        Task<List<RateLimitCheckResult<TRequest>>> CheckAsync(TRequest request, IRateLimitStorage storage, ITimeProvider timeProvider);
     }
 }
