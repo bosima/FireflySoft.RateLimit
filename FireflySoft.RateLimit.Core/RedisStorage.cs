@@ -17,6 +17,8 @@ namespace FireflySoft.RateLimit.Core
     {
         private readonly ConnectionMultiplexer _redisClient;
 
+        private ITimeProvider _timeProvider;
+
         private readonly RedisLuaScript _fixedWindowIncrementLuaScript;
 
         private readonly RedisLuaScript _slidingWindowIncrementLuaScript;
@@ -81,18 +83,19 @@ namespace FireflySoft.RateLimit.Core
                 ret[1]=0
                 local st_key=KEYS[1] .. '-st'
                 local amount=tonumber(ARGV[1])
-                local period_expire_ms=tonumber(ARGV[2])*2
+                local period_expire_ms=tonumber(ARGV[2])
                 local period_ms=tonumber(ARGV[3])
                 local period_number=tonumber(ARGV[4])
                 local current_time=tonumber(ARGV[5])
-                local limit_number=tonumber(ARGV[6])
-                local lock_seconds=tonumber(ARGV[7])
+                local cal_start_time=tonumber(ARGV[6])
+                local limit_number=tonumber(ARGV[7])
+                local lock_seconds=tonumber(ARGV[8])
                 local current_period
                 local current_period_key
                 local start_time=redis.call('get',st_key)
                 if(start_time==false)
                 then
-                    start_time=current_time
+                    start_time=cal_start_time
                     current_period=start_time+period_ms-1
                     current_period_key=KEYS[1] .. '-' .. current_period
                     redis.call('set',st_key,start_time)
@@ -166,12 +169,13 @@ namespace FireflySoft.RateLimit.Core
                 local outflow_unit=tonumber(ARGV[3])
                 local outflow_quantity_per_unit=tonumber(ARGV[4])
                 local current_time=tonumber(ARGV[5])
-                local lock_seconds=tonumber(ARGV[6])
+                local start_time=tonumber(ARGV[6])
+                local lock_seconds=tonumber(ARGV[7])
                 local last_time
                 last_time=redis.call('get',st_key)
                 if(last_time==false)
                 then
-                    redis.call('mset',KEYS[1],amount,st_key,current_time)
+                    redis.call('mset',KEYS[1],amount,st_key,start_time)
                     ret[2]=amount
                     return ret
                 end
@@ -232,13 +236,14 @@ namespace FireflySoft.RateLimit.Core
                 local inflow_unit=tonumber(ARGV[3])
                 local inflow_quantity_per_unit=tonumber(ARGV[4])
                 local current_time=tonumber(ARGV[5])
-                local lock_seconds=tonumber(ARGV[6])
+                local start_time=tonumber(ARGV[6])
+                local lock_seconds=tonumber(ARGV[7])
                 local bucket_amount=0
                 local last_time=redis.call('get',st_key)
                 if(last_time==false)
                 then
                     bucket_amount = capacity - amount;
-                    redis.call('mset',KEYS[1],bucket_amount,st_key,current_time)
+                    redis.call('mset',KEYS[1],bucket_amount,st_key,start_time)
                     ret[2]=bucket_amount
                     return ret
                 end
@@ -295,7 +300,14 @@ namespace FireflySoft.RateLimit.Core
         /// <returns>amount of requests</returns>
         public Tuple<bool, long> FixedWindowIncrement(string target, long amount, TimeSpan statWindow, StartTimeType startTimeType, int limitNumber, int lockSeconds)
         {
-            long expireTime = GetExpireTime(statWindow, startTimeType);
+            long expireTime = (long)statWindow.TotalMilliseconds;
+
+            if (startTimeType == StartTimeType.FromNaturalPeriodBeign)
+            {
+                DateTimeOffset now = GetCurrentUtcTime();
+                expireTime = GetExpireTimeFromNaturalPeriodBeign(statWindow, now);
+            }
+
             var ret = (long[])EvaluateScript(_fixedWindowIncrementLuaScript,
                 new RedisKey[] { target },
                 new RedisValue[] { amount, expireTime, limitNumber, lockSeconds });
@@ -315,177 +327,201 @@ namespace FireflySoft.RateLimit.Core
         /// <returns>amount of requests</returns>
         public async Task<Tuple<bool, long>> FixedWindowIncrementAsync(string target, long amount, TimeSpan statWindow, StartTimeType startTimeType, int limitNumber, int lockSeconds)
         {
-            long expireTime = await GetExpireTimeAsync(statWindow, startTimeType);
+            long expireTime = (long)statWindow.TotalMilliseconds;
+
+            if (startTimeType == StartTimeType.FromNaturalPeriodBeign)
+            {
+                DateTimeOffset now = await GetCurrentUtcTimeAsync().ConfigureAwait(false);
+                expireTime = GetExpireTimeFromNaturalPeriodBeign(statWindow, now);
+            }
+
             var ret = (long[])await EvaluateScriptAsync(_fixedWindowIncrementLuaScript,
                 new RedisKey[] { target },
-                new RedisValue[] { amount, expireTime, limitNumber, lockSeconds });
+                new RedisValue[] { amount, expireTime, limitNumber, lockSeconds }).ConfigureAwait(false);
             return new Tuple<bool, long>(ret[0] == 0 ? false : true, ret[1]);
         }
 
         /// <summary>
-        /// 
+        /// Increase the count value of the rate limit target for sliding window algorithm.
         /// </summary>
         /// <param name="target"></param>
         /// <param name="amount"></param>
         /// <param name="statWindow"></param>
         /// <param name="statPeriod"></param>
+        /// <param name="startTimeType">The type of starting time of statistical time period</param>
         /// <param name="periodNumber"></param>
         /// <param name="limitNumber">The number of rate limit</param>
         /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
         /// <returns></returns>
-        public Tuple<bool, long> SlidingWindowIncrement(string target, long amount, TimeSpan statWindow, TimeSpan statPeriod, int periodNumber, int limitNumber, int lockSeconds)
+        public Tuple<bool, long> SlidingWindowIncrement(string target, long amount, TimeSpan statWindow, TimeSpan statPeriod, StartTimeType startTimeType, int periodNumber, int limitNumber, int lockSeconds)
         {
-            var currentTime = GetCurrentTime();
+            var currentTime = GetCurrentUnixTimeMilliseconds();
+            var startTime = CalculateStartTime(statWindow, startTimeType, currentTime);
+            long expireMilliseconds = ((long)statWindow.TotalMilliseconds) * 2;
+            long periodMilliseconds = (long)statPeriod.TotalMilliseconds;
 
             var ret = (long[])EvaluateScript(_slidingWindowIncrementLuaScript,
                  new RedisKey[] { target },
-                 new RedisValue[] { amount, (long)statWindow.TotalMilliseconds, (long)statPeriod.TotalMilliseconds, periodNumber, currentTime, limitNumber, lockSeconds });
+                 new RedisValue[] { amount, expireMilliseconds, periodMilliseconds, periodNumber, currentTime, startTime, limitNumber, lockSeconds });
 
+            return new Tuple<bool, long>(ret[0] == 0 ? false : true, ret[1]);
+        }
+
+        /// <summary>
+        /// Increase the count value of the rate limit target for sliding window algorithm.
+        /// </summary>
+        /// <param name="target"></param>
+        /// <param name="amount"></param>
+        /// <param name="statWindow"></param>
+        /// <param name="statPeriod"></param>
+        /// <param name="startTimeType">The type of starting time of statistical time period</param>
+        /// <param name="periodNumber"></param>
+        /// <param name="limitNumber">The number of rate limit</param>
+        /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
+        /// <returns></returns>
+        public async Task<Tuple<bool, long>> SlidingWindowIncrementAsync(string target, long amount, TimeSpan statWindow, TimeSpan statPeriod, StartTimeType startTimeType, int periodNumber, int limitNumber, int lockSeconds)
+        {
+            var currentTime = await GetCurrentUnixTimeMillisecondsAsync();
+            var startTime = CalculateStartTime(statWindow, startTimeType, currentTime);
+            long expireMilliseconds = ((long)statWindow.TotalMilliseconds) * 2;
+            long periodMilliseconds = (long)statPeriod.TotalMilliseconds;
+
+            var ret = (long[])await EvaluateScriptAsync(_slidingWindowIncrementLuaScript,
+                 new RedisKey[] { target },
+                 new RedisValue[] { amount, expireMilliseconds, periodMilliseconds, periodNumber, currentTime, startTime, limitNumber, lockSeconds });
+
+            return new Tuple<bool, long>(ret[0] == 0 ? false : true, ret[1]);
+        }
+
+        /// <summary>
+        /// Increase the count value of the rate limit target for leaky bucket algorithm.
+        /// </summary>
+        /// <param name="target">The target</param>
+        /// <param name="amount">amount of increase</param>
+        /// <param name="capacity">The capacity of leaky bucket</param>
+        /// <param name="outflowUnit">The time unit of outflow from the leaky bucket</param>
+        /// <param name="outflowQuantityPerUnit">The outflow quantity per unit time</param>
+        /// <param name="startTimeType">The type of starting time of 'outflowUnit'</param>
+        /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
+        /// <returns>Amount of request in the bucket</returns>
+        public Tuple<bool, long> LeakyBucketIncrement(string target, long amount, long capacity, int outflowUnit, int outflowQuantityPerUnit, StartTimeType startTimeType, int lockSeconds)
+        {
+            // can not call redis TIME command in script
+            var currentTime = GetCurrentUnixTimeMilliseconds();
+            var startTime = CalculateStartTime(TimeSpan.FromMilliseconds(outflowUnit), startTimeType, currentTime);
+            var ret = (long[])EvaluateScript(_leakyBucketIncrementLuaScript, new RedisKey[] { target },
+                new RedisValue[] { amount, capacity, outflowUnit, outflowQuantityPerUnit, currentTime, startTime, lockSeconds });
+            return new Tuple<bool, long>(ret[0] == 0 ? false : true, ret[1]);
+        }
+
+        /// <summary>
+        /// Increase the count value of the rate limit target for leaky bucket algorithm.
+        /// </summary>
+        /// <param name="target">The target</param>
+        /// <param name="amount">amount of increase</param>
+        /// <param name="capacity">The capacity of leaky bucket</param>
+        /// <param name="outflowUnit">The time unit of outflow from the leaky bucket</param>
+        /// <param name="outflowQuantityPerUnit">The outflow quantity per unit time</param>
+        /// <param name="startTimeType">The type of starting time of 'outflowUnit'</param>
+        /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
+        /// <returns>Amount of request in the bucket</returns>
+        public async Task<Tuple<bool, long>> LeakyBucketIncrementAsync(string target, long amount, long capacity, int outflowUnit, int outflowQuantityPerUnit, StartTimeType startTimeType, int lockSeconds)
+        {
+            // can not call redis TIME command in script
+            var currentTime = await GetCurrentUnixTimeMillisecondsAsync();
+            var startTime = CalculateStartTime(TimeSpan.FromMilliseconds(outflowUnit), startTimeType, currentTime);
+            var ret = (long[])await EvaluateScriptAsync(_leakyBucketIncrementLuaScript, new RedisKey[] { target },
+                new RedisValue[] { amount, capacity, outflowUnit, outflowQuantityPerUnit, currentTime, startTime, lockSeconds });
+            return new Tuple<bool, long>(ret[0] == 0 ? false : true, ret[1]);
+        }
+
+        /// <summary>
+        /// Decrease the count value of the rate limit target for token bucket algorithm.
+        /// </summary>
+        /// <param name="target">The target</param>
+        /// <param name="amount">amount of decrease</param>
+        /// <param name="capacity">The capacity of token bucket</param>
+        /// <param name="inflowUnit">The time unit of inflow to the bucket bucket</param>
+        /// <param name="inflowQuantityPerUnit">The inflow quantity per unit time</param>
+        /// <param name="startTimeType">The type of starting time of 'inflowUnit'</param>
+        /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
+        /// <returns>Amount of token in the bucket</returns>
+        public Tuple<bool, long> TokenBucketDecrement(string target, long amount, long capacity, int inflowUnit, int inflowQuantityPerUnit, StartTimeType startTimeType, int lockSeconds)
+        {
+            // can not call redis TIME command in script
+            var currentTime = GetCurrentUnixTimeMilliseconds();
+            var startTime = CalculateStartTime(TimeSpan.FromMilliseconds(inflowUnit), startTimeType, currentTime);
+
+            var ret = (long[])EvaluateScript(_tokenBucketDecrementLuaScript, new RedisKey[] { target },
+                new RedisValue[] { amount, capacity, inflowUnit, inflowQuantityPerUnit, currentTime, startTime, lockSeconds });
+            return new Tuple<bool, long>(ret[0] == 0 ? false : true, ret[1]);
+        }
+
+        /// <summary>
+        /// Decrease the count value of the rate limit target for token bucket algorithm.
+        /// </summary>
+        /// <param name="target">The target</param>
+        /// <param name="amount">amount of decrease</param>
+        /// <param name="capacity">The capacity of token bucket</param>
+        /// <param name="inflowUnit">The time unit of inflow to the bucket bucket</param>
+        /// <param name="inflowQuantityPerUnit">The inflow quantity per unit time</param>
+        /// <param name="startTimeType">The type of starting time of 'inflowUnit'</param>
+        /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
+        /// <returns>Amount of token in the bucket</returns>
+        public async Task<Tuple<bool, long>> TokenBucketDecrementAsync(string target, long amount, long capacity, int inflowUnit, int inflowQuantityPerUnit, StartTimeType startTimeType, int lockSeconds)
+        {
+            // can not call redis TIME command in script
+            var currentTime = await GetCurrentUnixTimeMillisecondsAsync();
+            var startTime = CalculateStartTime(TimeSpan.FromMilliseconds(inflowUnit), startTimeType, currentTime);
+
+            var ret = (long[])await EvaluateScriptAsync(_tokenBucketDecrementLuaScript, new RedisKey[] { target },
+                new RedisValue[] { amount, capacity, inflowUnit, inflowQuantityPerUnit, currentTime, startTime, lockSeconds });
             return new Tuple<bool, long>(ret[0] == 0 ? false : true, ret[1]);
         }
 
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="target"></param>
-        /// <param name="amount"></param>
-        /// <param name="statWindow"></param>
-        /// <param name="statPeriod"></param>
-        /// <param name="periodNumber"></param>
-        /// <param name="limitNumber">The number of rate limit</param>
-        /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
-        /// <returns></returns>
-        public async Task<Tuple<bool, long>> SlidingWindowIncrementAsync(string target, long amount, TimeSpan statWindow, TimeSpan statPeriod, int periodNumber, int limitNumber, int lockSeconds)
+        /// <param name="timeProvider"></param>
+        public void SetTimeProvider(ITimeProvider timeProvider)
         {
-            var currentTime = await GetCurrentTimeAsync();
-
-            var ret = (long[])await EvaluateScriptAsync(_slidingWindowIncrementLuaScript,
-                 new RedisKey[] { target },
-                 new RedisValue[] { amount, (long)statWindow.TotalMilliseconds, (long)statPeriod.TotalMilliseconds, periodNumber, currentTime, limitNumber, lockSeconds });
-
-            return new Tuple<bool, long>(ret[0] == 0 ? false : true, ret[1]);
-        }
-
-        /// <summary>
-        /// Increase the count value of the rate limit target for leaky bucket algorithm.
-        /// </summary>
-        /// <param name="target">The target</param>
-        /// <param name="amount">amount of increase</param>
-        /// <param name="capacity">The capacity of leaky bucket</param>
-        /// <param name="outflowUnit">The time unit of outflow from the leaky bucket</param>
-        /// <param name="outflowQuantityPerUnit">The outflow quantity per unit time</param>
-        /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
-        /// <returns>Amount of request in the bucket</returns>
-        public Tuple<bool, long> LeakyBucketIncrement(string target, long amount, long capacity, int outflowUnit, int outflowQuantityPerUnit, int lockSeconds)
-        {
-            // can not call redis TIME command in script
-            var currentTime = GetCurrentTime();
-
-            var ret = (long[])EvaluateScript(_leakyBucketIncrementLuaScript, new RedisKey[] { target },
-                new RedisValue[] { amount, capacity, outflowUnit, outflowQuantityPerUnit, currentTime, lockSeconds });
-            return new Tuple<bool, long>(ret[0] == 0 ? false : true, ret[1]);
-        }
-
-        /// <summary>
-        /// Increase the count value of the rate limit target for leaky bucket algorithm.
-        /// </summary>
-        /// <param name="target">The target</param>
-        /// <param name="amount">amount of increase</param>
-        /// <param name="capacity">The capacity of leaky bucket</param>
-        /// <param name="outflowUnit">The time unit of outflow from the leaky bucket</param>
-        /// <param name="outflowQuantityPerUnit">The outflow quantity per unit time</param>
-        /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
-        /// <returns>Amount of request in the bucket</returns>
-        public async Task<Tuple<bool, long>> LeakyBucketIncrementAsync(string target, long amount, long capacity, int outflowUnit, int outflowQuantityPerUnit, int lockSeconds)
-        {
-            // can not call redis TIME command in script
-            var currentTime = await GetCurrentTimeAsync();
-
-            var ret = (long[])await EvaluateScriptAsync(_leakyBucketIncrementLuaScript, new RedisKey[] { target },
-                new RedisValue[] { amount, capacity, outflowUnit, outflowQuantityPerUnit, currentTime, lockSeconds });
-            return new Tuple<bool, long>(ret[0] == 0 ? false : true, ret[1]);
-        }
-
-        /// <summary>
-        /// Decrease the count value of the rate limit target for token bucket algorithm.
-        /// </summary>
-        /// <param name="target">The target</param>
-        /// <param name="amount">amount of decrease</param>
-        /// <param name="capacity">The capacity of token bucket</param>
-        /// <param name="inflowUnit">The time unit of inflow to the bucket bucket</param>
-        /// <param name="inflowQuantityPerUnit">The inflow quantity per unit time</param>
-        /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
-        /// <returns>Amount of token in the bucket</returns>
-        public Tuple<bool, long> TokenBucketDecrement(string target, long amount, long capacity, int inflowUnit, int inflowQuantityPerUnit, int lockSeconds)
-        {
-            // can not call redis TIME command in script
-            var currentTime = GetCurrentTime();
-
-            var ret = (long[])EvaluateScript(_tokenBucketDecrementLuaScript, new RedisKey[] { target },
-                new RedisValue[] { amount, capacity, inflowUnit, inflowQuantityPerUnit, currentTime, lockSeconds });
-            return new Tuple<bool, long>(ret[0] == 0 ? false : true, ret[1]);
-        }
-
-        /// <summary>
-        /// Decrease the count value of the rate limit target for token bucket algorithm.
-        /// </summary>
-        /// <param name="target">The target</param>
-        /// <param name="amount">amount of decrease</param>
-        /// <param name="capacity">The capacity of token bucket</param>
-        /// <param name="inflowUnit">The time unit of inflow to the bucket bucket</param>
-        /// <param name="inflowQuantityPerUnit">The inflow quantity per unit time</param>
-        /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
-        /// <returns>Amount of token in the bucket</returns>
-        public async Task<Tuple<bool, long>> TokenBucketDecrementAsync(string target, long amount, long capacity, int inflowUnit, int inflowQuantityPerUnit, int lockSeconds)
-        {
-            // can not call redis TIME command in script
-            var currentTime = await GetCurrentTimeAsync();
-
-            var ret = (long[])await EvaluateScriptAsync(_tokenBucketDecrementLuaScript, new RedisKey[] { target },
-                new RedisValue[] { amount, capacity, inflowUnit, inflowQuantityPerUnit, currentTime, lockSeconds });
-            return new Tuple<bool, long>(ret[0] == 0 ? false : true, ret[1]);
+            _timeProvider = timeProvider;
         }
 
         /// <summary>
         /// Get the current unified time
         /// </summary>
         /// <returns></returns>
-        private long GetCurrentTime()
+        private DateTimeOffset GetCurrentUtcTime()
         {
-            var endPoints = _redisClient.GetEndPoints();
-            foreach (var endPoint in endPoints)
-            {
-                var server = _redisClient.GetServer(_redisClient.GetEndPoints()[0]);
-                if (server.IsConnected)
-                {
-                    var redisTime = server.Time();
-                    DateTimeOffset utcTime = redisTime;
-                    return utcTime.ToUnixTimeMilliseconds();
-                }
-            }
-
-            return 0;
+            return _timeProvider.GetCurrentUtcTime();
         }
 
         /// <summary>
         /// Get the current unified time
         /// </summary>
         /// <returns></returns>
-        private async Task<long> GetCurrentTimeAsync()
+        private async Task<DateTimeOffset> GetCurrentUtcTimeAsync()
         {
-            var endPoints = _redisClient.GetEndPoints();
-            foreach (var endPoint in endPoints)
-            {
-                var server = _redisClient.GetServer(endPoint);
-                if (server.IsConnected)
-                {
-                    var redisTime = await server.TimeAsync();
-                    DateTimeOffset utcTime = redisTime;
-                    return utcTime.ToUnixTimeMilliseconds();
-                }
-            }
+            return await _timeProvider.GetCurrentUtcTimeAsync().ConfigureAwait(false);
+        }
 
-            return 0;
+        /// <summary>
+        /// Get the current unified time
+        /// </summary>
+        /// <returns></returns>
+        private long GetCurrentUnixTimeMilliseconds()
+        {
+            return _timeProvider.GetCurrentUnixTimeMilliseconds();
+        }
+
+        /// <summary>
+        /// Get the current unified time
+        /// </summary>
+        /// <returns></returns>
+        private async Task<long> GetCurrentUnixTimeMillisecondsAsync()
+        {
+            return await _timeProvider.GetCurrentUnixTimeMillisecondsAsync().ConfigureAwait(false);
         }
 
         /// <summary>
@@ -513,60 +549,47 @@ namespace FireflySoft.RateLimit.Core
             return dataBase.ScriptEvaluate(sha1, keys, values);
         }
 
-        private long GetExpireTime(TimeSpan statWindow, StartTimeType startTimeType)
+        private static long GetExpireTimeFromNaturalPeriodBeign(TimeSpan statWindow, DateTimeOffset now)
+        {
+            DateTimeOffset startTime = GetStartTimeFromNaturalPeriodBeign(statWindow, now);
+            DateTimeOffset endTime = startTime.Add(statWindow);
+            return (long)endTime.Subtract(now).TotalMilliseconds;
+        }
+
+        private static long CalculateStartTime(TimeSpan statWindow, StartTimeType startTimeType, long nowUnixTs)
         {
             if (startTimeType == StartTimeType.FromNaturalPeriodBeign)
             {
-                long nowUnixTs = GetCurrentTime();
-                return GetExpireTime(statWindow, nowUnixTs);
+                DateTimeOffset nowUtc = DateTimeOffset.FromUnixTimeMilliseconds(nowUnixTs);
+                DateTimeOffset startTime = GetStartTimeFromNaturalPeriodBeign(statWindow, nowUtc);
+                return startTime.ToUnixTimeMilliseconds();
             }
 
-            return (long)statWindow.TotalMilliseconds;
+            return nowUnixTs;
         }
 
-        private async Task<long> GetExpireTimeAsync(TimeSpan statWindow, StartTimeType startTimeType)
+        private static DateTimeOffset GetStartTimeFromNaturalPeriodBeign(TimeSpan statWindow, DateTimeOffset nowUtc)
         {
-            if (startTimeType == StartTimeType.FromNaturalPeriodBeign)
-            {
-                long nowUnixTs = await GetCurrentTimeAsync();
-                return GetExpireTime(statWindow, nowUnixTs);
-            }
-
-            return (long)statWindow.TotalMilliseconds;
-        }
-
-        private static long GetExpireTime(TimeSpan statWindow, long nowUnixTs)
-        {
-            DateTimeOffset now = DateTimeOffset.FromUnixTimeMilliseconds(nowUnixTs);
-            DateTimeOffset endTime;
-            DateTimeOffset startTime;
+            DateTimeOffset startTime = nowUtc;
 
             if (statWindow.Days > 0)
             {
-                startTime = new DateTimeOffset(now.Year, now.Month, now.Day, 0, 0, 0, TimeSpan.FromHours(8));
-                endTime = startTime.AddDays(statWindow.Days).AddMilliseconds(-1);
+                startTime = new DateTimeOffset(nowUtc.Year, nowUtc.Month, nowUtc.Day, 0, 0, 0, TimeSpan.FromHours(0));
             }
             else if (statWindow.Hours > 0)
             {
-                startTime = new DateTimeOffset(now.Year, now.Month, now.Day, now.Hour, 0, 0, TimeSpan.FromHours(8));
-                endTime = startTime.AddHours(statWindow.Hours).AddMilliseconds(-1);
+                startTime = new DateTimeOffset(nowUtc.Year, nowUtc.Month, nowUtc.Day, nowUtc.Hour, 0, 0, TimeSpan.FromHours(0));
             }
             else if (statWindow.Minutes > 0)
             {
-                startTime = new DateTimeOffset(now.Year, now.Month, now.Day, now.Hour, now.Minute, 0, TimeSpan.FromHours(8));
-                endTime = startTime.AddMinutes(statWindow.Minutes).AddMilliseconds(-1);
+                startTime = new DateTimeOffset(nowUtc.Year, nowUtc.Month, nowUtc.Day, nowUtc.Hour, nowUtc.Minute, 0, TimeSpan.FromHours(0));
             }
             else if (statWindow.Seconds > 0)
             {
-                startTime = new DateTimeOffset(now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second, TimeSpan.FromHours(8));
-                endTime = startTime.AddSeconds(statWindow.Seconds).AddMilliseconds(-1);
-            }
-            else
-            {
-                return (long)statWindow.TotalMilliseconds;
+                startTime = new DateTimeOffset(nowUtc.Year, nowUtc.Month, nowUtc.Day, nowUtc.Hour, nowUtc.Minute, nowUtc.Second, TimeSpan.FromHours(0));
             }
 
-            return (long)endTime.Subtract(startTime).TotalMilliseconds;
+            return startTime;
         }
 
         private class RedisLuaScript

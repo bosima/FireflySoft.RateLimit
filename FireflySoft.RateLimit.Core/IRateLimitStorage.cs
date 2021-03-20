@@ -40,11 +40,12 @@ namespace FireflySoft.RateLimit.Core
         /// <param name="amount"></param>
         /// <param name="statWindow"></param>
         /// <param name="statPeriod"></param>
+        /// <param name="startTimeType">The type of starting time of statistical time period</param>
         /// <param name="periodNumber"></param>
         /// <param name="limitNumber">The number of rate limit</param>
         /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
         /// <returns></returns>
-        Tuple<bool, long> SlidingWindowIncrement(string target, long amount, TimeSpan statWindow, TimeSpan statPeriod, int periodNumber, int limitNumber, int lockSeconds);
+        Tuple<bool, long> SlidingWindowIncrement(string target, long amount, TimeSpan statWindow, TimeSpan statPeriod, StartTimeType startTimeType, int periodNumber, int limitNumber, int lockSeconds);
 
         /// <summary>
         /// Increase the count value of the rate limit target for sliding window algorithm.
@@ -53,11 +54,12 @@ namespace FireflySoft.RateLimit.Core
         /// <param name="amount"></param>
         /// <param name="statWindow"></param>
         /// <param name="statPeriod"></param>
+        /// <param name="startTimeType">The type of starting time of statistical time period</param>
         /// <param name="periodNumber"></param>
         /// <param name="limitNumber">The number of rate limit</param>
         /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
         /// <returns></returns>
-        Task<Tuple<bool, long>> SlidingWindowIncrementAsync(string target, long amount, TimeSpan statWindow, TimeSpan statPeriod, int periodNumber, int limitNumber, int lockSeconds);
+        Task<Tuple<bool, long>> SlidingWindowIncrementAsync(string target, long amount, TimeSpan statWindow, TimeSpan statPeriod, StartTimeType startTimeType, int periodNumber, int limitNumber, int lockSeconds);
 
         /// <summary>
         /// Increase the count value of the rate limit target for leaky bucket algorithm.
@@ -67,9 +69,10 @@ namespace FireflySoft.RateLimit.Core
         /// <param name="capacity">The capacity of leaky bucket</param>
         /// <param name="outflowUnit">The time unit of outflow from the leaky bucket</param>
         /// <param name="outflowQuantityPerUnit">The outflow quantity per unit time</param>
+        /// <param name="startTimeType">The type of starting time of 'outflowUnit'</param>
         /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
         /// <returns>Amount of request in the bucket</returns>
-        Tuple<bool, long> LeakyBucketIncrement(string target, long amount, long capacity, int outflowUnit, int outflowQuantityPerUnit, int lockSeconds);
+        Tuple<bool, long> LeakyBucketIncrement(string target, long amount, long capacity, int outflowUnit, int outflowQuantityPerUnit, StartTimeType startTimeType, int lockSeconds);
 
         /// <summary>
         /// Increase the count value of the rate limit target for leaky bucket algorithm.
@@ -79,9 +82,10 @@ namespace FireflySoft.RateLimit.Core
         /// <param name="capacity">The capacity of leaky bucket</param>
         /// <param name="outflowUnit">The time unit of outflow from the leaky bucket</param>
         /// <param name="outflowQuantityPerUnit">The outflow quantity per unit time</param>
+        /// <param name="startTimeType">The type of starting time of 'outflowUnit'</param>
         /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
         /// <returns>Amount of request in the bucket</returns>
-        Task<Tuple<bool, long>> LeakyBucketIncrementAsync(string target, long amount, long capacity, int outflowUnit, int outflowQuantityPerUnit, int lockSeconds);
+        Task<Tuple<bool, long>> LeakyBucketIncrementAsync(string target, long amount, long capacity, int outflowUnit, int outflowQuantityPerUnit, StartTimeType startTimeType, int lockSeconds);
 
         /// <summary>
         /// Decrease the count value of the rate limit target for token bucket algorithm.
@@ -91,9 +95,10 @@ namespace FireflySoft.RateLimit.Core
         /// <param name="capacity">The capacity of token bucket</param>
         /// <param name="inflowUnit">The time unit of inflow to the bucket bucket</param>
         /// <param name="inflowQuantityPerUnit">The inflow quantity per unit time</param>
+        /// <param name="startTimeType">The type of starting time of 'inflowUnit'</param>
         /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
         /// <returns>Amount of token in the bucket</returns>
-        Tuple<bool, long> TokenBucketDecrement(string target, long amount, long capacity, int inflowUnit, int inflowQuantityPerUnit, int lockSeconds);
+        Tuple<bool, long> TokenBucketDecrement(string target, long amount, long capacity, int inflowUnit, int inflowQuantityPerUnit, StartTimeType startTimeType, int lockSeconds);
 
         /// <summary>
         /// Decrease the count value of the rate limit target for token bucket algorithm.
@@ -103,8 +108,15 @@ namespace FireflySoft.RateLimit.Core
         /// <param name="capacity">The capacity of token bucket</param>
         /// <param name="inflowUnit">The time unit of inflow to the bucket bucket</param>
         /// <param name="inflowQuantityPerUnit">The inflow quantity per unit time</param>
+        /// <param name="startTimeType">The type of starting time of 'inflowUnit'</param>
         /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
         /// <returns>Amount of token in the bucket</returns>
-        Task<Tuple<bool, long>> TokenBucketDecrementAsync(string target, long amount, long capacity, int inflowUnit, int inflowQuantityPerUnit, int lockSeconds);
+        Task<Tuple<bool, long>> TokenBucketDecrementAsync(string target, long amount, long capacity, int inflowUnit, int inflowQuantityPerUnit, StartTimeType startTimeType, int lockSeconds);
+
+        /// <summary>
+        /// Set a instance of ITimeProvider for storage
+        /// </summary>
+        /// <param name="timeProvider"></param>
+        void SetTimeProvider(ITimeProvider timeProvider);
     }
 }

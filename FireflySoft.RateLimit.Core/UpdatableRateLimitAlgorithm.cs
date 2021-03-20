@@ -39,7 +39,7 @@ namespace FireflySoft.RateLimit.Core
         }
 
         /// <summary>
-        /// 
+        /// Check single rule for target
         /// </summary>
         /// <param name="target"></param>
         /// <param name="storage"></param>
@@ -48,7 +48,7 @@ namespace FireflySoft.RateLimit.Core
         protected abstract bool CheckSingleRule(string target, IRateLimitStorage storage, RateLimitRule<TRequest> rule);
 
         /// <summary>
-        /// 
+        /// Check single rule for target
         /// </summary>
         /// <param name="target"></param>
         /// <param name="storage"></param>
@@ -85,17 +85,16 @@ namespace FireflySoft.RateLimit.Core
         /// </summary>
         /// <param name="request">a request</param>
         /// <param name="storage">a instance of IRateLimitStorage</param>
+        /// <param name="timeProvider">a instance of ITimeProvider</param>
         /// <returns>the list of check result</returns>
-        public List<RateLimitCheckResult<TRequest>> Check(TRequest request, IRateLimitStorage storage)
+        public List<RateLimitCheckResult<TRequest>> Check(TRequest request, IRateLimitStorage storage, ITimeProvider timeProvider)
         {
-            List<RateLimitCheckResult<TRequest>> results = new List<RateLimitCheckResult<TRequest>>();
-
             if (_updatable)
             {
                 try
                 {
                     _lock.EnterReadLock();
-                    CheckAllRules(request, storage, results);
+                    return CheckAllRules(request, storage, timeProvider);
                 }
                 finally
                 {
@@ -104,10 +103,8 @@ namespace FireflySoft.RateLimit.Core
             }
             else
             {
-                CheckAllRules(request, storage, results);
+                return CheckAllRules(request, storage, timeProvider);
             }
-
-            return results;
         }
 
         /// <summary>
@@ -115,17 +112,16 @@ namespace FireflySoft.RateLimit.Core
         /// </summary>
         /// <param name="request">a request</param>
         /// <param name="storage">a instance of IRateLimitStorage</param>
+        /// <param name="timeProvider">a instance of ITimerProvider</param>
         /// <returns>the list of check result</returns>
-        public async Task<List<RateLimitCheckResult<TRequest>>> CheckAsync(TRequest request, IRateLimitStorage storage)
+        public async Task<List<RateLimitCheckResult<TRequest>>> CheckAsync(TRequest request, IRateLimitStorage storage, ITimeProvider timeProvider)
         {
-            List<RateLimitCheckResult<TRequest>> results = new List<RateLimitCheckResult<TRequest>>();
-
             if (_updatable)
             {
                 try
                 {
                     _lock.EnterReadLock();
-                    await CheckAllRulesAsync(request, storage, results);
+                    return await CheckAllRulesAsync(request, storage, timeProvider);
                 }
                 finally
                 {
@@ -134,14 +130,14 @@ namespace FireflySoft.RateLimit.Core
             }
             else
             {
-                await CheckAllRulesAsync(request, storage, results);
+                return await CheckAllRulesAsync(request, storage, timeProvider);
             }
-
-            return results;
         }
 
-        private void CheckAllRules(TRequest request, IRateLimitStorage storage, List<RateLimitCheckResult<TRequest>> results)
+        private List<RateLimitCheckResult<TRequest>> CheckAllRules(TRequest request, IRateLimitStorage storage, ITimeProvider timeProvider)
         {
+            List<RateLimitCheckResult<TRequest>> results = new List<RateLimitCheckResult<TRequest>>();
+
             foreach (var rule in _rules)
             {
                 if (rule.CheckRuleMatching(request))
@@ -162,10 +158,14 @@ namespace FireflySoft.RateLimit.Core
                     });
                 }
             }
+
+            return results;
         }
 
-        private async Task CheckAllRulesAsync(TRequest request, IRateLimitStorage storage, List<RateLimitCheckResult<TRequest>> results)
+        private async Task<List<RateLimitCheckResult<TRequest>>> CheckAllRulesAsync(TRequest request, IRateLimitStorage storage, ITimeProvider timeProvider)
         {
+            List<RateLimitCheckResult<TRequest>> results = new List<RateLimitCheckResult<TRequest>>();
+
             foreach (var rule in _rules)
             {
                 if (rule.CheckRuleMatching(request))
@@ -186,6 +186,8 @@ namespace FireflySoft.RateLimit.Core
                     });
                 }
             }
+
+            return results;
         }
     }
 }

@@ -32,7 +32,7 @@ namespace FireflySoft.RateLimit.Core
         {
             var currentRule = rule as LeakyBucketRateLimitRule<TRequest>;
 
-            var result = storage.LeakyBucketIncrement(target, 1, currentRule.Capacity, (int)currentRule.OutflowUnit.TotalMilliseconds, currentRule.OutflowQuantityPerUnit, currentRule.LockSeconds);
+            var result = storage.LeakyBucketIncrement(target, 1, currentRule.Capacity, (int)currentRule.OutflowUnit.TotalMilliseconds, currentRule.OutflowQuantityPerUnit, currentRule.StartTimeType, currentRule.LockSeconds);
             Debug.WriteLine("check result:" + result.Item1 + "," + result.Item2);
             return result.Item1;
         }
@@ -48,7 +48,7 @@ namespace FireflySoft.RateLimit.Core
         {
             var currentRule = rule as LeakyBucketRateLimitRule<TRequest>;
 
-            var result = await storage.LeakyBucketIncrementAsync(target, 1, currentRule.Capacity, (int)currentRule.OutflowUnit.TotalMilliseconds, currentRule.OutflowQuantityPerUnit, currentRule.LockSeconds);
+            var result = await storage.LeakyBucketIncrementAsync(target, 1, currentRule.Capacity, (int)currentRule.OutflowUnit.TotalMilliseconds, currentRule.OutflowQuantityPerUnit, currentRule.StartTimeType, currentRule.LockSeconds);
             Debug.WriteLine("check result:" + result.Item1 + "," + result.Item2);
             return result.Item1;
         }

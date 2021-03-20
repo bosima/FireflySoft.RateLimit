@@ -17,6 +17,10 @@ namespace FireflySoft.RateLimit.Core
     {
         readonly MemoryCache _cache;
 
+        bool hasSetStartTime = false;
+
+        ITimeProvider _timeProvider;
+
         /// <summary>
         /// Create a new instance
         /// </summary>
@@ -44,10 +48,13 @@ namespace FireflySoft.RateLimit.Core
                 return new Tuple<bool, long>(true, -1);
             }
 
+            var startTime = CalculateStartTime(statWindow, startTimeType, GetCurrentLocalTime());
+
             Tuple<bool, long> incrementResult;
             lock (target)
             {
-                incrementResult = SimpleIncrement(target, amount, statWindow, startTimeType, limitNumber);
+                DateTimeOffset expireTime = startTime.Add(statWindow);
+                incrementResult = SimpleIncrement(target, amount, expireTime, limitNumber);
             }
 
             var checkResult = false;
@@ -80,17 +87,18 @@ namespace FireflySoft.RateLimit.Core
         }
 
         /// <summary>
-        /// 
+        /// Increase the count value of the rate limit target for sliding window algorithm.
         /// </summary>
         /// <param name="target"></param>
         /// <param name="amount"></param>
         /// <param name="statWindow"></param>
         /// <param name="statPeriod"></param>
+        /// <param name="startTimeType">The type of starting time of statistical time period</param>
         /// <param name="periodNumber"></param>
         /// <param name="limitNumber">The number of rate limit</param>
         /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
         /// <returns></returns>
-        public Tuple<bool, long> SlidingWindowIncrement(string target, long amount, TimeSpan statWindow, TimeSpan statPeriod, int periodNumber, int limitNumber, int lockSeconds)
+        public Tuple<bool, long> SlidingWindowIncrement(string target, long amount, TimeSpan statWindow, TimeSpan statPeriod, StartTimeType startTimeType, int periodNumber, int limitNumber, int lockSeconds)
         {
             bool locked = CheckLocked(target);
             if (locked)
@@ -99,17 +107,13 @@ namespace FireflySoft.RateLimit.Core
             }
 
             // get current time
-            var currentMilliseconds = GetCurrentTime();
+            var currentTime = GetCurrentLocalTime();
 
             // get the start time
-            long startMilliseconds = currentMilliseconds;
-            var cachedStartMilliseconds = _cache.AddOrGetExisting($"{target}-st", currentMilliseconds, DateTimeOffset.MaxValue);
-            if (cachedStartMilliseconds != null)
-            {
-                startMilliseconds = (long)cachedStartMilliseconds;
-            }
+            long startMilliseconds = GetOrSetStartTime(target, statWindow, startTimeType, currentTime);
 
             // get the stat periods
+            var currentMilliseconds = currentTime.ToUnixTimeMilliseconds();
             var statPeriodArray = GetStatWindowPeriodArray(currentMilliseconds, startMilliseconds, periodNumber, (long)statPeriod.TotalMilliseconds);
 
             lock (target)
@@ -128,28 +132,29 @@ namespace FireflySoft.RateLimit.Core
 
                 // increment for current period
                 var currentPeriod = statPeriodArray[0];
-                var expireTimeSpan = statWindow.Add(statWindow); // for the calculating time
+                var expireTime = currentTime.Add(statWindow).AddSeconds(3); // add 3s for: avoid data loss because other steps take too much time
                 var incrementKey = $"{target}-{currentPeriod}";
-                SimpleIncrement(incrementKey, amount, expireTimeSpan);
+                SimpleIncrement(incrementKey, amount, expireTime);
 
                 return Tuple.Create(false, totalAmount);
             }
         }
 
         /// <summary>
-        /// 
+        /// Increase the count value of the rate limit target for sliding window algorithm.
         /// </summary>
         /// <param name="target"></param>
         /// <param name="amount"></param>
         /// <param name="statWindow"></param>
         /// <param name="statPeriod"></param>
+        /// <param name="startTimeType">The type of starting time of statistical time period</param>
         /// <param name="periodNumber"></param>
         /// <param name="limitNumber">The number of rate limit</param>
         /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
         /// <returns></returns>
-        public async Task<Tuple<bool, long>> SlidingWindowIncrementAsync(string target, long amount, TimeSpan statWindow, TimeSpan statPeriod, int periodNumber, int limitNumber, int lockSeconds)
+        public async Task<Tuple<bool, long>> SlidingWindowIncrementAsync(string target, long amount, TimeSpan statWindow, TimeSpan statPeriod, StartTimeType startTimeType, int periodNumber, int limitNumber, int lockSeconds)
         {
-            return await Task.FromResult(SlidingWindowIncrement(target, amount, statWindow, statPeriod, periodNumber, limitNumber, lockSeconds));
+            return await Task.FromResult(SlidingWindowIncrement(target, amount, statWindow, statPeriod, startTimeType, periodNumber, limitNumber, lockSeconds));
         }
 
         /// <summary>
@@ -160,9 +165,10 @@ namespace FireflySoft.RateLimit.Core
         /// <param name="capacity">The capacity of leaky bucket</param>
         /// <param name="outflowUnit">The time unit of outflow from the leaky bucket</param>
         /// <param name="outflowQuantityPerUnit">The outflow quantity per unit time</param>
+        /// <param name="startTimeType">The type of starting time of 'outflowUnit'</param>
         /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
         /// <returns>Amount of request in the bucket</returns>
-        public Tuple<bool, long> LeakyBucketIncrement(string target, long amount, long capacity, int outflowUnit, int outflowQuantityPerUnit, int lockSeconds)
+        public Tuple<bool, long> LeakyBucketIncrement(string target, long amount, long capacity, int outflowUnit, int outflowQuantityPerUnit, StartTimeType startTimeType, int lockSeconds)
         {
             bool locked = CheckLocked(target);
             if (locked)
@@ -172,18 +178,19 @@ namespace FireflySoft.RateLimit.Core
 
             lock (target)
             {
-                var now = DateTimeOffset.Now;
+                var currentTime = GetCurrentLocalTime();
 
                 var result = _cache.GetCacheItem(target);
                 if (result == null)
                 {
-                    _cache.Add(target, new CountValue(amount) { LastFlowTime = now }, DateTimeOffset.MaxValue);
+                    var startTime = CalculateStartTime(TimeSpan.FromMilliseconds(outflowUnit), startTimeType, currentTime);
+                    _cache.Add(target, new CountValue(amount) { LastFlowTime = startTime }, DateTimeOffset.MaxValue);
                     return new Tuple<bool, long>(false, amount);
                 }
 
                 var countValue = (CountValue)result.Value;
                 var lastTime = countValue.LastFlowTime;
-                var pastTime = now - lastTime;
+                var pastTime = currentTime - lastTime;
                 var lastTimeChanged = false;
                 var pastTimeMilliseconds = pastTime.TotalMilliseconds;
                 long newCount = 0;
@@ -227,11 +234,12 @@ namespace FireflySoft.RateLimit.Core
         /// <param name="capacity">The capacity of leaky bucket</param>
         /// <param name="outflowUnit">The time unit of outflow from the leaky bucket</param>
         /// <param name="outflowQuantityPerUnit">The outflow quantity per unit time</param>
+        /// <param name="startTimeType">The type of starting time of 'outflowUnit'</param>
         /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
         /// <returns>Amount of request in the bucket</returns>
-        public async Task<Tuple<bool, long>> LeakyBucketIncrementAsync(string target, long amount, long capacity, int outflowUnit, int outflowQuantityPerUnit, int lockSeconds)
+        public async Task<Tuple<bool, long>> LeakyBucketIncrementAsync(string target, long amount, long capacity, int outflowUnit, int outflowQuantityPerUnit, StartTimeType startTimeType, int lockSeconds)
         {
-            return await Task.FromResult(LeakyBucketIncrement(target, amount, capacity, outflowUnit, outflowQuantityPerUnit, lockSeconds));
+            return await Task.FromResult(LeakyBucketIncrement(target, amount, capacity, outflowUnit, outflowQuantityPerUnit, startTimeType, lockSeconds));
         }
 
         /// <summary>
@@ -242,9 +250,10 @@ namespace FireflySoft.RateLimit.Core
         /// <param name="capacity">The capacity of token bucket</param>
         /// <param name="inflowUnit">The time unit of inflow to the bucket bucket</param>
         /// <param name="inflowQuantityPerUnit">The inflow quantity per unit time</param>
+        /// <param name="startTimeType">The type of starting time of 'inflowUnit'</param>
         /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
         /// <returns>Amount of token in the bucket</returns>
-        public Tuple<bool, long> TokenBucketDecrement(string target, long amount, long capacity, int inflowUnit, int inflowQuantityPerUnit, int lockSeconds)
+        public Tuple<bool, long> TokenBucketDecrement(string target, long amount, long capacity, int inflowUnit, int inflowQuantityPerUnit, StartTimeType startTimeType, int lockSeconds)
         {
             bool locked = CheckLocked(target);
             if (locked)
@@ -254,20 +263,21 @@ namespace FireflySoft.RateLimit.Core
 
             lock (target)
             {
-                var now = DateTimeOffset.Now;
+                var currentTime = GetCurrentLocalTime();
                 long bucketAmount = 0;
                 var result = _cache.GetCacheItem(target);
                 if (result == null)
                 {
+                    var startTime = CalculateStartTime(TimeSpan.FromMilliseconds(inflowUnit), startTimeType, currentTime);
                     bucketAmount = capacity - amount;
-                    _cache.Add(target, new CountValue(bucketAmount) { LastFlowTime = now }, DateTimeOffset.MaxValue);
+                    _cache.Add(target, new CountValue(bucketAmount) { LastFlowTime = startTime }, DateTimeOffset.MaxValue);
                     return new Tuple<bool, long>(false, bucketAmount);
                 }
 
                 var countValue = (CountValue)result.Value;
                 var lastTime = countValue.LastFlowTime;
                 var lastTimeChanged = false;
-                var pastTime = now - lastTime;
+                var pastTime = currentTime - lastTime;
                 var pastTimeMilliseconds = pastTime.TotalMilliseconds;
                 if (pastTimeMilliseconds < inflowUnit)
                 {
@@ -314,11 +324,21 @@ namespace FireflySoft.RateLimit.Core
         /// <param name="capacity">The capacity of token bucket</param>
         /// <param name="inflowUnit">The time unit of inflow to the bucket bucket</param>
         /// <param name="inflowQuantityPerUnit">The inflow quantity per unit time</param>
+        /// <param name="startTimeType">The type of starting time of 'inflowUnit'</param>
         /// <param name="lockSeconds">The number of seconds locked after triggering rate limiting. 0 means not locked</param>
         /// <returns>Amount of token in the bucket</returns>
-        public async Task<Tuple<bool, long>> TokenBucketDecrementAsync(string target, long amount, long capacity, int inflowUnit, int inflowQuantityPerUnit, int lockSeconds)
+        public async Task<Tuple<bool, long>> TokenBucketDecrementAsync(string target, long amount, long capacity, int inflowUnit, int inflowQuantityPerUnit, StartTimeType startTimeType, int lockSeconds)
         {
-            return await Task.FromResult(TokenBucketDecrement(target, amount, capacity, inflowUnit, inflowQuantityPerUnit, lockSeconds));
+            return await Task.FromResult(TokenBucketDecrement(target, amount, capacity, inflowUnit, inflowQuantityPerUnit,startTimeType, lockSeconds));
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="timeProvider"></param>
+        public void SetTimeProvider(ITimeProvider timeProvider)
+        {
+            _timeProvider = timeProvider;
         }
 
         private List<long> GetStatWindowPeriodArray(long currentMilliseconds, long startMilliseconds, int periodNumber, long statPeriodMilliseconds)
@@ -353,9 +373,9 @@ namespace FireflySoft.RateLimit.Core
         /// Get the current unified time
         /// </summary>
         /// <returns></returns>
-        private long GetCurrentTime()
+        private DateTimeOffset GetCurrentLocalTime()
         {
-            return DateTimeOffset.Now.ToUnixTimeMilliseconds();
+            return _timeProvider.GetCurrentLocalTime();
         }
 
         /// <summary>
@@ -375,7 +395,7 @@ namespace FireflySoft.RateLimit.Core
             return 0;
         }
 
-        private Tuple<bool, long> SimpleIncrement(string target, long amount, TimeSpan statWindow, StartTimeType startTimeType = StartTimeType.FromCurrent, int checkNumber = 0)
+        private Tuple<bool, long> SimpleIncrement(string target, long amount, DateTimeOffset expireTime, int checkNumber = 0)
         {
             var result = _cache.GetCacheItem(target);
             if (result != null)
@@ -389,51 +409,54 @@ namespace FireflySoft.RateLimit.Core
                 return Tuple.Create(false, countValue.Value);
             }
 
-            DateTimeOffset expireTime;
-            if (statWindow == TimeSpan.Zero)
-            {
-                expireTime = DateTimeOffset.MaxValue;
-            }
-            else
-            {
-                expireTime = GetExpireAtTime(statWindow, startTimeType);
-            }
-
             _cache.Add(target, new CountValue(amount), expireTime);
+
             return Tuple.Create(false, amount);
         }
 
-        private static DateTimeOffset GetExpireAtTime(TimeSpan statWindow, StartTimeType startTimeType)
+        private long GetOrSetStartTime(string target, TimeSpan statWindow, StartTimeType startTimeType, DateTimeOffset currentTime)
         {
-            DateTimeOffset now = DateTimeOffset.Now;
-            DateTimeOffset startTime = now;
-            DateTimeOffset expireTime = startTime.Add(statWindow);
+            long startMilliseconds = 0;
+            if (!hasSetStartTime)
+            {
+                var startTime = CalculateStartTime(statWindow, startTimeType, currentTime);
+                startMilliseconds = startTime.ToUnixTimeMilliseconds();
+                var cachedStartMilliseconds = _cache.AddOrGetExisting($"{target}-st", startMilliseconds, DateTimeOffset.MaxValue);
+                if (cachedStartMilliseconds == null) hasSetStartTime = true;
+            }
+            else
+            {
+                startMilliseconds = (long)_cache.Get($"{target}-st");
+            }
+
+            return startMilliseconds;
+        }
+
+        private DateTimeOffset CalculateStartTime(TimeSpan statWindow, StartTimeType startTimeType, DateTimeOffset currentTime)
+        {
+            DateTimeOffset startTime = currentTime;
 
             if (startTimeType == StartTimeType.FromNaturalPeriodBeign)
             {
                 if (statWindow.Days > 0)
                 {
-                    startTime = new DateTimeOffset(now.Year, now.Month, now.Day, 0, 0, 0, TimeSpan.FromHours(8));
-                    expireTime = startTime.AddDays(statWindow.Days).AddMilliseconds(-1);
+                    startTime = new DateTimeOffset(currentTime.Year, currentTime.Month, currentTime.Day, 0, 0, 0, TimeSpan.FromHours(8));
                 }
                 else if (statWindow.Hours > 0)
                 {
-                    startTime = new DateTimeOffset(now.Year, now.Month, now.Day, now.Hour, 0, 0, TimeSpan.FromHours(8));
-                    expireTime = startTime.AddHours(statWindow.Hours).AddMilliseconds(-1);
+                    startTime = new DateTimeOffset(currentTime.Year, currentTime.Month, currentTime.Day, currentTime.Hour, 0, 0, TimeSpan.FromHours(8));
                 }
                 else if (statWindow.Minutes > 0)
                 {
-                    startTime = new DateTimeOffset(now.Year, now.Month, now.Day, now.Hour, now.Minute, 0, TimeSpan.FromHours(8));
-                    expireTime = startTime.AddMinutes(statWindow.Minutes).AddMilliseconds(-1);
+                    startTime = new DateTimeOffset(currentTime.Year, currentTime.Month, currentTime.Day, currentTime.Hour, currentTime.Minute, 0, TimeSpan.FromHours(8));
                 }
                 else if (statWindow.Seconds > 0)
                 {
-                    startTime = new DateTimeOffset(now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second, TimeSpan.FromHours(8));
-                    expireTime = startTime.AddSeconds(statWindow.Seconds).AddMilliseconds(-1);
+                    startTime = new DateTimeOffset(currentTime.Year, currentTime.Month, currentTime.Day, currentTime.Hour, currentTime.Minute, currentTime.Second, TimeSpan.FromHours(8));
                 }
             }
 
-            return expireTime;
+            return startTime;
         }
 
         /// <summary>
@@ -443,7 +466,7 @@ namespace FireflySoft.RateLimit.Core
         /// <param name="expireTimeSpan"></param>
         private void TryLock(string target, TimeSpan expireTimeSpan)
         {
-            var expireTime = DateTimeOffset.Now.Add(expireTimeSpan);
+            var expireTime = GetCurrentLocalTime().Add(expireTimeSpan);
             _cache.Add($"{target}-lock", 1, expireTime);
         }
 
