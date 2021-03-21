@@ -29,7 +29,7 @@ Code coverage:
 
 | Module                     | Line   | Branch | Method |
 |---|---|---|---|
-| FireflySoft.RateLimit.Core | 90.53% | 80.23% | 95.78% |
+| FireflySoft.RateLimit.Core | 90.48% | 81.05% | 95.86% |
 
 ## Projects
 |Project|Descriptioin|
@@ -50,13 +50,13 @@ Code coverage:
 Package Manager:
 
 ```shell
-Install-Package FireflySoft.RateLimit.AspNetCore -Version 1.2.0
+Install-Package FireflySoft.RateLimit.AspNetCore
 ```
 
 Or .NET CLI:
 
 ```shell
-dotnet add package FireflySoft.RateLimit.AspNetCore --version 1.2.0
+dotnet add package FireflySoft.RateLimit.AspNetCore
 ```
 
 Or Project file：
@@ -114,7 +114,7 @@ public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
 Package Manager:
 
 ```shell
-Install-Package FireflySoft.RateLimit.AspNet -Version 1.2.0
+Install-Package FireflySoft.RateLimit.AspNet
 ```
 
 ***2、Register MessageHandler***
@@ -167,13 +167,13 @@ protected void Application_Start()
 Package Manager:
 
 ```shell
-Install-Package FireflySoft.RateLimit.Core -Version 1.2.0
+Install-Package FireflySoft.RateLimit.Core
 ```
 
 Or .NET CLI:
 
 ```shell
-dotnet add package FireflySoft.RateLimit.Core --version 1.2.0
+dotnet add package FireflySoft.RateLimit.Core
 ```
 
 **2、Use RateLimitProcessor**
@@ -224,8 +224,9 @@ var result = processor.Check(new SimulationRequest()
 SimulationRequest is a custom request that you can modify to any type.
 
 ### Todo List
-
-* Add Time start type for rules: indicates whether the time starts from the current time or the start time of the natural period
-* Add the current statistical value to the return value of Check method of RateLimitProcessor.
+* Upgrade the return value of RateLimitProcessor.Check: 
+    * Add the current statistical value.
+    * Add the wait time for leaky bucket algorithm.
+    * Add a new limit state for leaky bucket algorithm.
+* Remove generic types of the current request for each class.
 * Add more unit tests.
-* Remove IRatelimitStorage and transfer related methods to corresponding algorithm classes.

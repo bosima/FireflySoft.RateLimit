@@ -14,13 +14,13 @@ namespace FireflySoft.RateLimit.Core.UnitTest
         public static void Init(TestContext tc)
         {
         }
-        
+
         [DataTestMethod]
         [DataRow("memory")]
         [DataRow("redis")]
-        public void TestTokenBucketAlgorithm(string storageType)
+        public void Test(string storageType)
         {
-            var processor = GetTokenBucketProcessor(storageType);
+            var processor = GetTokenBucketProcessor(storageType, 30, 10, TimeSpan.FromSeconds(1), 1);
 
             for (int i = 1; i <= 80; i++)
             {
@@ -54,9 +54,145 @@ namespace FireflySoft.RateLimit.Core.UnitTest
         [DataTestMethod]
         [DataRow("memory")]
         [DataRow("redis")]
-        public async Task TestTokenBucketAlgorithmAsync(string storageType)
+        public void TestLockSeconds(string storageType)
         {
-            var processor = GetTokenBucketProcessor(storageType);
+            var processor = GetTokenBucketProcessor(storageType, 30, 10, TimeSpan.FromSeconds(1), 3);
+
+            for (int i = 1; i <= 70; i++)
+            {
+                if (i == 61 && i == 62 && i == 63)
+                {
+                    Thread.Sleep(1000);
+                }
+                var result = processor.Check(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i > 30 && i <= 62)
+                {
+                    Assert.AreEqual(true, result.IsLimit);
+                }
+
+                if (i <= 50 && i > 62)
+                {
+                    Assert.AreEqual(false, result.IsLimit);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        [DataRow("memory")]
+        [DataRow("redis")]
+        public void TestFromNaturalPeriodBeign(string storageType)
+        {
+            var processor = GetTokenBucketProcessor(storageType, 30, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromNaturalPeriodBeign);
+
+            while (true)
+            {
+                if (DateTimeOffset.Now.Millisecond < 800)
+                {
+                    Thread.Sleep(50);
+                    continue;
+                }
+                break;
+            }
+
+            for (int i = 1; i <= 80; i++)
+            {
+                Debug.WriteLine("for " + i);
+
+                var checkResult = processor.Check(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i == 31 || i == 42 || i >= 53)
+                {
+                    Assert.AreEqual(true, checkResult.IsLimit);
+                }
+                else
+                {
+                    Assert.AreEqual(false, checkResult.IsLimit);
+                }
+
+                if (i == 31)
+                {
+                    Thread.Sleep(200);
+                }
+
+                if (i == 42)
+                {
+                    Thread.Sleep(1000);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        [DataRow("memory")]
+        [DataRow("redis")]
+        public void TestFromCurrent(string storageType)
+        {
+            var processor = GetTokenBucketProcessor(storageType, 30, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromCurrent);
+
+            while (true)
+            {
+                if (DateTimeOffset.Now.Millisecond < 800)
+                {
+                    Thread.Sleep(50);
+                    continue;
+                }
+                break;
+            }
+
+            for (int i = 1; i <= 80; i++)
+            {
+                Debug.WriteLine("for " + i);
+
+                var checkResult = processor.Check(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if ((i >= 31 && i <= 42) || i >= 53)
+                {
+                    Assert.AreEqual(true, checkResult.IsLimit);
+                }
+                else
+                {
+                    Assert.AreEqual(false, checkResult.IsLimit);
+                }
+
+                if (i == 31)
+                {
+                    Thread.Sleep(200);
+                }
+
+                if (i == 42)
+                {
+                    Thread.Sleep(1000);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        [DataRow("memory")]
+        [DataRow("redis")]
+        public async Task TestAsync(string storageType)
+        {
+            var processor = GetTokenBucketProcessor(storageType, 30, 10, TimeSpan.FromSeconds(1), 1);
 
             for (int i = 1; i <= 80; i++)
             {
@@ -87,14 +223,117 @@ namespace FireflySoft.RateLimit.Core.UnitTest
             }
         }
 
-        private RateLimitProcessor<SimulationRequest> GetTokenBucketProcessor(string storageType)
+        [DataTestMethod]
+        [DataRow("memory")]
+        [DataRow("redis")]
+        public async Task TestFromNaturalPeriodBeignAsync(string storageType)
+        {
+            var processor = GetTokenBucketProcessor(storageType, 30, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromNaturalPeriodBeign);
+
+            while (true)
+            {
+                if (DateTimeOffset.Now.Millisecond < 800)
+                {
+                    Thread.Sleep(50);
+                    continue;
+                }
+                break;
+            }
+
+            for (int i = 1; i <= 80; i++)
+            {
+                Debug.WriteLine("for " + i);
+
+                var checkResult = await processor.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i == 31 || i == 42 || i >= 53)
+                {
+                    Assert.AreEqual(true, checkResult.IsLimit);
+                }
+                else
+                {
+                    Assert.AreEqual(false, checkResult.IsLimit);
+                }
+
+                if (i == 31)
+                {
+                    Thread.Sleep(200);
+                }
+
+                if (i == 42)
+                {
+                    Thread.Sleep(1000);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        [DataRow("memory")]
+        [DataRow("redis")]
+        public async Task TestFromCurrentAsync(string storageType)
+        {
+            var processor = GetTokenBucketProcessor(storageType, 30, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromCurrent);
+
+            while (true)
+            {
+                if (DateTimeOffset.Now.Millisecond < 800)
+                {
+                    Thread.Sleep(50);
+                    continue;
+                }
+                break;
+            }
+
+            for (int i = 1; i <= 80; i++)
+            {
+                Debug.WriteLine("for " + i);
+
+                var checkResult = await processor.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if ((i >= 31 && i <= 42) || i >= 53)
+                {
+                    Assert.AreEqual(true, checkResult.IsLimit);
+                }
+                else
+                {
+                    Assert.AreEqual(false, checkResult.IsLimit);
+                }
+
+                if (i == 31)
+                {
+                    Thread.Sleep(200);
+                }
+
+                if (i == 42)
+                {
+                    Thread.Sleep(1000);
+                }
+            }
+        }
+
+        private RateLimitProcessor<SimulationRequest> GetTokenBucketProcessor(string storageType, int capacity, int inflowQuantity, TimeSpan inflowUnit, int lockSeconds, StartTimeType startTimeType = StartTimeType.FromCurrent)
         {
             var tokenBucketRules = new TokenBucketRateLimitRule<SimulationRequest>[]
                 {
-                    new TokenBucketRateLimitRule<SimulationRequest>(30,10,TimeSpan.FromSeconds(1))
+                    new TokenBucketRateLimitRule<SimulationRequest>(capacity,inflowQuantity,inflowUnit)
                     {
                         Id=Guid.NewGuid().ToString(),
-                        LockSeconds=1,
+                        LockSeconds=lockSeconds,
+                        StartTimeType=startTimeType,
                         ExtractTarget = (request) =>
                         {
                             return request.RequestResource;

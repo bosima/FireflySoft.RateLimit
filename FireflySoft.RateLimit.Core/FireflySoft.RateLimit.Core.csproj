@@ -3,10 +3,10 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageId>FireflySoft.RateLimit.Core</PackageId>
-    <Version>1.2.0</Version>
+    <Version>1.3.0</Version>
     <Authors>bossma</Authors>
     <PackageProjectUrl>https://github.com/bosima/FireflySoft.RateLimit</PackageProjectUrl>
-    <PackageReleaseNotes>fix some bugs; add updating rules method.</PackageReleaseNotes>
+    <PackageReleaseNotes>fix some bugs; add 'StartTimeType' for rate limit rule.</PackageReleaseNotes>
     <PackageTags>Rate Limit;Fixed Window;Sliding Window;Leaky Bucket;Token Bucket</PackageTags>
     <Description>
       A rate limit library, support .NET Framework and .NET Core.
