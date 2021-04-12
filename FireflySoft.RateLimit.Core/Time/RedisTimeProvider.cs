@@ -2,7 +2,7 @@ using System;
 using System.Threading.Tasks;
 using StackExchange.Redis;
 
-namespace FireflySoft.RateLimit.Core
+namespace FireflySoft.RateLimit.Core.Time
 {
     /// <summary>
     /// The time provider of redis
@@ -32,7 +32,7 @@ namespace FireflySoft.RateLimit.Core
         /// 
         /// </summary>
         /// <returns></returns>
-        public long GetCurrentUnixTimeMilliseconds()
+        public long GetCurrentUtcMilliseconds()
         {
             DateTimeOffset utcTime = GetCurrentUtcTime();
             return utcTime.ToUnixTimeMilliseconds();
@@ -62,7 +62,7 @@ namespace FireflySoft.RateLimit.Core
         /// Get the milliseconds of current unix time
         /// </summary>
         /// <returns></returns>
-        public async Task<long> GetCurrentUnixTimeMillisecondsAsync()
+        public async Task<long> GetCurrentUtcMillisecondsAsync()
         {
             DateTimeOffset utcTime = await GetCurrentUtcTimeAsync().ConfigureAwait(false);
             return utcTime.ToUnixTimeMilliseconds();

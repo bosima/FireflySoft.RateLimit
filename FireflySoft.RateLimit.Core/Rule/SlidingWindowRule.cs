@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 
-namespace FireflySoft.RateLimit.Core
+namespace FireflySoft.RateLimit.Core.Rule
 {
     /// <summary>
     /// The rule of sliding window algorithm
     /// </summary>
-    public class SlidingWindowRateLimitRule<T> : RateLimitRule<T>
+    public class SlidingWindowRule : RateLimitRule
     {
         private int _periodNumber;
 
@@ -42,7 +42,7 @@ namespace FireflySoft.RateLimit.Core
         /// </summary>
         /// <param name="statWindow"></param>
         /// <param name="statPeriod"></param>
-        public SlidingWindowRateLimitRule(TimeSpan statWindow, TimeSpan statPeriod)
+        public SlidingWindowRule(TimeSpan statWindow, TimeSpan statPeriod)
         {
             if (statWindow.TotalMilliseconds < 1)
             {

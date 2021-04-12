@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 
-namespace FireflySoft.RateLimit.Core
+namespace FireflySoft.RateLimit.Core.Rule
 {
     /// <summary>
     /// The rule of token bucket algorithm
     /// </summary>
-    public class TokenBucketRateLimitRule<T> : RateLimitRule<T>
+    public class TokenBucketRule : RateLimitRule
     {
         /// <summary>
         /// Rhe capacity of token bucket
@@ -29,7 +29,7 @@ namespace FireflySoft.RateLimit.Core
         /// <param name="capacity"></param>
         /// <param name="inflowQuantityPerUnit"></param>
         /// <param name="inflowUnit"></param>
-        public TokenBucketRateLimitRule(int capacity, int inflowQuantityPerUnit, TimeSpan inflowUnit)
+        public TokenBucketRule(int capacity, int inflowQuantityPerUnit, TimeSpan inflowUnit)
         {
             if (capacity < 1)
             {

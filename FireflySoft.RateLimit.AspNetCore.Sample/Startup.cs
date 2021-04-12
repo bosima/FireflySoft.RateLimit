@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FireflySoft.RateLimit.Core;
+using FireflySoft.RateLimit.Core.InProcessAlgorithm;
+using FireflySoft.RateLimit.Core.Rule;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -27,6 +29,8 @@ namespace FireflySoft.RateLimit.AspNetCore.Sample
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            AddLimitForPerSecond(services);
+
             services.AddControllers();
         }
 
@@ -38,9 +42,7 @@ namespace FireflySoft.RateLimit.AspNetCore.Sample
                 app.UseDeveloperExceptionPage();
             }
 
-            //app.UseHttpsRedirection();
-
-            UseLimitForPerSecond(app);
+            app.UseRateLimit();
 
             app.UseRouting();
 
@@ -52,90 +54,84 @@ namespace FireflySoft.RateLimit.AspNetCore.Sample
             });
         }
 
-        private void UseLimitForPerSecond(IApplicationBuilder app)
+        private void AddLimitForPerSecond(IServiceCollection app)
         {
-            app.UseRateLimit(new Core.RateLimitProcessor<HttpContext>.Builder()
-                            .WithError(new Core.RateLimitError()
-                            {
-                                Message = "The system is busy, please try again later"
-                            })
-                            .WithAlgorithm(new FixedWindowAlgorithm<HttpContext>(new[] {
-                                new FixedWindowRateLimitRule<HttpContext>()
-                                {
-                                    ExtractTarget = context =>
-                                    {
-                                        return context.Request.Path.Value;
-                                    },
-                                    CheckRuleMatching = context =>
-                                    {
-                                        return true;
-                                    },
-                                    Name="general limit rule",
-                                    LimitNumber=30,
-                                    StatWindow=TimeSpan.FromSeconds(1)
-                                }
-                            }))
-                            .Build());
+            app.AddRateLimit(new InProcessFixedWindowAlgorithm(
+                new[] {
+                    new FixedWindowRule()
+                    {
+                        ExtractTarget = context =>
+                        {
+                            return (context as HttpContext).Request.Path.Value;
+                        },
+                        CheckRuleMatching = context =>
+                        {
+                            return true;
+                        },
+                        Name="default limit rule",
+                        LimitNumber=30,
+                        StatWindow=TimeSpan.FromSeconds(1)
+                    }
+                })
+            );
         }
 
-        private void UseLimitForDifferentUser(IApplicationBuilder app)
+        private void AddLimitForDifferentUser(IServiceCollection app)
         {
-            app.UseRateLimit(new RateLimitProcessor<HttpContext>.Builder()
-                    .WithAlgorithm(new FixedWindowAlgorithm<HttpContext>(new[] {
-                        new FixedWindowRateLimitRule<HttpContext>()
-                        {
-                            Id = "1",
-                            ExtractTarget = context =>
-                            {
-                                // 这里假设用户Id是从header中传过来的，需根据实际情况获取
-                                return context.Request.GetTypedHeaders().Get<string>("userId");
-                            },
-                            CheckRuleMatching = context =>
-                            {
-                                // 这里假设用户类型是从header中传过来的，实际可能需要根据用户Id再去查询
-                                // 0免费用户 1收费用户
-                                int userType = context.Request.GetTypedHeaders().Get<int>("userType");
-                                if(userType==0){
-                                    return true;
-                                }
-                                return false;
-                            },
-                            Name="免费用户限流规则",
-                            LimitNumber=100,
-                            StatWindow=TimeSpan.FromDays(1),
-                            StartTimeType=StartTimeType.FromNaturalPeriodBeign
-                        },
-                        new FixedWindowRateLimitRule<HttpContext>()
-                        {
-                            Id = "2",
-                            ExtractTarget = context =>
-                            {
-                                // 这里假设用户Id是从header中传过来的，需根据实际情况获取
-                                return context.Request.GetTypedHeaders().Get<string>("userId");
-                            },
-                            CheckRuleMatching = context =>
-                            {
-                                // 这里假设用户类型是从header中传过来的，实际可能需要根据用户Id再去查询
-                                // 0免费用户 1收费用户
-                                int userType = context.Request.GetTypedHeaders().Get<int>("userType");
-                                if(userType==1){
-                                    return true;
-                                }
-                                return false;
-                            },
-                            Name="收费用户限流规则",
-                            LimitNumber=1000000,
-                            StatWindow=TimeSpan.FromDays(1),
-                            StartTimeType=StartTimeType.FromNaturalPeriodBeign
-                        }
-                    }))
-                    .WithError(new Core.RateLimitError()
+            app.AddRateLimit(new InProcessFixedWindowAlgorithm(
+                new[] {
+                    new FixedWindowRule()
                     {
-                        Code = 429,
-                        Message = "查询数达到当天最大限制"
-                    })
-                    //.WithStorage(new RedisStorage(StackExchange.Redis.ConnectionMultiplexer.Connect("localhost")))
-                    .Build());
+                        Id = "1",
+                        ExtractTarget = context =>
+                        {
+                            // Assuming that the user ID is passed from the header, it needs to be obtained according to the actual situation
+                            return (context as HttpContext).Request.GetTypedHeaders().Get<string>("userId");
+                        },
+                        CheckRuleMatching = context =>
+                        {
+                            // Assuming that the user type is passed from the header, it may actually need to be queried according to the user Id
+                            // 0 free users 1 charged users
+                            int userType = (context as HttpContext).Request.GetTypedHeaders().Get<int>("userType");
+                            if(userType==0){
+                                return true;
+                            }
+                            return false;
+                        },
+                        Name="Free user rate limit rules",
+                        LimitNumber=100,
+                        StatWindow=TimeSpan.FromDays(1),
+                        StartTimeType=StartTimeType.FromNaturalPeriodBeign
+                    },
+                    new FixedWindowRule()
+                    {
+                        Id = "2",
+                        ExtractTarget = context =>
+                        {
+                            return (context as HttpContext).Request.GetTypedHeaders().Get<string>("userId");
+                        },
+                        CheckRuleMatching = context =>
+                        {
+                            int userType = (context as HttpContext).Request.GetTypedHeaders().Get<int>("userType");
+                            if(userType==1){
+                                return true;
+                            }
+                            return false;
+                        },
+                        Name="Charged user rate limit rules",
+                        LimitNumber=1000000,
+                        StatWindow=TimeSpan.FromDays(1),
+                        StartTimeType=StartTimeType.FromNaturalPeriodBeign
+                    }
+                }),
+                new HttpRateLimitError()
+                {
+                    BuildHttpContent = (context, ruleCheckResult) =>
+                    {
+                        return "The number of queries exceeds the maximum limit of the day.";
+                    }
+                }
+            );
         }
     }
 }

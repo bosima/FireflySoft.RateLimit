@@ -5,6 +5,11 @@ using System.Threading.Tasks;
 using System.Diagnostics;
 using BenchmarkDotNet.Attributes;
 using FireflySoft.RateLimit.Core;
+using StackExchange.Redis;
+using FireflySoft.RateLimit.Core.Rule;
+using FireflySoft.RateLimit.Core.InProcessAlgorithm;
+using FireflySoft.RateLimit.Core.RedisAlgorithm;
+using System.Linq;
 
 namespace FireflySoft.RateLmit.Core.BenchmarkTest
 {
@@ -12,28 +17,26 @@ namespace FireflySoft.RateLmit.Core.BenchmarkTest
     [SimpleJob(launchCount: 1, warmupCount: 3, targetCount: 10)]
     public class BenchmarkTest
     {
-        IRateLimitStorage redisStorage;
-        IRateLimitStorage memoryStorage;
+        ConnectionMultiplexer redisClient;
 
         [GlobalSetup]
         public void GlobalSetup()
         {
-            memoryStorage = new InProcessMemoryStorage();
-            redisStorage = new RedisStorage(StackExchange.Redis.ConnectionMultiplexer.Connect("127.0.0.1"));
+            redisClient = StackExchange.Redis.ConnectionMultiplexer.Connect("127.0.0.1");
         }
 
         [Benchmark]
-        [Arguments("fixedWindow", "memory", 10000, 4)]
+        // [Arguments("fixedWindow", "memory", 10000, 4)]
         [Arguments("slidingWindow", "memory", 10000, 4)]
-        [Arguments("leakyBucket", "memory", 10000, 4)]
-        [Arguments("tokenBucket", "memory", 10000, 4)]
-        [Arguments("fixedWindow", "redis", 10000, 8)]
-        [Arguments("slidingWindow", "redis", 10000, 8)]
-        [Arguments("leakyBucket", "redis", 10000, 8)]
-        [Arguments("tokenBucket", "redis", 10000, 8)]
+        // [Arguments("leakyBucket", "memory", 10000, 4)]
+        // [Arguments("tokenBucket", "memory", 10000, 4)]
+        // [Arguments("fixedWindow", "redis", 10000, 8)]
+        // [Arguments("slidingWindow", "redis", 10000, 8)]
+        // [Arguments("leakyBucket", "redis", 10000, 8)]
+        // [Arguments("tokenBucket", "redis", 10000, 8)]
         public void Test(string algorithm, string storageType, int limitNumber, int taskNumber)
         {
-            RateLimitProcessor<SimulationRequest> processor;
+            IAlgorithm processor;
             switch (algorithm)
             {
                 default:
@@ -69,7 +72,7 @@ namespace FireflySoft.RateLmit.Core.BenchmarkTest
 
                         if (result.IsLimit)
                         {
-                            Console.WriteLine($"error code: {result.Target}, {result.Error.Code}");
+                            Console.WriteLine($"limit count: {result.RuleCheckResults.First().Count}");
                         }
                     }
                 });
@@ -79,17 +82,17 @@ namespace FireflySoft.RateLmit.Core.BenchmarkTest
         }
 
         [Benchmark]
-        [Arguments("fixedWindow", "memory", 10000, 4)]
+        // [Arguments("fixedWindow", "memory", 10000, 4)]
         [Arguments("slidingWindow", "memory", 10000, 4)]
-        [Arguments("leakyBucket", "memory", 10000, 4)]
-        [Arguments("tokenBucket", "memory", 10000, 4)]
-        [Arguments("fixedWindow", "redis", 10000, 8)]
-        [Arguments("slidingWindow", "redis", 10000, 8)]
-        [Arguments("leakyBucket", "redis", 10000, 8)]
-        [Arguments("tokenBucket", "redis", 10000, 8)]
+        // [Arguments("leakyBucket", "memory", 10000, 4)]
+        // [Arguments("tokenBucket", "memory", 10000, 4)]
+        // [Arguments("fixedWindow", "redis", 10000, 8)]
+        // [Arguments("slidingWindow", "redis", 10000, 8)]
+        // [Arguments("leakyBucket", "redis", 10000, 8)]
+        // [Arguments("tokenBucket", "redis", 10000, 8)]
         public async Task TestAsync(string algorithm, string storageType, int limitNumber, int taskNumber)
         {
-            RateLimitProcessor<SimulationRequest> processor;
+            IAlgorithm processor;
             switch (algorithm)
             {
                 default:
@@ -125,7 +128,7 @@ namespace FireflySoft.RateLmit.Core.BenchmarkTest
 
                         if (result.IsLimit)
                         {
-                            Console.WriteLine($"error code: {result.Target}, {result.Error.Code}");
+                            Console.WriteLine($"limit count: {result.RuleCheckResults.First().Count}");
                         }
                     }
                 });
@@ -134,23 +137,17 @@ namespace FireflySoft.RateLmit.Core.BenchmarkTest
             await Task.WhenAll(tasks);
         }
 
-        private RateLimitProcessor<SimulationRequest> GetTokenBucketProcessor(string storageType, int limitNumber)
+        private IAlgorithm GetTokenBucketProcessor(string storageType, int limitNumber)
         {
-            IRateLimitStorage storage = memoryStorage;
-            if (storageType == "redis")
-            {
-                storage = redisStorage;
-            }
-
-            var tokenBucketRules = new TokenBucketRateLimitRule<SimulationRequest>[]
+            var tokenBucketRules = new TokenBucketRule[]
                 {
-                    new TokenBucketRateLimitRule<SimulationRequest>(limitNumber,100,TimeSpan.FromSeconds(1))
+                    new TokenBucketRule(limitNumber,100,TimeSpan.FromSeconds(1))
                     {
                         Id=Guid.NewGuid().ToString(),
                         LockSeconds=1,
                         ExtractTarget = (request) =>
                         {
-                            return request.RequestResource;
+                            return (request as SimulationRequest).RequestResource;
                         },
                         CheckRuleMatching = (request) =>
                         {
@@ -159,33 +156,27 @@ namespace FireflySoft.RateLmit.Core.BenchmarkTest
                     }
                 };
 
-            return new RateLimitProcessor<SimulationRequest>.Builder()
-                .WithAlgorithm(new TokenBucketAlgorithm<SimulationRequest>(tokenBucketRules))
-                .WithStorage(storage)
-                .WithError(new RateLimitError()
-                {
-                    Code = 429,
-                })
-                .Build();
-        }
-
-        private RateLimitProcessor<SimulationRequest> GetLeakyBucketProcessor(string storageType, int limitNumber)
-        {
-            IRateLimitStorage storage = memoryStorage;
             if (storageType == "redis")
             {
-                storage = redisStorage;
+                return new RedisTokenBucketAlgorithm(tokenBucketRules, redisClient);
             }
+            else
+            {
+                return new InProcessTokenBucketAlgorithm(tokenBucketRules);
+            }
+        }
 
-            var leakyBucketRules = new LeakyBucketRateLimitRule<SimulationRequest>[]
+        private IAlgorithm GetLeakyBucketProcessor(string storageType, int limitNumber)
+        {
+            var leakyBucketRules = new LeakyBucketRule[]
                 {
-                    new LeakyBucketRateLimitRule<SimulationRequest>(limitNumber,100,TimeSpan.FromSeconds(1))
+                    new LeakyBucketRule(limitNumber,100,TimeSpan.FromSeconds(1))
                     {
                         Id=Guid.NewGuid().ToString(),
                         LockSeconds=1,
                         ExtractTarget = (request) =>
                         {
-                            return request.RequestResource;
+                            return (request as SimulationRequest).RequestResource;
                         },
                         CheckRuleMatching = (request) =>
                         {
@@ -194,34 +185,28 @@ namespace FireflySoft.RateLmit.Core.BenchmarkTest
                     }
                 };
 
-            return new RateLimitProcessor<SimulationRequest>.Builder()
-                .WithAlgorithm(new LeakyBucketAlgorithm<SimulationRequest>(leakyBucketRules))
-                .WithStorage(storage)
-                .WithError(new RateLimitError()
-                {
-                    Code = 429,
-                })
-                .Build();
-        }
-
-        private RateLimitProcessor<SimulationRequest> GetSlidingWindowProcessor(string storageType, int limitNumber)
-        {
-            IRateLimitStorage storage = memoryStorage;
             if (storageType == "redis")
             {
-                storage = redisStorage;
+                return new RedisLeakyBucketAlgorithm(leakyBucketRules, redisClient);
             }
+            else
+            {
+                return new InProcessLeakyBucketAlgorithm(leakyBucketRules);
+            }
+        }
 
-            var slidingWindowsRules = new SlidingWindowRateLimitRule<SimulationRequest>[]
+        private IAlgorithm GetSlidingWindowProcessor(string storageType, int limitNumber)
+        {
+            var slidingWindowsRules = new SlidingWindowRule[]
                 {
-                    new SlidingWindowRateLimitRule<SimulationRequest>(TimeSpan.FromSeconds(10),TimeSpan.FromSeconds(1))
+                    new SlidingWindowRule(TimeSpan.FromSeconds(10),TimeSpan.FromSeconds(1))
                     {
                         Id=Guid.NewGuid().ToString(),
                         LimitNumber=limitNumber,
                         LockSeconds=1,
                         ExtractTarget = (request) =>
                         {
-                            return request.RequestResource;
+                            return (request as SimulationRequest).RequestResource;
                         },
                         CheckRuleMatching = (request) =>
                         {
@@ -230,50 +215,44 @@ namespace FireflySoft.RateLmit.Core.BenchmarkTest
                     }
                 };
 
-            return new RateLimitProcessor<SimulationRequest>.Builder()
-                .WithAlgorithm(new SlidingWindowAlgorithm<SimulationRequest>(slidingWindowsRules))
-                .WithStorage(storage)
-                .WithError(new RateLimitError()
-                {
-                    Code = 429,
-                })
-                .Build();
-        }
-
-        private RateLimitProcessor<SimulationRequest> GetFixedWindowProcessor(string storageType, int limitNumber)
-        {
-            IRateLimitStorage storage = memoryStorage;
             if (storageType == "redis")
             {
-                storage = redisStorage;
+                return new RedisSlidingWindowAlgorithm(slidingWindowsRules, redisClient);
             }
+            else
+            {
+                return new InProcessSlidingWindowAlgorithm(slidingWindowsRules);
+            }
+        }
 
-            var fixedWindowRules = new FixedWindowRateLimitRule<SimulationRequest>[]
+        private IAlgorithm GetFixedWindowProcessor(string storageType, int limitNumber)
+        {
+            var fixedWindowRules = new FixedWindowRule[]
                 {
-                    new FixedWindowRateLimitRule<SimulationRequest>()
+                    new FixedWindowRule()
                     {
                         Id=Guid.NewGuid().ToString(),
                         StatWindow=TimeSpan.FromSeconds(1),
                         LimitNumber=limitNumber,
                         ExtractTarget = (request) =>
                         {
-                            return request.RequestResource;
+                            return (request as SimulationRequest).RequestResource;
                         },
                         CheckRuleMatching = (request) =>
                         {
                             return true;
-                        },
+                        }
                     }
                 };
 
-            return new RateLimitProcessor<SimulationRequest>.Builder()
-                .WithAlgorithm(new FixedWindowAlgorithm<SimulationRequest>(fixedWindowRules))
-                .WithStorage(storage)
-                .WithError(new RateLimitError()
-                {
-                    Code = 429,
-                })
-                .Build();
+            if (storageType == "redis")
+            {
+                return new RedisFixedWindowAlgorithm(fixedWindowRules, redisClient);
+            }
+            else
+            {
+                return new InProcessFixedWindowAlgorithm(fixedWindowRules);
+            }
         }
 
         public class SimulationRequest

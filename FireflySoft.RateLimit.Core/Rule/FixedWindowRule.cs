@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 
-namespace FireflySoft.RateLimit.Core
+namespace FireflySoft.RateLimit.Core.Rule
 {
     /// <summary>
     /// Fixed Window Algorithm
     /// </summary>
-    public class FixedWindowRateLimitRule<T> : RateLimitRule<T>
+    public class FixedWindowRule : RateLimitRule
     {
         /// <summary>
         /// Statistical time window, which counts the number of requests in this time.
