@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Web;
 using System.Web.Http;
 using FireflySoft.RateLimit.Core;
+using FireflySoft.RateLimit.Core.Rule;
 
 namespace FireflySoft.RateLimit.AspNet.Sample
 {
@@ -10,33 +11,27 @@ namespace FireflySoft.RateLimit.AspNet.Sample
     {
         protected void Application_Start()
         {
-            // 限流
             GlobalConfiguration.Configuration.MessageHandlers.Add(new RateLimitHandler(
-                new Core.RateLimitProcessor<HttpRequestMessage>.Builder()
-                .WithError(new Core.RateLimitError()
-                {
-                    Message = "The system is busy, please try again later"
-                })
-                .WithAlgorithm(new FixedWindowAlgorithm<HttpRequestMessage>( new[] {
-                    new FixedWindowRateLimitRule<HttpRequestMessage>()
-                    {
-                        ExtractTarget = context =>
+                new Core.InProcessAlgorithm.InProcessFixedWindowAlgorithm(
+                    new[] {
+                        new FixedWindowRule()
                         {
-                             return context.RequestUri.AbsolutePath;
-                        },
-                        CheckRuleMatching = context =>
-                        {
-                            return true;
-                        },
-                        Name="general limit rule",
-                        LimitNumber=30,
-                        StatWindow=TimeSpan.FromSeconds(1)
-                    }
-                }))
-                .Build()
-             ));
+                            ExtractTarget = context =>
+                            {
+                                return (context as HttpRequestMessage).RequestUri.AbsolutePath;
+                            },
+                            CheckRuleMatching = context =>
+                            {
+                                return true;
+                            },
+                            Name="default limit rule",
+                            LimitNumber=30,
+                            StatWindow=TimeSpan.FromSeconds(1)
+                        }
+                    })
+            ));
 
             GlobalConfiguration.Configure(WebApiConfig.Register);
         }
-}
+    }
 }

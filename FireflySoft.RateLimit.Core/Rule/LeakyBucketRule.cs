@@ -1,22 +1,22 @@
 using System;
 using System.Collections.Generic;
 
-namespace FireflySoft.RateLimit.Core
+namespace FireflySoft.RateLimit.Core.Rule
 {
     /// <summary>
     /// the rule of leaky bucket algorithm
     /// </summary>
-    public class LeakyBucketRateLimitRule<T> : RateLimitRule<T>
+    public class LeakyBucketRule : RateLimitRule
     {
         /// <summary>
         /// The capacity of current leaky bucket
         /// </summary>
-        public int Capacity { get; private set; }
+        public long Capacity { get; private set; }
 
         /// <summary>
         /// The outflow quantity per unit time
         /// </summary>
-        public int OutflowQuantityPerUnit { get; private set; }
+        public long OutflowQuantityPerUnit { get; private set; }
 
         /// <summary>
         /// The time unit of outflow from the leaky bucket
@@ -29,7 +29,7 @@ namespace FireflySoft.RateLimit.Core
         /// <param name="capacity"></param>
         /// <param name="outflowQuantityPerUnit"></param>
         /// <param name="outflowUnit"></param>
-        public LeakyBucketRateLimitRule(int capacity, int outflowQuantityPerUnit, TimeSpan outflowUnit)
+        public LeakyBucketRule(long capacity, long outflowQuantityPerUnit, TimeSpan outflowUnit)
         {
             if (capacity < 1)
             {

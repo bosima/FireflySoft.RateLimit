@@ -1,5 +1,7 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
+using FireflySoft.RateLimit.Core.Time;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace FireflySoft.RateLimit.Core.UnitTest
@@ -15,9 +17,9 @@ namespace FireflySoft.RateLimit.Core.UnitTest
         }
 
         [DataTestMethod]
-        public void TestGetCurrentUnixTimeMilliseconds()
+        public void TestGetCurrentUtcMilliseconds()
         {
-            var currentTs = GetTimeProvider().GetCurrentUnixTimeMilliseconds();
+            var currentTs = GetTimeProvider().GetCurrentUtcMilliseconds();
             Assert.AreEqual(true, currentTs <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
         }
 
@@ -32,13 +34,14 @@ namespace FireflySoft.RateLimit.Core.UnitTest
         public async Task TestGetCurrentUtcTimeAsync()
         {
             var currentUtcTime = await GetTimeProvider().GetCurrentUtcTimeAsync();
+            Assert.AreEqual(true, currentUtcTime.Offset == TimeSpan.FromHours(0));
             Assert.AreEqual(true, currentUtcTime <= DateTimeOffset.UtcNow);
         }
 
         [DataTestMethod]
-        public async Task TestGetCurrentUnixTimeMillisecondsAsync()
+        public async Task TestGetCurrentUtcMillisecondsAsync()
         {
-            var currentTs = await GetTimeProvider().GetCurrentUnixTimeMillisecondsAsync();
+            var currentTs = await GetTimeProvider().GetCurrentUtcMillisecondsAsync();
             Assert.AreEqual(true, currentTs <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
         }
 

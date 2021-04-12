@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 
-namespace FireflySoft.RateLimit.Core
+namespace FireflySoft.RateLimit.Core.Time
 {
     /// <summary>
     /// Local time provider
@@ -21,7 +21,7 @@ namespace FireflySoft.RateLimit.Core
         /// Get the milliseconds of current unix time
         /// </summary>
         /// <returns></returns>
-        public long GetCurrentUnixTimeMilliseconds()
+        public long GetCurrentUtcMilliseconds()
         {
             return DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         }
@@ -48,9 +48,9 @@ namespace FireflySoft.RateLimit.Core
         /// Get the milliseconds of current unix time
         /// </summary>
         /// <returns></returns>
-        public async Task<long> GetCurrentUnixTimeMillisecondsAsync()
+        public async Task<long> GetCurrentUtcMillisecondsAsync()
         {
-            return await Task.FromResult(GetCurrentUnixTimeMilliseconds());
+            return await Task.FromResult(GetCurrentUtcMilliseconds());
         }
 
         /// <summary>
