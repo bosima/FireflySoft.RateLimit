@@ -15,8 +15,9 @@ namespace FireflySoft.RateLimit.AspNetCore
         /// <param name="builder"></param>
         /// <param name="algorithm"></param>
         /// <param name="error"></param>
+        /// <param name="interceptor"></param>
         /// <returns></returns>
-        public static IServiceCollection AddRateLimit(this IServiceCollection builder, IAlgorithm algorithm, HttpRateLimitError error = null)
+        public static IServiceCollection AddRateLimit(this IServiceCollection builder, IAlgorithm algorithm, HttpErrorResponse error = null, HttpInvokeInterceptor interceptor = null)
         {
             if (algorithm == null)
             {
@@ -25,7 +26,7 @@ namespace FireflySoft.RateLimit.AspNetCore
 
             if (error == null)
             {
-                error = new HttpRateLimitError()
+                error = new HttpErrorResponse()
                 {
                     HttpStatusCode = 429,
                     BuildHttpContent = (context, checkResult) =>
@@ -36,7 +37,8 @@ namespace FireflySoft.RateLimit.AspNetCore
             }
 
             builder.AddSingleton<IAlgorithm>(algorithm);
-            builder.AddSingleton<HttpRateLimitError>(error);
+            builder.AddSingleton<HttpErrorResponse>(error);
+            builder.AddSingleton<HttpInvokeInterceptor>(interceptor);
             return builder;
         }
     }

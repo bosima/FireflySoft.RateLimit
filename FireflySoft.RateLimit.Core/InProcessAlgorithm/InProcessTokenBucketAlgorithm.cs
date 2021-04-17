@@ -89,6 +89,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                 var lastTimeChanged = false;
                 var pastTime = currentTime - lastTime;
                 var pastTimeMilliseconds = pastTime.TotalMilliseconds;
+                // Debug.WriteLine(currentTime.ToString("mm:ss.fff") + "," + lastTime.ToString("mm:ss.fff") + "," + pastTimeMilliseconds);
                 if (pastTimeMilliseconds < inflowUnit)
                 {
                     bucketAmount = countValue.Value - amount;
