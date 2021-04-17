@@ -29,7 +29,8 @@ namespace FireflySoft.RateLimit.AspNetCore.Sample
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            AddLimitForPerSecond(services);
+            //AddLimitForPerSecond(services);
+            AddLimitForTokenBucketPerSecond(services);
 
             services.AddControllers();
         }
@@ -71,6 +72,26 @@ namespace FireflySoft.RateLimit.AspNetCore.Sample
                         Name="default limit rule",
                         LimitNumber=30,
                         StatWindow=TimeSpan.FromSeconds(1)
+                    }
+                })
+            );
+        }
+
+        private void AddLimitForTokenBucketPerSecond(IServiceCollection app)
+        {
+            app.AddRateLimit(new InProcessTokenBucketAlgorithm(
+                new[] {
+                    new TokenBucketRule(20,10,TimeSpan.FromSeconds(1))
+                    {
+                        ExtractTarget = context =>
+                        {
+                            return (context as HttpContext).Request.Path.Value;
+                        },
+                        CheckRuleMatching = context =>
+                        {
+                            return true;
+                        },
+                        Name="default limit rule",
                     }
                 })
             );
@@ -124,11 +145,18 @@ namespace FireflySoft.RateLimit.AspNetCore.Sample
                         StartTimeType=StartTimeType.FromNaturalPeriodBeign
                     }
                 }),
-                new HttpRateLimitError()
+                new HttpErrorResponse()
                 {
                     BuildHttpContent = (context, ruleCheckResult) =>
                     {
                         return "The number of queries exceeds the maximum limit of the day.";
+                    }
+                },
+                new HttpInvokeInterceptor()
+                {
+                    OnTriggered = (context, ruleCheckResult) =>
+                    {
+                        Console.WriteLine("Rate Limit Alarm!!!");
                     }
                 }
             );

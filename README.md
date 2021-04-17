@@ -208,4 +208,5 @@ SimulationRequest is a custom request that you can modify to any type.
 
 ### Todo List
 * Add more convenient options for asp.net core. 
+* Use 'TIME' command in lua script when redis support 'scripts effects replication'.
 * Add more unit tests.
