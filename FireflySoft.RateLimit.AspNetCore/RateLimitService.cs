@@ -36,6 +36,11 @@ namespace FireflySoft.RateLimit.AspNetCore
                 };
             }
 
+            if (interceptor==null)
+            {
+                interceptor = new HttpInvokeInterceptor();
+            }
+
             builder.AddSingleton<IAlgorithm>(algorithm);
             builder.AddSingleton<HttpErrorResponse>(error);
             builder.AddSingleton<HttpInvokeInterceptor>(interceptor);
