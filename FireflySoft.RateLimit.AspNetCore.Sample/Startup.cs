@@ -30,7 +30,8 @@ namespace FireflySoft.RateLimit.AspNetCore.Sample
         public void ConfigureServices(IServiceCollection services)
         {
             //AddLimitForPerSecond(services);
-            AddLimitForTokenBucketPerSecond(services);
+            //AddLimitForTokenBucketPerSecond(services);
+            AddLimitForLeakyBucketPerSecond(services);
 
             services.AddControllers();
         }
@@ -82,6 +83,26 @@ namespace FireflySoft.RateLimit.AspNetCore.Sample
             app.AddRateLimit(new InProcessTokenBucketAlgorithm(
                 new[] {
                     new TokenBucketRule(20,10,TimeSpan.FromSeconds(1))
+                    {
+                        ExtractTarget = context =>
+                        {
+                            return (context as HttpContext).Request.Path.Value;
+                        },
+                        CheckRuleMatching = context =>
+                        {
+                            return true;
+                        },
+                        Name="default limit rule",
+                    }
+                })
+            );
+        }
+
+        private void AddLimitForLeakyBucketPerSecond(IServiceCollection app)
+        {
+            app.AddRateLimit(new InProcessLeakyBucketAlgorithm(
+                new[] {
+                    new LeakyBucketRule(20,10,TimeSpan.FromSeconds(1))
                     {
                         ExtractTarget = context =>
                         {

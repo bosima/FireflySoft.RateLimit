@@ -78,7 +78,10 @@ namespace FireflySoft.RateLimit.AspNetCore
             {
                 await DoOnBreforUntriggeredDoNext(context, checkResult).ConfigureAwait(false);
 
-                await DoLeakyBucketWait(checkResult).ConfigureAwait(false);
+                if (checkResult.RuleCheckResults.Any())
+                {
+                    await DoLeakyBucketWait(checkResult).ConfigureAwait(false);
+                }
 
                 //Debug.WriteLine("R-Count" + checkResult.RuleCheckResults.First().Count + " " + DateTimeOffset.Now.ToString("mm:ss.fff"));
                 await _next(context);
