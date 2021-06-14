@@ -39,6 +39,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 local capacity=tonumber(ARGV[2])
                 local inflow_unit=tonumber(ARGV[3])
                 local inflow_quantity_per_unit=tonumber(ARGV[4])
+                local expire_time=math.ceil((capacity/inflow_quantity_per_unit)*inflow_unit)
                 local current_time=tonumber(ARGV[5])
                 local start_time=tonumber(ARGV[6])
                 local lock_seconds=tonumber(ARGV[7])
@@ -47,7 +48,8 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 if(last_time==false)
                 then
                     bucket_amount = capacity - amount;
-                    redis.call('mset',KEYS[1],bucket_amount,st_key,start_time)
+                    redis.call('set',KEYS[1],bucket_amount,'PX',expire_time+100)
+                    redis.call('set',st_key,start_time,'PX',expire_time)
                     ret[2]=bucket_amount
                     return ret
                 end
@@ -85,9 +87,10 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 end
 
                 if last_time_changed==1 then
-                    redis.call('mset',KEYS[1],bucket_amount,st_key,last_time)
+                    redis.call('set',KEYS[1],bucket_amount,'PX',expire_time+100)
+                    redis.call('set',st_key,last_time,'PX',expire_time)
                 else
-                    redis.call('set',KEYS[1],bucket_amount)
+                    redis.call('set',KEYS[1],bucket_amount,'PX',expire_time)
                 end
                 return ret");
         }
