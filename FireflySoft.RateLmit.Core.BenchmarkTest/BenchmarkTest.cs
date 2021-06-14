@@ -27,13 +27,13 @@ namespace FireflySoft.RateLmit.Core.BenchmarkTest
 
         [Benchmark]
         // [Arguments("fixedWindow", "memory", 10000, 4)]
-        [Arguments("slidingWindow", "memory", 10000, 4)]
+        // [Arguments("slidingWindow", "memory", 10000, 4)]
         // [Arguments("leakyBucket", "memory", 10000, 4)]
         // [Arguments("tokenBucket", "memory", 10000, 4)]
         // [Arguments("fixedWindow", "redis", 10000, 8)]
         // [Arguments("slidingWindow", "redis", 10000, 8)]
         // [Arguments("leakyBucket", "redis", 10000, 8)]
-        // [Arguments("tokenBucket", "redis", 10000, 8)]
+        [Arguments("tokenBucket", "redis", 10000, 8)]
         public void Test(string algorithm, string storageType, int limitNumber, int taskNumber)
         {
             IAlgorithm processor;
@@ -83,13 +83,13 @@ namespace FireflySoft.RateLmit.Core.BenchmarkTest
 
         [Benchmark]
         // [Arguments("fixedWindow", "memory", 10000, 4)]
-        [Arguments("slidingWindow", "memory", 10000, 4)]
+        //[Arguments("slidingWindow", "memory", 10000, 4)]
         // [Arguments("leakyBucket", "memory", 10000, 4)]
         // [Arguments("tokenBucket", "memory", 10000, 4)]
         // [Arguments("fixedWindow", "redis", 10000, 8)]
         // [Arguments("slidingWindow", "redis", 10000, 8)]
         // [Arguments("leakyBucket", "redis", 10000, 8)]
-        // [Arguments("tokenBucket", "redis", 10000, 8)]
+         [Arguments("tokenBucket", "redis", 10000, 8)]
         public async Task TestAsync(string algorithm, string storageType, int limitNumber, int taskNumber)
         {
             IAlgorithm processor;

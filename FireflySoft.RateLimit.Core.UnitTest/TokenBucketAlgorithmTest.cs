@@ -357,13 +357,57 @@ namespace FireflySoft.RateLimit.Core.UnitTest
             }
         }
 
-        private IAlgorithm GetAlgorithm(string storageType, int capacity, int inflowQuantity, TimeSpan inflowUnit, int lockSeconds, StartTimeType startTimeType = StartTimeType.FromCurrent)
+        [DataTestMethod]
+        [DataRow("redis")]
+        public void TestRedisKeyExpire(string storageType)
         {
+            var processor = GetAlgorithm(storageType, 30, 10, TimeSpan.FromSeconds(1), 0, id: "1");
+
+            for (int i = 1; i <= 80; i++)
+            {
+                var checkResult = processor.Check(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                Debug.WriteLine("for " + i+":"+checkResult.IsLimit);
+
+                if (i == 31 || i == 62)
+                {
+                    Assert.AreEqual(true, checkResult.IsLimit);
+                }
+                else
+                {
+                    Assert.AreEqual(false, checkResult.IsLimit);
+                }
+
+                if (i == 31 || i == 62)
+                {
+                    Thread.Sleep(3000);
+
+                    var redisClient = GetRedisClient();
+                    bool exsit = redisClient.GetDatabase().KeyExists("1-home-st");
+                    Assert.AreEqual(false, exsit);
+                }
+            }
+        }
+
+        private IAlgorithm GetAlgorithm(string storageType, int capacity, int inflowQuantity, TimeSpan inflowUnit, int lockSeconds, StartTimeType startTimeType = StartTimeType.FromCurrent, string id = "")
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                id = Guid.NewGuid().ToString();
+            }
+
             var tokenBucketRules = new TokenBucketRule[]
                 {
                     new TokenBucketRule(capacity,inflowQuantity,inflowUnit)
                     {
-                        Id=Guid.NewGuid().ToString(),
+                        Id=id,
                         LockSeconds=lockSeconds,
                         StartTimeType=startTimeType,
                         ExtractTarget = (request) =>
@@ -387,13 +431,20 @@ namespace FireflySoft.RateLimit.Core.UnitTest
 
             if (storageType == "redis")
             {
-                var redisClient = StackExchange.Redis.ConnectionMultiplexer.Connect("127.0.0.1");
+                var redisClient = GetRedisClient();
                 return new RedisTokenBucketAlgorithm(tokenBucketRules, redisClient);
             }
             else
             {
                 return new InProcessTokenBucketAlgorithm(tokenBucketRules);
             }
+        }
+
+        private StackExchange.Redis.ConnectionMultiplexer _redisClient;
+        private StackExchange.Redis.ConnectionMultiplexer GetRedisClient()
+        {
+            _redisClient = StackExchange.Redis.ConnectionMultiplexer.Connect("127.0.0.1");
+            return _redisClient;
         }
     }
 }
