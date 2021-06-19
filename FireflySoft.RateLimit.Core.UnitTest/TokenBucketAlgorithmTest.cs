@@ -387,7 +387,7 @@ namespace FireflySoft.RateLimit.Core.UnitTest
 
                 if (i == 31 || i == 62)
                 {
-                    Thread.Sleep(3000);
+                    SpinWait.SpinUntil(() => { return false; }, 3000);
 
                     var redisClient = GetRedisClient();
                     bool exsit = redisClient.GetDatabase().KeyExists("1-home-st");

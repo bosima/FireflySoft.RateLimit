@@ -87,7 +87,7 @@ namespace FireflySoft.RateLimit.Core.UnitTest
             }
         }
 
-[DataTestMethod]
+        [DataTestMethod]
         [DataRow("memory")]
         [DataRow("redis")]
         public async Task TestLockSecondsAsync(string storageType)
@@ -364,13 +364,58 @@ namespace FireflySoft.RateLimit.Core.UnitTest
             }
         }
 
-        private IAlgorithm GetAlgorithm(string storageType, int capacity, int outflowQuantity, TimeSpan outflowUnit, int lockSeconds, StartTimeType startTimeType = StartTimeType.FromCurrent)
+
+        [DataTestMethod]
+        [DataRow("redis")]
+        public void TestRedisKeyExpire(string storageType)
         {
+            var processor = GetAlgorithm(storageType, 30, 10, TimeSpan.FromSeconds(1), 0, id: "1");
+
+            for (int i = 1; i <= 90; i++)
+            {
+                Debug.WriteLine("for " + i);
+
+                var checkResult = processor.Check(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i == 41 || i >= 82)
+                {
+                    Assert.AreEqual(true, checkResult.IsLimit);
+                }
+                else
+                {
+                    Assert.AreEqual(false, checkResult.IsLimit);
+                }
+
+                if (i == 41)
+                {
+                    SpinWait.SpinUntil(() => { return false; }, 3000);
+
+                    var redisClient = GetRedisClient();
+                    bool exsit = redisClient.GetDatabase().KeyExists("1-home-st");
+                    Assert.AreEqual(false, exsit);
+                }
+            }
+        }
+
+        private IAlgorithm GetAlgorithm(string storageType, int capacity, int outflowQuantity, TimeSpan outflowUnit, int lockSeconds, StartTimeType startTimeType = StartTimeType.FromCurrent, string id = "")
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                id = Guid.NewGuid().ToString();
+            }
+
             var leakyBucketRules = new LeakyBucketRule[]
                 {
                     new LeakyBucketRule(capacity,outflowQuantity,outflowUnit)
                     {
-                        Id=Guid.NewGuid().ToString(),
+                        Id=id,
                         LockSeconds=lockSeconds,
                         StartTimeType=startTimeType,
                         ExtractTarget = (request) =>
@@ -386,7 +431,7 @@ namespace FireflySoft.RateLimit.Core.UnitTest
 
             if (storageType == "redis")
             {
-                var redisClient = StackExchange.Redis.ConnectionMultiplexer.Connect("127.0.0.1");
+                var redisClient = GetRedisClient();
                 return new RedisLeakyBucketAlgorithm(leakyBucketRules, redisClient);
             }
             else
@@ -395,5 +440,11 @@ namespace FireflySoft.RateLimit.Core.UnitTest
             }
         }
 
+        private StackExchange.Redis.ConnectionMultiplexer _redisClient;
+        private StackExchange.Redis.ConnectionMultiplexer GetRedisClient()
+        {
+            _redisClient = StackExchange.Redis.ConnectionMultiplexer.Connect("127.0.0.1");
+            return _redisClient;
+        }
     }
 }

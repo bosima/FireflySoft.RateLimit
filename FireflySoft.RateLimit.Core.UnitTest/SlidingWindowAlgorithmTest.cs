@@ -353,13 +353,65 @@ namespace FireflySoft.RateLimit.Core.UnitTest
             }
         }
 
-        private IAlgorithm GetAlgorithm(string storageType, TimeSpan statWindow, TimeSpan statPeriod, StartTimeType startTimeType = StartTimeType.FromCurrent, int limitNumber = 20, int lockSeconds = 1)
+        [DataTestMethod]
+        [DataRow("redis")]
+        public void TestRedisKeyExpire(string storageType)
         {
+            var processor = GetAlgorithm(storageType, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(1), lockSeconds: 0, id: "1");
+
+            for (int i = 1; i <= 15; i++)
+            {
+                int j = 6;
+                if (i == 4 || i == 8)
+                {
+                    j = 12;
+                }
+
+                AlgorithmCheckResult checkResult = null;
+                for (int k = 0; k < j; k++)
+                {
+                    checkResult = processor.Check(new SimulationRequest()
+                    {
+                        RequestId = Guid.NewGuid().ToString(),
+                        RequestResource = "home",
+                        Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                    });
+                    Debug.WriteLine(DateTimeOffset.Now.ToString("HH:mm:ss.fff"));
+                }
+
+                Debug.WriteLine(i + ":" + checkResult.IsLimit + "," + checkResult.RuleCheckResults.First().Count);
+
+                if (i == 4 || i == 8)
+                {
+                    Assert.AreEqual(true, checkResult.IsLimit);
+                    SpinWait.SpinUntil(() => { return false; }, 3000);
+
+                    var redisClient = GetRedisClient();
+                    bool exsit = redisClient.GetDatabase().KeyExists("1-home-st");
+                    Assert.AreEqual(false, exsit);
+                }
+                else
+                {
+                    Assert.AreEqual(false, checkResult.IsLimit);
+                    SpinWait.SpinUntil(() => { return false; }, 1000);
+                }
+            }
+        }
+
+        private IAlgorithm GetAlgorithm(string storageType, TimeSpan statWindow, TimeSpan statPeriod, StartTimeType startTimeType = StartTimeType.FromCurrent, int limitNumber = 20, int lockSeconds = 1, string id = "")
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                id = Guid.NewGuid().ToString();
+            }
+
             var slidingWindowsRules = new SlidingWindowRule[]
                 {
                     new SlidingWindowRule(statWindow, statPeriod)
                     {
-                        Id=Guid.NewGuid().ToString(),
+                        Id=id,
                         LimitNumber=limitNumber,
                         LockSeconds=lockSeconds,
                         ExtractTarget = (request) =>
@@ -383,13 +435,20 @@ namespace FireflySoft.RateLimit.Core.UnitTest
 
             if (storageType == "redis")
             {
-                var redisClient = StackExchange.Redis.ConnectionMultiplexer.Connect("127.0.0.1");
+                var redisClient = GetRedisClient();
                 return new RedisSlidingWindowAlgorithm(slidingWindowsRules, redisClient);
             }
             else
             {
                 return new InProcessSlidingWindowAlgorithm(slidingWindowsRules);
             }
+        }
+
+        private StackExchange.Redis.ConnectionMultiplexer _redisClient;
+        private StackExchange.Redis.ConnectionMultiplexer GetRedisClient()
+        {
+            _redisClient = StackExchange.Redis.ConnectionMultiplexer.Connect("127.0.0.1");
+            return _redisClient;
         }
     }
 }

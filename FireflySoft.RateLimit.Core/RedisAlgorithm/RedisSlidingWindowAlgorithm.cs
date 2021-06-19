@@ -43,6 +43,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 local cal_start_time=tonumber(ARGV[6])
                 local limit_number=tonumber(ARGV[7])
                 local lock_seconds=tonumber(ARGV[8])
+                local key_expire_time=period_expire_ms+10
                 local current_period
                 local current_period_key
                 local start_time=redis.call('get',st_key)
@@ -51,7 +52,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                     start_time=cal_start_time
                     current_period=start_time+period_ms-1
                     current_period_key=KEYS[1] .. '-' .. current_period
-                    redis.call('set',st_key,start_time)
+                    redis.call('set',st_key,start_time,'PX',key_expire_time)
                     redis.call('set',current_period_key,amount,'PX',period_expire_ms)
                     ret[2]=amount
                     return ret
