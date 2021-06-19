@@ -4,10 +4,10 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <LangVersion>8.0</LangVersion>
     <PackageId>FireflySoft.RateLimit.Core</PackageId>
-    <Version>2.0.0</Version>
+    <Version>2.0.1</Version>
     <Authors>bossma</Authors>
     <PackageProjectUrl>https://github.com/bosima/FireflySoft.RateLimit</PackageProjectUrl>
-    <PackageReleaseNotes>Using new designs and APIs.</PackageReleaseNotes>
+    <PackageReleaseNotes>Add Redis count key expiration mechanism.</PackageReleaseNotes>
     <PackageTags>Rate Limit;Fixed Window;Sliding Window;Leaky Bucket;Token Bucket</PackageTags>
     <Description>
       A rate limit library, support .NET Framework and .NET Core.
@@ -15,6 +15,7 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <AssemblyVersion>2.0.1.0</AssemblyVersion>
   </PropertyGroup>
   <ItemGroup>
     <Content Include="FireflySoft-RateLimit.readme" />
