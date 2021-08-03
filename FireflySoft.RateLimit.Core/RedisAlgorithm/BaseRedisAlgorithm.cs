@@ -42,9 +42,30 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
         /// <returns></returns>
         protected async Task<RedisResult> EvaluateScriptAsync(RedisLuaScript luaScript, RedisKey[] keys, RedisValue[] values)
         {
-            byte[] sha1 = await luaScript.LoadAsync();
-            IDatabase dataBase = _redisClient.GetDatabase();
-            return await dataBase.ScriptEvaluateAsync(sha1, keys, values);
+            RedisServerException _lastException = null;
+
+            for (int attempt = 0; attempt < 5; attempt++)
+            {
+                try
+                {
+                    byte[] sha1 = await luaScript.LoadAsync();
+                    IDatabase dataBase = _redisClient.GetDatabase();
+                    return await dataBase.ScriptEvaluateAsync(sha1, keys, values);
+                }
+                catch (RedisServerException exception)
+                {
+                    _lastException = exception;
+
+                    // If the database gets reset, the script can end up cleared. This will force it to be reloaded
+                    if (exception.Message.Contains("NOSCRIPT"))
+                    {
+                        luaScript.ResetLoadStatus();
+                        continue;
+                    }
+                }
+            }
+
+            throw _lastException;
         }
 
         /// <summary>
@@ -56,9 +77,30 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
         /// <returns></returns>
         protected RedisResult EvaluateScript(RedisLuaScript luaScript, RedisKey[] keys, RedisValue[] values)
         {
-            byte[] sha1 = luaScript.Load();
-            IDatabase dataBase = _redisClient.GetDatabase();
-            return dataBase.ScriptEvaluate(sha1, keys, values);
+            RedisServerException _lastException = null;
+
+            for (int attempt = 0; attempt < 5; attempt++)
+            {
+                try
+                {
+                    byte[] sha1 = luaScript.Load();
+                    IDatabase dataBase = _redisClient.GetDatabase();
+                    return dataBase.ScriptEvaluate(sha1, keys, values);
+                }
+                catch (RedisServerException exception)
+                {
+                    _lastException = exception;
+
+                    // If the database gets reset, the script can end up cleared. This will force it to be reloaded
+                    if (exception.Message.Contains("NOSCRIPT"))
+                    {
+                        luaScript.ResetLoadStatus();
+                        continue;
+                    }
+                }
+            }
+
+            throw _lastException;
         }
 
         /// <summary>
@@ -187,6 +229,14 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 }
 
                 return SHA1;
+            }
+
+            /// <summary>
+            /// Reset the load status of the script, forcing it to load again next time.
+            /// </summary>
+            internal void ResetLoadStatus()
+            {
+                SHA1 = null;
             }
 
             private byte[] CalcLuaSha1(string luaScript)
