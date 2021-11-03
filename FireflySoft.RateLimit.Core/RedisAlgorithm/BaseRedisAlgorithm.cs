@@ -108,9 +108,11 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
         /// </summary>
         protected class RedisLuaScript
         {
+            private byte[] _sha1;
             private readonly ConnectionMultiplexer _redisClient;
-
             private readonly static SemaphoreSlim _loadLock = new SemaphoreSlim(1, 1);
+            private DateTimeOffset _reloadTs;
+            private readonly object _reloadLocker = new object();
 
             /// <summary>
             /// Create a new instace
@@ -121,49 +123,38 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
             public RedisLuaScript(ConnectionMultiplexer redisClient, string name, string script)
             {
                 _redisClient = redisClient;
+                _reloadTs = DateTimeOffset.MinValue;
                 Name = name;
                 Script = script;
             }
 
-            private RedisLuaScript(string name, string script)
-            {
-                this.Name = name;
-                this.Script = script;
-            }
-
             /// <summary>
-            /// The name
+            /// The name of script
             /// </summary>
             /// <value></value>
             public string Name { get; private set; }
 
             /// <summary>
-            /// The script content
+            /// The content of script
             /// </summary>
             /// <value></value>
             public string Script { get; private set; }
 
             /// <summary>
-            /// The script SHA1 
-            /// </summary>
-            /// <value></value>
-            public byte[] SHA1 { get; private set; }
-
-            /// <summary>
             /// Async load script in the redis server
             /// </summary>
             /// <returns></returns>
-            public async System.Threading.Tasks.Task<byte[]> LoadAsync()
+            public async Task<byte[]> LoadAsync()
             {
-                if (SHA1 == null)
+                if (_sha1 == null)
                 {
                     await _loadLock.WaitAsync();
 
                     try
                     {
-                        if (SHA1 == null)
+                        if (_sha1 == null)
                         {
-                            var sha1 = CalcLuaSha1(Script);
+                            var tmpSHA1 = CalcLuaSHA1();
 
                             var endPoints = _redisClient.GetEndPoints();
                             foreach (var endpoint in endPoints)
@@ -171,7 +162,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                                 var server = _redisClient.GetServer(endpoint);
                                 if (server.IsConnected)
                                 {
-                                    bool exists = await server.ScriptExistsAsync(sha1);
+                                    bool exists = await server.ScriptExistsAsync(tmpSHA1);
                                     if (!exists)
                                     {
                                         await server.ScriptLoadAsync(Script);
@@ -179,7 +170,9 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                                 }
                             }
 
-                            SHA1 = sha1;
+                            // When reset load status, other threads may change '_sha1' to null, so 'tmpSHA1' is returned
+                            _sha1 = tmpSHA1;
+                            return tmpSHA1;
                         }
                     }
                     finally
@@ -188,7 +181,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                     }
                 }
 
-                return SHA1;
+                return _sha1;
             }
 
             /// <summary>
@@ -197,14 +190,14 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
             /// <returns></returns>
             public byte[] Load()
             {
-                if (SHA1 == null)
+                if (_sha1 == null)
                 {
-                    _loadLock.WaitAsync();
+                    _loadLock.Wait();
                     try
                     {
-                        if (SHA1 == null)
+                        if (_sha1 == null)
                         {
-                            var sha1 = CalcLuaSha1(Script);
+                            var tmpSHA1 = CalcLuaSHA1();
 
                             var endPoints = _redisClient.GetEndPoints();
                             Array.ForEach(endPoints, endpoint =>
@@ -212,14 +205,16 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                                 var server = _redisClient.GetServer(endpoint);
                                 if (server.IsConnected)
                                 {
-                                    if (!server.ScriptExists(sha1))
+                                    if (!server.ScriptExists(tmpSHA1))
                                     {
                                         server.ScriptLoad(Script);
                                     }
                                 }
                             });
 
-                            SHA1 = sha1;
+                            // When reset load status, other threads may change '_sha1' to null, so 'tmpSHA1' is returned
+                            _sha1 = tmpSHA1;
+                            return tmpSHA1;
                         }
                     }
                     finally
@@ -228,7 +223,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                     }
                 }
 
-                return SHA1;
+                return _sha1;
             }
 
             /// <summary>
@@ -236,14 +231,23 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
             /// </summary>
             internal void ResetLoadStatus()
             {
-                SHA1 = null;
+                lock (_reloadLocker)
+                {
+                    var now = DateTimeOffset.Now;
+                    if (now.Subtract(_reloadTs).TotalMilliseconds > 1000)
+                    {
+                        _sha1 = null;
+                        _reloadTs = now;
+                    }
+                }
             }
 
-            private byte[] CalcLuaSha1(string luaScript)
+            private byte[] CalcLuaSHA1()
             {
-                SHA1 sha1 = new SHA1CryptoServiceProvider();
-                var bytesSha1In = Encoding.Default.GetBytes(luaScript);
-                return sha1.ComputeHash(bytesSha1In);
+                using (SHA1 sha1Service = new SHA1CryptoServiceProvider())
+                {
+                    return sha1Service.ComputeHash(Encoding.Default.GetBytes(Script));
+                }
             }
         }
     }

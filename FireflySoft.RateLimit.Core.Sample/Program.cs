@@ -18,10 +18,11 @@ namespace FireflySoft.RateLimit.Core.Sample
             await Task.FromResult("Start");
 
             Console.WriteLine("FireflySoft.RateLimit.Core.Sample");
-
+            
             DoFixedWindow();
             //await DoFixedWindowAsync();
             //DoLeakyBucket();
+            //TestLuaScriptMissing();
 
             Console.Read();
         }
@@ -69,7 +70,7 @@ namespace FireflySoft.RateLimit.Core.Sample
                     Console.WriteLine($"[{i}] Target:{r.Target},IsLimit:{r.IsLimit},Count:{r.Count}.");
 
                     // If you need to return when a rule is restricted, you can use break.
-                    // However, this is not recommended, the count will be lost for the rule is not triggered
+                    // However, this is not recommended, the count will be lost for the rule which is not triggered
                     // if (r.IsLimit)
                     // {
                     //     break;
@@ -299,6 +300,54 @@ namespace FireflySoft.RateLimit.Core.Sample
                     Console.WriteLine($"[{i}] Target:{r.Target},IsLimit:{r.IsLimit},Count:{r.Count},Wait:{r.Wait}.");
                 }
             }
+        }
+
+        private static void TestLuaScriptMissing()
+        {
+            var fixedWindowRules = new FixedWindowRule[]
+                {
+                    new FixedWindowRule()
+                    {
+                        Id=Guid.NewGuid().ToString(),
+                        StatWindow=TimeSpan.FromSeconds(1),
+                        LimitNumber=10000,
+                        ExtractTarget = (request) =>
+                        {
+                            return (request as SimulationRequest).RequestResource;
+                        },
+                        CheckRuleMatching = (request) =>
+                        {
+                            return true;
+                        },
+                    }
+                };
+            var timeProvider = new LocalTimeProvider();
+            var redisClient = StackExchange.Redis.ConnectionMultiplexer.Connect("127.0.0.1");
+            var algorithm = new RedisFixedWindowAlgorithm(fixedWindowRules, redisClient, timeProvider, true);
+
+            Parallel.For(1, 1000000, (index, state) =>
+            {
+                try
+                {
+                    var result = algorithm.Check(new SimulationRequest()
+                    {
+                        RequestId = Guid.NewGuid().ToString(),
+                        RequestResource = "home",
+                        Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                    });
+
+                    if (index % 1000 == 0)
+                    {
+                        Console.WriteLine($"index:{index}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            });
         }
 
         private class SimulationRequest
