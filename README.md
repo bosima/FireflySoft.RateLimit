@@ -207,6 +207,5 @@ var result = algorithm.Check(new SimulationRequest()
 SimulationRequest is a custom request that you can modify to any type.
 
 ### Todo List
-* Add more convenient options for asp.net core. 
+* The same current time is used for different rule checking in the same request. 
 * Use 'TIME' command in lua script when redis support 'scripts effects replication'.
-* Add more unit tests.

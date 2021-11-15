@@ -5,7 +5,7 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\FireflySoft.RateLimit.Core\FireflySoft.RateLimit.Core.csproj">
+    <ProjectReference Include="..\..\FireflySoft.RateLimit.Core\FireflySoft.RateLimit.Core.csproj">
     </ProjectReference>
   </ItemGroup>
 </Project>

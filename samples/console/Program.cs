@@ -125,6 +125,8 @@ namespace FireflySoft.RateLimit.Core.Sample
                     });
                 }
             }
+
+            Console.WriteLine("Over");
         }
 
         private static async Task DoFixedWindowAsync()

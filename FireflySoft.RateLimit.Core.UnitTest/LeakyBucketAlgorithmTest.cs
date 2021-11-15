@@ -273,7 +273,7 @@ namespace FireflySoft.RateLimit.Core.UnitTest
             {
                 if (DateTimeOffset.Now.Millisecond < 800)
                 {
-                    Thread.Sleep(50);
+                    Thread.Sleep(10);
                     continue;
                 }
                 break;
@@ -324,7 +324,7 @@ namespace FireflySoft.RateLimit.Core.UnitTest
             {
                 if (DateTimeOffset.Now.Millisecond < 800)
                 {
-                    Thread.Sleep(50);
+                    Thread.Sleep(10);
                     continue;
                 }
                 break;

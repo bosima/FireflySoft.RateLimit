@@ -14,7 +14,7 @@ using System.Linq;
 namespace FireflySoft.RateLmit.Core.BenchmarkTest
 {
     [MemoryDiagnoser]
-    [SimpleJob(launchCount: 1, warmupCount: 3, targetCount: 10)]
+    [SimpleJob(launchCount: 1, warmupCount: 5, targetCount: 16)]
     public class BenchmarkTest
     {
         ConnectionMultiplexer redisClient;
@@ -30,10 +30,10 @@ namespace FireflySoft.RateLmit.Core.BenchmarkTest
         [Arguments("slidingWindow", "memory", 10000, 4)]
         [Arguments("leakyBucket", "memory", 10000, 4)]
         [Arguments("tokenBucket", "memory", 10000, 4)]
-        [Arguments("fixedWindow", "redis", 10000, 8)]
-        [Arguments("slidingWindow", "redis", 10000, 8)]
-        [Arguments("leakyBucket", "redis", 10000, 8)]
-        [Arguments("tokenBucket", "redis", 10000, 8)]
+        [Arguments("fixedWindow", "redis", 10000, 4)]
+        [Arguments("slidingWindow", "redis", 10000, 4)]
+        [Arguments("leakyBucket", "redis", 10000, 4)]
+        [Arguments("tokenBucket", "redis", 10000, 4)]
         public void Test(string algorithm, string storageType, int limitNumber, int taskNumber)
         {
             IAlgorithm processor;
@@ -86,10 +86,10 @@ namespace FireflySoft.RateLmit.Core.BenchmarkTest
         [Arguments("slidingWindow", "memory", 10000, 4)]
         [Arguments("leakyBucket", "memory", 10000, 4)]
         [Arguments("tokenBucket", "memory", 10000, 4)]
-        [Arguments("fixedWindow", "redis", 10000, 8)]
-        [Arguments("slidingWindow", "redis", 10000, 8)]
-        [Arguments("leakyBucket", "redis", 10000, 8)]
-        [Arguments("tokenBucket", "redis", 10000, 8)]
+        [Arguments("fixedWindow", "redis", 10000, 4)]
+        [Arguments("slidingWindow", "redis", 10000, 4)]
+        [Arguments("leakyBucket", "redis", 10000, 4)]
+        [Arguments("tokenBucket", "redis", 10000, 4)]
         public async Task TestAsync(string algorithm, string storageType, int limitNumber, int taskNumber)
         {
             IAlgorithm processor;

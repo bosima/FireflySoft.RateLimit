@@ -39,18 +39,18 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Net.Http.Formatting, Version=5.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.AspNet.WebApi.Client.5.2.3\lib\net45\System.Net.Http.Formatting.dll</HintPath>
+      <HintPath>..\..\packages\Microsoft.AspNet.WebApi.Client.5.2.3\lib\net45\System.Net.Http.Formatting.dll</HintPath>
     </Reference>
     <Reference Include="System.Web" />
     <Reference Include="System.Web.Http, Version=5.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.2.3\lib\net45\System.Web.Http.dll</HintPath>
+      <HintPath>..\..\packages\Microsoft.AspNet.WebApi.Core.5.2.3\lib\net45\System.Web.Http.dll</HintPath>
     </Reference>
     <Reference Include="System.Web.Http.WebHost, Version=5.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.AspNet.WebApi.WebHost.5.2.3\lib\net45\System.Web.Http.WebHost.dll</HintPath>
+      <HintPath>..\..\packages\Microsoft.AspNet.WebApi.WebHost.5.2.3\lib\net45\System.Web.Http.WebHost.dll</HintPath>
     </Reference>
     <Reference Include="System.Xml" />
     <Reference Include="System.Core" />
@@ -65,72 +65,72 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Net.Http" />
     <Reference Include="Nito.AsyncEx.Coordination">
-      <HintPath>..\packages\Nito.AsyncEx.Coordination.5.1.0\lib\netstandard2.0\Nito.AsyncEx.Coordination.dll</HintPath>
+      <HintPath>..\..\packages\Nito.AsyncEx.Coordination.5.1.0\lib\netstandard2.0\Nito.AsyncEx.Coordination.dll</HintPath>
     </Reference>
     <Reference Include="Nito.Collections.Deque">
-      <HintPath>..\packages\Nito.Collections.Deque.1.1.0\lib\netstandard2.0\Nito.Collections.Deque.dll</HintPath>
+      <HintPath>..\..\packages\Nito.Collections.Deque.1.1.0\lib\netstandard2.0\Nito.Collections.Deque.dll</HintPath>
     </Reference>
     <Reference Include="System.Collections.Immutable">
-      <HintPath>..\packages\System.Collections.Immutable.1.4.0\lib\netstandard2.0\System.Collections.Immutable.dll</HintPath>
+      <HintPath>..\..\packages\System.Collections.Immutable.1.4.0\lib\netstandard2.0\System.Collections.Immutable.dll</HintPath>
     </Reference>
     <Reference Include="Nito.Disposables">
-      <HintPath>..\packages\Nito.Disposables.2.2.0\lib\net461\Nito.Disposables.dll</HintPath>
+      <HintPath>..\..\packages\Nito.Disposables.2.2.0\lib\net461\Nito.Disposables.dll</HintPath>
     </Reference>
     <Reference Include="Nito.AsyncEx.Tasks">
-      <HintPath>..\packages\Nito.AsyncEx.Tasks.5.1.0\lib\netstandard2.0\Nito.AsyncEx.Tasks.dll</HintPath>
+      <HintPath>..\..\packages\Nito.AsyncEx.Tasks.5.1.0\lib\netstandard2.0\Nito.AsyncEx.Tasks.dll</HintPath>
     </Reference>
     <Reference Include="Nito.AsyncEx.Context">
-      <HintPath>..\packages\Nito.AsyncEx.Context.5.1.0\lib\netstandard2.0\Nito.AsyncEx.Context.dll</HintPath>
+      <HintPath>..\..\packages\Nito.AsyncEx.Context.5.1.0\lib\netstandard2.0\Nito.AsyncEx.Context.dll</HintPath>
     </Reference>
     <Reference Include="Nito.AsyncEx.Interop.WaitHandles">
-      <HintPath>..\packages\Nito.AsyncEx.Interop.WaitHandles.5.1.0\lib\netstandard2.0\Nito.AsyncEx.Interop.WaitHandles.dll</HintPath>
+      <HintPath>..\..\packages\Nito.AsyncEx.Interop.WaitHandles.5.1.0\lib\netstandard2.0\Nito.AsyncEx.Interop.WaitHandles.dll</HintPath>
     </Reference>
     <Reference Include="Nito.AsyncEx.Oop">
-      <HintPath>..\packages\Nito.AsyncEx.Oop.5.1.0\lib\netstandard2.0\Nito.AsyncEx.Oop.dll</HintPath>
+      <HintPath>..\..\packages\Nito.AsyncEx.Oop.5.1.0\lib\netstandard2.0\Nito.AsyncEx.Oop.dll</HintPath>
     </Reference>
     <Reference Include="Nito.Cancellation">
-      <HintPath>..\packages\Nito.Cancellation.1.1.0\lib\netstandard2.0\Nito.Cancellation.dll</HintPath>
+      <HintPath>..\..\packages\Nito.Cancellation.1.1.0\lib\netstandard2.0\Nito.Cancellation.dll</HintPath>
     </Reference>
     <Reference Include="System.Buffers">
-      <HintPath>..\packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
+      <HintPath>..\..\packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
     </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="System.Diagnostics.PerformanceCounter">
-      <HintPath>..\packages\System.Diagnostics.PerformanceCounter.5.0.0\lib\net461\System.Diagnostics.PerformanceCounter.dll</HintPath>
+      <HintPath>..\..\packages\System.Diagnostics.PerformanceCounter.5.0.0\lib\net461\System.Diagnostics.PerformanceCounter.dll</HintPath>
     </Reference>
     <Reference Include="System.IO.Compression">
-      <HintPath>..\packages\System.IO.Compression.4.3.0\lib\net46\System.IO.Compression.dll</HintPath>
+      <HintPath>..\..\packages\System.IO.Compression.4.3.0\lib\net46\System.IO.Compression.dll</HintPath>
     </Reference>
     <Reference Include="System.Numerics.Vectors">
-      <HintPath>..\packages\System.Numerics.Vectors.4.5.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
+      <HintPath>..\..\packages\System.Numerics.Vectors.4.5.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
     </Reference>
     <Reference Include="System.Numerics" />
     <Reference Include="System.Runtime.CompilerServices.Unsafe">
-      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.4.5.3\lib\net461\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+      <HintPath>..\..\packages\System.Runtime.CompilerServices.Unsafe.4.5.3\lib\net461\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
     </Reference>
     <Reference Include="System.Memory">
-      <HintPath>..\packages\System.Memory.4.5.4\lib\net461\System.Memory.dll</HintPath>
+      <HintPath>..\..\packages\System.Memory.4.5.4\lib\net461\System.Memory.dll</HintPath>
     </Reference>
     <Reference Include="System.Runtime.InteropServices.RuntimeInformation">
-      <HintPath>..\packages\System.Runtime.InteropServices.RuntimeInformation.4.3.0\lib\net45\System.Runtime.InteropServices.RuntimeInformation.dll</HintPath>
+      <HintPath>..\..\packages\System.Runtime.InteropServices.RuntimeInformation.4.3.0\lib\net45\System.Runtime.InteropServices.RuntimeInformation.dll</HintPath>
     </Reference>
     <Reference Include="System.Threading.Tasks.Extensions">
-      <HintPath>..\packages\System.Threading.Tasks.Extensions.4.5.4\lib\net461\System.Threading.Tasks.Extensions.dll</HintPath>
+      <HintPath>..\..\packages\System.Threading.Tasks.Extensions.4.5.4\lib\net461\System.Threading.Tasks.Extensions.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Bcl.AsyncInterfaces">
-      <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.5.0.0\lib\net461\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
+      <HintPath>..\..\packages\Microsoft.Bcl.AsyncInterfaces.5.0.0\lib\net461\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
     </Reference>
     <Reference Include="System.IO.Pipelines">
-      <HintPath>..\packages\System.IO.Pipelines.5.0.0\lib\net461\System.IO.Pipelines.dll</HintPath>
+      <HintPath>..\..\packages\System.IO.Pipelines.5.0.0\lib\net461\System.IO.Pipelines.dll</HintPath>
     </Reference>
     <Reference Include="Pipelines.Sockets.Unofficial">
-      <HintPath>..\packages\Pipelines.Sockets.Unofficial.2.2.0\lib\net461\Pipelines.Sockets.Unofficial.dll</HintPath>
+      <HintPath>..\..\packages\Pipelines.Sockets.Unofficial.2.2.0\lib\net461\Pipelines.Sockets.Unofficial.dll</HintPath>
     </Reference>
     <Reference Include="System.Threading.Channels">
-      <HintPath>..\packages\System.Threading.Channels.5.0.0\lib\net461\System.Threading.Channels.dll</HintPath>
+      <HintPath>..\..\packages\System.Threading.Channels.5.0.0\lib\net461\System.Threading.Channels.dll</HintPath>
     </Reference>
     <Reference Include="StackExchange.Redis">
-      <HintPath>..\packages\StackExchange.Redis.2.2.4\lib\net461\StackExchange.Redis.dll</HintPath>
+      <HintPath>..\..\packages\StackExchange.Redis.2.2.4\lib\net461\StackExchange.Redis.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -146,11 +146,11 @@
     <Compile Include="Models\WeatherForecast.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\FireflySoft.RateLimit.AspNet\FireflySoft.RateLimit.AspNet.csproj">
+    <ProjectReference Include="..\..\FireflySoft.RateLimit.AspNet\FireflySoft.RateLimit.AspNet.csproj">
       <Project>{9CBEAEB7-8BE1-4824-9F0F-98B206B3A549}</Project>
       <Name>FireflySoft.RateLimit.AspNet</Name>
     </ProjectReference>
-    <ProjectReference Include="..\FireflySoft.RateLimit.Core\FireflySoft.RateLimit.Core.csproj">
+    <ProjectReference Include="..\..\FireflySoft.RateLimit.Core\FireflySoft.RateLimit.Core.csproj">
       <Project>{EC3C2079-1284-49F1-8F38-67B5A71B0483}</Project>
       <Name>FireflySoft.RateLimit.Core</Name>
     </ProjectReference>

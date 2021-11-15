@@ -2,37 +2,77 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "build",
+            "label": "build aspnetcore",
             "command": "dotnet",
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/FireflySoft.RateLimit.Core.Sample/FireflySoft.RateLimit.Core.Sample.csproj",
+                "${workspaceFolder}/samples/aspnetcore/aspnetcore.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "build aspnetcore6",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/samples/aspnetcore6/aspnetcore6.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "publish",
+            "label": "build console",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/samples/console/console.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "publish aspnetcore",
             "command": "dotnet",
             "type": "process",
             "args": [
                 "publish",
-                "${workspaceFolder}/FireflySoft.RateLimit.Core.Sample/FireflySoft.RateLimit.Core.Sample.csproj",
+                "${workspaceFolder}/samples/aspnetcore/aspnetcore.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "watch",
+            "label": "publish aspnetcore6",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "publish",
+                "${workspaceFolder}/samples/aspnetcore6/aspnetcore6.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "watch aspnetcore6",
             "command": "dotnet",
             "type": "process",
             "args": [
                 "watch",
                 "run",
-                "${workspaceFolder}/FireflySoft.RateLimit.Core.Sample/FireflySoft.RateLimit.Core.Sample.csproj",
+                "${workspaceFolder}/samples/aspnetcore6/aspnetcore6.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],

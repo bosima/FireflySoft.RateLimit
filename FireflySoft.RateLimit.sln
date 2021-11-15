@@ -4,19 +4,23 @@ VisualStudioVersion = 16.0.30804.86
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FireflySoft.RateLimit.Core", "FireflySoft.RateLimit.Core\FireflySoft.RateLimit.Core.csproj", "{EC3C2079-1284-49F1-8F38-67B5A71B0483}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FireflySoft.RateLimit.Core.Sample", "FireflySoft.RateLimit.Core.Sample\FireflySoft.RateLimit.Core.Sample.csproj", "{27FF49FD-09AD-4ABE-B8B9-F387034D3AF6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "console", "samples\console\console.csproj", "{27FF49FD-09AD-4ABE-B8B9-F387034D3AF6}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FireflySoft.RateLimit.AspNetCore", "FireflySoft.RateLimit.AspNetCore\FireflySoft.RateLimit.AspNetCore.csproj", "{265730D4-995C-4228-9BD7-AE902A82284D}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FireflySoft.RateLimit.AspNetCore.Sample", "FireflySoft.RateLimit.AspNetCore.Sample\FireflySoft.RateLimit.AspNetCore.Sample.csproj", "{4DDD46C7-81AF-443E-BEB1-2DBF0F467229}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "aspnetcore", "samples\aspnetcore\aspnetcore.csproj", "{4DDD46C7-81AF-443E-BEB1-2DBF0F467229}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FireflySoft.RateLimit.AspNet", "FireflySoft.RateLimit.AspNet\FireflySoft.RateLimit.AspNet.csproj", "{9CBEAEB7-8BE1-4824-9F0F-98B206B3A549}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FireflySoft.RateLimit.AspNet.Sample", "FireflySoft.RateLimit.AspNet.Sample\FireflySoft.RateLimit.AspNet.Sample.csproj", "{3D7CF23D-24FE-4526-9159-2301EBB81170}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "aspnet", "samples\aspnet\aspnet.csproj", "{3D7CF23D-24FE-4526-9159-2301EBB81170}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FireflySoft.RateLimit.Core.UnitTest", "FireflySoft.RateLimit.Core.UnitTest\FireflySoft.RateLimit.Core.UnitTest.csproj", "{977FB204-41B8-41AE-85A6-C2F865C98415}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FireflySoft.RateLmit.Core.BenchmarkTest", "FireflySoft.RateLmit.Core.BenchmarkTest\FireflySoft.RateLmit.Core.BenchmarkTest.csproj", "{0E94CBB5-31CF-46CD-B57F-D7D06741657A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{7854209F-39A0-4CA6-88AF-7A3721902060}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "aspnetcore6", "samples\aspnetcore6\aspnetcore6.csproj", "{EDD5BB20-5D4E-4352-8BD4-E2F555BF9232}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -56,11 +60,21 @@ Global
 		{0E94CBB5-31CF-46CD-B57F-D7D06741657A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0E94CBB5-31CF-46CD-B57F-D7D06741657A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0E94CBB5-31CF-46CD-B57F-D7D06741657A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EDD5BB20-5D4E-4352-8BD4-E2F555BF9232}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EDD5BB20-5D4E-4352-8BD4-E2F555BF9232}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EDD5BB20-5D4E-4352-8BD4-E2F555BF9232}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EDD5BB20-5D4E-4352-8BD4-E2F555BF9232}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {FC338DEA-C8F5-4E27-B00C-3DF079B86A9D}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{27FF49FD-09AD-4ABE-B8B9-F387034D3AF6} = {7854209F-39A0-4CA6-88AF-7A3721902060}
+		{3D7CF23D-24FE-4526-9159-2301EBB81170} = {7854209F-39A0-4CA6-88AF-7A3721902060}
+		{4DDD46C7-81AF-443E-BEB1-2DBF0F467229} = {7854209F-39A0-4CA6-88AF-7A3721902060}
+		{EDD5BB20-5D4E-4352-8BD4-E2F555BF9232} = {7854209F-39A0-4CA6-88AF-7A3721902060}
 	EndGlobalSection
 EndGlobal
