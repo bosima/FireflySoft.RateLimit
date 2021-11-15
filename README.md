@@ -38,9 +38,9 @@ Code coverage:
 | FireflySoft.RateLimit.Core.UnitTest      | Unit test for FireflySoft.RateLimit.Core.              |
 | FireflySoft.RateLimit.Core.BenchmarkTest | Benchmark test for FireflySoft.RateLimit.Core.         |
 | samples/console                          | FireflySoft.RateLmit.Core sample program.              |
-| samples/aspnet                           | FireflySoft.RateLimit.AspNet smample program.          |
-| samples/aspnetcore                       | FireflySoft.RateLimit.AspNetCore smample program.      |
-| samples/aspnetcore6                | FireflySoft.RateLimit.AspNetCore with .NET6 smample program. |
+| samples/aspnet                           | FireflySoft.RateLimit.AspNet sample program.          |
+| samples/aspnetcore                       | FireflySoft.RateLimit.AspNetCore sample program.      |
+| samples/aspnetcore6                | FireflySoft.RateLimit.AspNetCore with .NET6 sample program. |
 ## Usage
 
 ### ASP.NET Core
