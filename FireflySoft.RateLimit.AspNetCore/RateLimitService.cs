@@ -12,12 +12,12 @@ namespace FireflySoft.RateLimit.AspNetCore
         /// <summary>
         /// Add rate limit service
         /// </summary>
-        /// <param name="builder"></param>
+        /// <param name="services"></param>
         /// <param name="algorithm"></param>
         /// <param name="error"></param>
         /// <param name="interceptor"></param>
         /// <returns></returns>
-        public static IServiceCollection AddRateLimit(this IServiceCollection builder, IAlgorithm algorithm, HttpErrorResponse error = null, HttpInvokeInterceptor interceptor = null)
+        public static IServiceCollection AddRateLimit(this IServiceCollection services, IAlgorithm algorithm, HttpErrorResponse error = null, HttpInvokeInterceptor interceptor = null)
         {
             if (algorithm == null)
             {
@@ -36,15 +36,53 @@ namespace FireflySoft.RateLimit.AspNetCore
                 };
             }
 
-            if (interceptor==null)
+            if (interceptor == null)
             {
                 interceptor = new HttpInvokeInterceptor();
             }
 
-            builder.AddSingleton<IAlgorithm>(algorithm);
-            builder.AddSingleton<HttpErrorResponse>(error);
-            builder.AddSingleton<HttpInvokeInterceptor>(interceptor);
-            return builder;
+            services.AddSingleton<IAlgorithm>(algorithm);
+            services.AddSingleton<HttpErrorResponse>(error);
+            services.AddSingleton<HttpInvokeInterceptor>(interceptor);
+            return services;
+        }
+
+        /// <summary>
+        /// Add rate limit service
+        /// </summary>
+        /// <param name="services"></param>
+        /// <param name="algorithmProvider"></param>
+        /// <param name="errorProvider"></param>
+        /// <param name="interceptorProvider"></param>
+        /// <returns></returns>
+        public static IServiceCollection AddRateLimit(this IServiceCollection services, Func<IServiceProvider, IAlgorithm> algorithmProvider, Func<IServiceProvider, HttpErrorResponse> errorProvider = null, Func<IServiceProvider, HttpInvokeInterceptor> interceptorProvider = null)
+        {
+            if (algorithmProvider == null)
+            {
+                throw new ArgumentNullException("The algorithm service provider is not registered, please use 'AddRateLimit' in 'ConfigureServices' method.");
+            }
+
+            if (errorProvider == null)
+            {
+                errorProvider = serviceProvider => new HttpErrorResponse()
+                {
+                    HttpStatusCode = 429,
+                    BuildHttpContent = (context, checkResult) =>
+                    {
+                        return "too many requests";
+                    }
+                };
+            }
+
+            if (interceptorProvider == null)
+            {
+                interceptorProvider = serviceProvider => new HttpInvokeInterceptor();
+            }
+
+            services.AddSingleton<IAlgorithm>(algorithmProvider);
+            services.AddSingleton<HttpErrorResponse>(errorProvider);
+            services.AddSingleton<HttpInvokeInterceptor>(interceptorProvider);
+            return services;
         }
     }
 }
