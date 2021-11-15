@@ -33,13 +33,14 @@ Code coverage:
 | Project                                  | Descriptioin                                           |
 | ---------------------------------------- | ------------------------------------------------------ |
 | FireflySoft.RateLmit.Core                | algorithm, rules, persistence and other core codes.    |
-| FireflySoft.RateLmit.Core.Sample         | FireflySoft.RateLmit.Core sample program.              |
 | FireflySoft.RateLimit.AspNet             | ASP.NET rate-limit middleware based on .NET Framework. |
-| FireflySoft.RateLimit.AspNet.Sample      | FireflySoft.RateLimit.AspNet smample program.          |
 | FireflySoft.RateLimit.AspNetCore         | ASP.NET Core rate-limit middleware.                    |
-| FireflySoft.RateLimit.AspNetCore.Sample  | FireflySoft.RateLimit.AspNetCore smample program.      |
 | FireflySoft.RateLimit.Core.UnitTest      | Unit test for FireflySoft.RateLimit.Core.              |
 | FireflySoft.RateLimit.Core.BenchmarkTest | Benchmark test for FireflySoft.RateLimit.Core.         |
+| samples/console                          | FireflySoft.RateLmit.Core sample program.              |
+| samples/aspnet                           | FireflySoft.RateLimit.AspNet smample program.          |
+| samples/aspnetcore                       | FireflySoft.RateLimit.AspNetCore smample program.      |
+| samples/aspnetcore6                | FireflySoft.RateLimit.AspNetCore with .NET6 smample program. |
 ## Usage
 
 ### ASP.NET Core
