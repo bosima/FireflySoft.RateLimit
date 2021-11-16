@@ -19,25 +19,47 @@ public enum LimitPathType
 public class RateLimitConfiguratioinManager
 {
     readonly RateLimitRuleDAO _dao;
+    readonly Timer _checkConfigChangedTimer;
+    DateTime _lastConfigChangedTime;
+
+    Action<IEnumerable<RateLimitConfiguration>>? _action;
 
     public RateLimitConfiguratioinManager(RateLimitRuleDAO dao)
     {
         _dao = dao;
+        _lastConfigChangedTime = DateTime.MinValue;
+        _checkConfigChangedTimer = NonCapturingTimer.Create(new TimerCallback(CheckConfigChangedTimerCallbackAsync), this, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(10));
     }
 
-    public async Task<IEnumerable<RateLimitConfiguration>> LoadAsync()
+    public void Watch(Action<IEnumerable<RateLimitConfiguration>> action)
+    {
+        _action = action;
+    }
+
+    private async void CheckConfigChangedTimerCallbackAsync(object? state)
     {
         var rules = await _dao.GetAllRulesAsync();
-
-        return rules.Select(d =>
+        if (rules.Any())
         {
-            return new RateLimitConfiguration()
+            var latestChangedTime = rules.OrderByDescending(d => d.UpdateTime).Select(d => d.UpdateTime).First();
+            if (latestChangedTime > _lastConfigChangedTime)
             {
-                Path = d.Path,
-                PathType = d.PathType,
-                TokenCapacity = d.TokenCapacity,
-                TokenSpeed = d.TokenSpeed
-            };
-        });
+
+                var configs = rules.Select(d =>
+                        {
+                            return new RateLimitConfiguration()
+                            {
+                                Path = d.Path,
+                                PathType = d.PathType,
+                                TokenCapacity = d.TokenCapacity,
+                                TokenSpeed = d.TokenSpeed
+                            };
+                        });
+
+                _action?.Invoke(configs);
+
+                _lastConfigChangedTime = latestChangedTime;
+            }
+        }
     }
 }

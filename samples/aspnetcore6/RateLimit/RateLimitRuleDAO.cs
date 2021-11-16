@@ -19,6 +19,11 @@ CREATE TABLE `rate_limit_rule` (
   `UpdateTime` datetime NOT NULL,
   PRIMARY KEY (`Id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+
+INSERT INTO rate_limit_rule (Id,`Path`,PathType,TokenCapacity,TokenSpeed,AddTime,UpdateTime) VALUES
+	 ('1','/WeatherForecast/GetToday',1,26,20,'2021-11-16 00:00:00.0','2021-11-16 00:00:00.0'),
+	 ('2','/WeatherForecast/GetTomorrow',1,13,10,'2021-11-16 00:00:00.0','2021-11-16 00:00:00.0'),
+	 ('3','All',2,29,25,'2021-11-16 00:00:00.0','2021-11-16 00:00:00.0');
 */
 
 public class RateLimitRule

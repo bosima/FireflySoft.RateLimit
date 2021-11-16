@@ -7,16 +7,13 @@ namespace aspnetcore6.RateLimit;
 public class AutoUpdateAlgorithmManager
 {
     readonly RateLimitConfiguratioinManager _configurationManager;
-    readonly Timer _updateRuleTimer;
     readonly IAlgorithm _algorithm;
 
     public AutoUpdateAlgorithmManager(RateLimitConfiguratioinManager configurationManager)
     {
         _configurationManager = configurationManager;
-
-        var rules = GetRulesAsync().Result;
-        _algorithm = new InProcessTokenBucketAlgorithm(rules);
-        _updateRuleTimer = NonCapturingTimer.Create(new TimerCallback(UpdateRuleTimerCallbackAsync), this, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
+        _algorithm = new InProcessTokenBucketAlgorithm(new TokenBucketRule[0],updatable:true);
+        _configurationManager.Watch(UpdateAlgorithmRules);
     }
 
     public IAlgorithm GetAlgorithmInstance()
@@ -24,26 +21,24 @@ public class AutoUpdateAlgorithmManager
         return _algorithm;
     }
 
-    private async void UpdateRuleTimerCallbackAsync(object? state)
+    private void UpdateAlgorithmRules(IEnumerable<RateLimitConfiguration> configurations)
     {
-        var rules = await GetRulesAsync();
-        await _algorithm.UpdateRulesAsync(rules);
+        var rules = ConvertConfigurationsToRules(configurations);
+        _algorithm.UpdateRules(rules);
     }
 
-    private async Task<IEnumerable<TokenBucketRule>> GetRulesAsync()
+    private IEnumerable<TokenBucketRule> ConvertConfigurationsToRules(IEnumerable<RateLimitConfiguration> configurations)
     {
-        var configurations = await _configurationManager.LoadAsync();
-
         List<TokenBucketRule> ruleList = new List<TokenBucketRule>();
-        foreach (var configure in configurations)
+        foreach (var configuration in configurations)
         {
-            var tokenRule = new TokenBucketRule(configure.TokenCapacity, configure.TokenSpeed, TimeSpan.FromSeconds(1))
+            var tokenRule = new TokenBucketRule(configuration.TokenCapacity, configuration.TokenSpeed, TimeSpan.FromSeconds(1))
             {
                 ExtractTarget = context =>
                 {
                     var requestSymbol = ExtractRequestSymbol((HttpContext)context);
 
-                    return configure.PathType == LimitPathType.Single ?
+                    return configuration.PathType == LimitPathType.Single ?
                     requestSymbol.Item1 + "," + requestSymbol.Item2 :
                     requestSymbol.Item1;
                 },
@@ -51,11 +46,11 @@ public class AutoUpdateAlgorithmManager
                 {
                     var requestSymbol = ExtractRequestSymbol((HttpContext)context);
 
-                    return configure.PathType == LimitPathType.Single ?
-                    configure.Path == requestSymbol.Item2 :
+                    return configuration.PathType == LimitPathType.Single ?
+                    configuration.Path == requestSymbol.Item2 :
                     !string.IsNullOrWhiteSpace(requestSymbol.Item1);
                 },
-                Name = $"The Rule for '{configure.Path}'",
+                Name = $"The Rule for '{configuration.Path}'",
             };
             ruleList.Add(tokenRule);
         }
