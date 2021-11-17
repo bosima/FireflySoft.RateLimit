@@ -45,7 +45,7 @@ Code coverage:
 
 ### ASP.NET Core
 
-**1、Install Nuget Package**
+***1、Install Nuget Package***
 
 Package Manager:
 
@@ -66,7 +66,7 @@ Or Project file：
 </ItemGroup>
 ```
 
-**2、Use Middleware**
+***2、Use Middleware***
 
 The following code calls the rate-limit [middleware](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/middleware/?view=aspnetcore-3.1) from Startup.Configure:
 
@@ -75,7 +75,7 @@ public void ConfigureServices(IServiceCollection services)
 {
     ...
 
-    app.AddRateLimit(new InProcessFixedWindowAlgorithm(
+    services.AddRateLimit(new InProcessFixedWindowAlgorithm(
         new[] {
             new FixedWindowRule()
             {
@@ -153,7 +153,7 @@ protected void Application_Start()
 
 ### Others
 
-**1、Install Nuget Package**
+***1、Install Nuget Package***
 
 Package Manager:
 
@@ -167,7 +167,7 @@ Or .NET CLI:
 dotnet add package FireflySoft.RateLimit.Core
 ```
 
-**2、Use IAlgorithm**
+***2、Use IAlgorithm***
 
 Use *IAlgorithm* to filter every request, process the return value of *Check* method.
 
@@ -208,5 +208,7 @@ var result = algorithm.Check(new SimulationRequest()
 SimulationRequest is a custom request that you can modify to any type.
 
 ### Todo List
+* Optimize the time consumption of sliding window algorithm in memory.
 * The same current time is used for different rule checking in the same request. 
 * Use 'TIME' command in lua script when redis support 'scripts effects replication'.
+* Run unit tests in the docker container to avoid installing redis.
