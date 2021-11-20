@@ -84,5 +84,32 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
 
             return Tuple.Create(checkResult, incrementResult.Item2);
         }
+
+        /// <summary>
+        /// Increment a value with expire time and limit value
+        /// </summary>
+        /// <param name="target"></param>
+        /// <param name="amount"></param>
+        /// <param name="expireTime"></param>
+        /// <param name="checkNumber"></param>
+        /// <returns></returns>
+        private Tuple<bool, long> SimpleIncrement(string target, long amount, DateTimeOffset expireTime, int checkNumber = -1)
+        {
+            var result = _cache.GetCacheItem(target);
+            if (result != null)
+            {
+                var countValue = (long)result.Value;
+                if (checkNumber >= 0 && countValue >= checkNumber)
+                {
+                    return Tuple.Create(true, countValue);
+                }
+                var newCountValue = countValue + amount;
+                result.Value = newCountValue;
+                return Tuple.Create(false, newCountValue);
+            }
+
+            _cache.Add(target, amount, expireTime);
+            return Tuple.Create(false, amount);
+        }
     }
 }

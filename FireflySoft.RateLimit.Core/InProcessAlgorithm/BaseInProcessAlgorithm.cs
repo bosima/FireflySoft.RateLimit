@@ -29,32 +29,6 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         }
 
         /// <summary>
-        /// Increment a value with expire time and limit value
-        /// </summary>
-        /// <param name="target"></param>
-        /// <param name="amount"></param>
-        /// <param name="expireTime"></param>
-        /// <param name="checkNumber"></param>
-        /// <returns></returns>
-        protected Tuple<bool, long> SimpleIncrement(string target, long amount, DateTimeOffset expireTime, int checkNumber = -1)
-        {
-            var result = _cache.GetCacheItem(target);
-            if (result != null)
-            {
-                var countValue = result.Value as CountValue;
-                if (checkNumber >= 0 && countValue.Value >= checkNumber)
-                {
-                    return Tuple.Create(true, countValue.Value);
-                }
-                countValue.Value += amount;
-                return Tuple.Create(false, countValue.Value);
-            }
-
-            _cache.Add(target, new CountValue(amount), expireTime);
-            return Tuple.Create(false, amount);
-        }
-
-        /// <summary>
         /// Lock the rate limit target until the expiration time, when triggering the rate limit rule.
         /// </summary>
         /// <param name="target"></param>
@@ -63,7 +37,6 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         protected bool TryLock(string target, DateTimeOffset currentTime, TimeSpan expireTimeSpan)
         {
             var expireTime = currentTime.Add(expireTimeSpan);
-            //Debug.WriteLine("expireTime:" + expireTime.ToString("mm:ss.fff"));
             return _cache.Add($"{target}-lock", 1, expireTime);
         }
 

@@ -68,6 +68,13 @@ namespace FireflySoft.RateLimit.Core
         protected abstract Task<RuleCheckResult> CheckSingleRuleAsync(string target, RateLimitRule rule);
 
         /// <summary>
+        /// Reset something after update rules
+        /// </summary>
+        protected virtual void ResetAfterUpdateRules()
+        {
+        }
+
+        /// <summary>
         /// Update the current rules
         /// </summary>
         /// <param name="rules"></param>
@@ -81,6 +88,8 @@ namespace FireflySoft.RateLimit.Core
                     {
                         _rules = rules;
                     }
+
+                    ResetAfterUpdateRules();
                 }
             }
         }
@@ -99,6 +108,8 @@ namespace FireflySoft.RateLimit.Core
                     {
                         _rules = rules;
                     }
+
+                    ResetAfterUpdateRules();
                 }
             }
         }
@@ -185,6 +196,7 @@ namespace FireflySoft.RateLimit.Core
                     }
 
                     target = string.Concat(rule.Id, "-", target);
+                    target = string.Intern(target);
                     yield return CheckSingleRule(target, rule);
                 }
             }
@@ -223,6 +235,7 @@ namespace FireflySoft.RateLimit.Core
                     }
 
                     target = string.Concat(rule.Id, "-", target);
+                    target = string.Intern(target);
                     yield return await CheckSingleRuleAsync(target, rule);
                 }
             }

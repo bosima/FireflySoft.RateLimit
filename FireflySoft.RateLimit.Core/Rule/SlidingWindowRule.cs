@@ -11,7 +11,7 @@ namespace FireflySoft.RateLimit.Core.Rule
         private int _periodNumber;
 
         /// <summary>
-        /// small period number
+        /// Get the amount of small periods.
         /// </summary>
         /// <value></value>
         public int PeriodNumber
@@ -23,22 +23,22 @@ namespace FireflySoft.RateLimit.Core.Rule
         }
 
         /// <summary>
-        /// Statistical time window, which counts the number of requests in this time.
+        /// Get or set the statistical time window, which counts the amount of requests in this time.
         /// </summary>
         public TimeSpan StatWindow { get; set; }
 
         /// <summary>
-        /// The threshold of triggering rate limit in the statistical time window。
+        /// Get or set the threshold of triggering rate limit in the statistical time window.
         /// </summary>
         public int LimitNumber { get; set; }
 
         /// <summary>
-        /// Small period length in statistical time window
+        /// Get the small period length in statistical time window.
         /// </summary>
         public TimeSpan StatPeriod { get; private set; }
 
         /// <summary>
-        /// create a new instance
+        /// Create a new instance of SlidingWindowRule
         /// </summary>
         /// <param name="statWindow"></param>
         /// <param name="statPeriod"></param>

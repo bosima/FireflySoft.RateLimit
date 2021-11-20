@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Threading.Tasks;
 using FireflySoft.RateLimit.Core.Rule;
 using FireflySoft.RateLimit.Core.Time;
@@ -13,6 +11,8 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
     /// </summary>
     public class InProcessSlidingWindowAlgorithm : BaseInProcessAlgorithm
     {
+        readonly Dictionary<string, MemorySlidingWindow> _slidingWindows;
+
         /// <summary>
         /// create a new instance
         /// </summary>
@@ -22,6 +22,15 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         public InProcessSlidingWindowAlgorithm(IEnumerable<SlidingWindowRule> rules, ITimeProvider timeProvider = null, bool updatable = false)
         : base(rules, timeProvider, updatable)
         {
+            _slidingWindows = new Dictionary<string, MemorySlidingWindow>();
+        }
+
+        /// <summary>
+        /// Clear sliding windows after update rules, because the instance of 'MemorySlidingWindow' is cached
+        /// </summary>
+        protected override void ResetAfterUpdateRules()
+        {
+            _slidingWindows.Clear();
         }
 
         /// <summary>
@@ -70,16 +79,15 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
 
             lock (target)
             {
-                // get current period
-                long currentPeriod = GetCurrentPeriod(target, currentRule, currentMilliseconds);
+                MemorySlidingWindow slidingWindow;
+                if (!_slidingWindows.TryGetValue(target, out slidingWindow))
+                {
+                    slidingWindow = new MemorySlidingWindow(currentRule);
+                    _slidingWindows.Add(target, slidingWindow);
+                }
 
-                // get the stat periods
-                var statPeriodArray = GetStatWindowPeriodArray(currentPeriod, currentRule);
-
-                // get the total amount of all stat periods
-                var currentTotalAmount = Sum(statPeriodArray.Select(d => $"{target}-{d}").ToList());
+                var currentTotalAmount = slidingWindow.GetCount();
                 var totalAmount = currentTotalAmount + amount;
-                //Console.WriteLine("totalAmount:" + totalAmount);
                 if (currentRule.LimitNumber >= 0 && totalAmount > currentRule.LimitNumber)
                 {
                     if (currentRule.LockSeconds > 0)
@@ -89,90 +97,9 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                     return Tuple.Create(true, currentTotalAmount);
                 }
 
-                // increment for current period
-                var expireTime = currentTime.Add(currentRule.StatWindow).AddSeconds(3); // add 3s for: avoid data loss because other steps take too much time
-                var incrementKey = $"{target}-{currentPeriod}";
-                SimpleIncrement(incrementKey, amount, expireTime);
-
+                slidingWindow.Increament(currentMilliseconds, amount);
                 return Tuple.Create(false, totalAmount);
             }
-        }
-
-        private long GetCurrentPeriod(string target, SlidingWindowRule currentRule, long currentMilliseconds)
-        {
-            long statPeriodMilliseconds = (long)currentRule.StatPeriod.TotalMilliseconds;
-            long currentPeriod = 0;
-            string ltKey = $"{target}-lt";
-
-            var currentPeriodObj = _cache.Get(ltKey);
-            if (currentPeriodObj == null)
-            {
-                var startTimeMilliseconds = AlgorithmStartTime.ToSpecifiedTypeTime(currentMilliseconds, currentRule.StatWindow, currentRule.StartTimeType);
-                currentPeriod = startTimeMilliseconds + statPeriodMilliseconds - 1;
-                _cache.Add(ltKey, currentPeriod, DateTimeOffset.MaxValue);
-            }
-            else
-            {
-                currentPeriod = (long)currentPeriodObj;
-                if (currentMilliseconds > currentPeriod)
-                {
-                    do
-                    {
-                        currentPeriod += statPeriodMilliseconds;
-                    } while (currentMilliseconds > currentPeriod);
-
-                    //_cache.Set(ltKey, currentPeriod, DateTimeOffset.MaxValue);
-                }
-            }
-
-            return currentPeriod;
-        }
-
-        private long[] GetStatWindowPeriodArray(long currentPeriod, SlidingWindowRule currentRule)
-        {
-            var periodNumber = currentRule.PeriodNumber;
-            var statPeriodMilliseconds = (long)currentRule.StatPeriod.TotalMilliseconds;
-
-            long[] periodSet = new long[periodNumber];
-            periodSet[0] = currentPeriod;
-            var prevPeriod = currentPeriod;
-            for (int i = 1; i < periodNumber; i++)
-            {
-                prevPeriod = prevPeriod - statPeriodMilliseconds;
-                periodSet[i] = prevPeriod;
-            }
-
-            //Debug.WriteLine(string.Join(",", periodSet.Select(d => d.ToString())));
-            return periodSet;
-        }
-
-        /// <summary>
-        /// Gets the sum of the counts of multiple rate limit targets
-        /// </summary>
-        /// <param name="targets">The targets</param>
-        /// <returns></returns>
-        private long Sum(IEnumerable<string> targets)
-        {
-            var values = _cache.GetValues(targets);
-            if (values != null && values.Count > 0)
-            {
-                //Debug.WriteLine(string.Join(",", values.Select(d => d.Key + ":" + (d.Value as CountValue).Value.ToString())));
-
-                long t = 0;
-                foreach (var key in values.Keys)
-                {
-                    if (values.TryGetValue(key, out object v))
-                    {
-                        if (v != null)
-                        {
-                            t += (v as CountValue).Value;
-                        }
-                    }
-                }
-                return t;
-            }
-
-            return 0;
         }
     }
 }
