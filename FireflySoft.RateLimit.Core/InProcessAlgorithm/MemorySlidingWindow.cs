@@ -48,14 +48,13 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         }
 
         /// <summary>
-        /// Increment the 'CountValue' of the current period
+        /// Increment the 'CountValue' of the specified period
         /// </summary>
-        /// <param name="currentMilliseconds">current time, which used to locate the current period</param>
+        /// <param name="periodIndex">The index of specified period in time window</param>
         /// <param name="amount"></param>
         /// <returns>The count value of the current period after increment</returns>
-        public long Increament(long currentMilliseconds, int amount)
+        public long IncreamentPeriod(int periodIndex, int amount)
         {
-            var periodIndex = GetCurrentPeriodIndex(currentMilliseconds);
             _queue[periodIndex].CountValue += amount;
             return _queue[periodIndex].CountValue;
         }
@@ -70,10 +69,10 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         }
 
         /// <summary>
-        /// Gets the index of the current time in the sliding window
+        /// Gets the period index of the current time in the sliding window
         /// </summary>
         /// <returns></returns>
-        private int GetCurrentPeriodIndex(long currentMilliseconds)
+        public int GetPeriodIndex(long currentMilliseconds)
         {
             var currentPeriodResult = GetCurrentPeriod(currentMilliseconds);
             var currentPeriod = currentPeriodResult.Item1;
@@ -150,15 +149,16 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             }
             else
             {
-                var pastMilliseconds = currentMilliseconds - _startPeriod;
+                var tailPeriod = _queue[_tail].Key;
+                var pastMilliseconds = currentMilliseconds - tailPeriod;
                 if (pastMilliseconds <= 0)
                 {
-                    currentPeriod = _startPeriod;
+                    currentPeriod = tailPeriod;
                 }
                 else
                 {
                     pastPeriods = (int)Math.Ceiling(pastMilliseconds / (double)_statPeriodMilliseconds);
-                    currentPeriod = currentPeriod + pastPeriods * _statPeriodMilliseconds;
+                    currentPeriod = tailPeriod + pastPeriods * _statPeriodMilliseconds;
                 }
             }
 

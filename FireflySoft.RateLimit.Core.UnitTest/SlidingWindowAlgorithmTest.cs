@@ -87,7 +87,7 @@ namespace FireflySoft.RateLimit.Core.UnitTest
                     Debug.WriteLine(DateTimeOffset.Now.ToString("HH:mm:ss.fff"));
                 }
 
-                Debug.WriteLine("for " + i + "," + checkResult.RuleCheckResults.First().Count);
+                // Requests that are limited are not counted
                 if (i == 7 || i == 10)
                 {
                     Assert.AreEqual(true, checkResult.IsLimit);
@@ -112,7 +112,7 @@ namespace FireflySoft.RateLimit.Core.UnitTest
             {
                 if (i >= 22 && i <= 24)
                 {
-                    Thread.Sleep(1100);
+                    Task.Delay(1000).ConfigureAwait(false).GetAwaiter().GetResult();
                 }
 
                 var result = processor.Check(new SimulationRequest()
@@ -182,6 +182,7 @@ namespace FireflySoft.RateLimit.Core.UnitTest
 
             while (true)
             {
+                // todo: mock time
                 if (DateTimeOffset.Now.Millisecond < 800)
                 {
                     Thread.Sleep(100);
@@ -213,7 +214,7 @@ namespace FireflySoft.RateLimit.Core.UnitTest
 
                 if (i == 25)
                 {
-                    Thread.Sleep(1001);
+                    Task.Delay(1000).ConfigureAwait(false).GetAwaiter().GetResult();
                 }
             }
         }
@@ -227,6 +228,7 @@ namespace FireflySoft.RateLimit.Core.UnitTest
 
             while (true)
             {
+                // todo: mock time
                 if (DateTimeOffset.Now.Millisecond < 800)
                 {
                     Thread.Sleep(100);
@@ -303,7 +305,7 @@ namespace FireflySoft.RateLimit.Core.UnitTest
 
                 if (i == 25)
                 {
-                    Thread.Sleep(1001);
+                    Task.Delay(1000).ConfigureAwait(false).GetAwaiter().GetResult();
                 }
             }
         }
@@ -317,6 +319,7 @@ namespace FireflySoft.RateLimit.Core.UnitTest
 
             while (true)
             {
+                // todo: mock time
                 if (DateTimeOffset.Now.Millisecond < 800)
                 {
                     Thread.Sleep(100);
@@ -348,7 +351,7 @@ namespace FireflySoft.RateLimit.Core.UnitTest
 
                 if (i == 25)
                 {
-                    Thread.Sleep(1001);
+                    Task.Delay(1000).ConfigureAwait(false).GetAwaiter().GetResult();
                 }
             }
         }
