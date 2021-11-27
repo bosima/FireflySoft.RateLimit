@@ -1,12 +1,14 @@
-- [Introduction](#introduction)
-- [Features](#features)
-- [Unit Test](#unit-test)
-- [Projects](#projects)
-- [Usage](#usage)
-  - [ASP.NET Core](#aspnet-core)
-  - [ASP.NET](#aspnet)
-  - [Others](#others)
-  - [Todo List](#todo-list)
+FireflySoft.RateLimit                      [English](https://github.com/bosima/FireflySoft.RateLimit)
+***
+- [介绍](#介绍)
+- [功能](#功能)
+- [单元测试](#单元测试)
+- [项目说明](#项目说明)
+- [使用说明](#使用说明)
+  - [ASP.NET Core 应用](#aspnet-core-应用)
+  - [ASP.NET 应用](#aspnet-应用)
+  - [其它类型应用](#其它类型应用)
+  - [待办](#待办)
 
 ## 介绍
 FireflySoft.RateLimit 是一个基于 .NET Standard 的限流类库，其内核简单轻巧，能够灵活应对各种需求的限流场景。
