@@ -11,16 +11,17 @@
   - [Todo List](#todo-list)
 
 ## Introduction
-A rate limit library, support .NET Framework and .NET core.
+Fireflysoft.ratelimit is a rate limiting library based on .Net standard. Its core is simple and lightweight, and can flexibly meet the rate limiting needs of many scene.
 
 ## Features
-* Four algorithms: fixed window, sliding window, leaky bucket, token bucket.
-* Two counting storages: memory and redis.
-* Consistent rate-limit for distributed services.
-* Locking for a period of time after triggering the limit.
-* Flexible rate-limit target setting and rule matching.
-* Supports updating rules at runtime.
-* Any scenario that requires rate-limit.
+* Multiple rate limiting algorithms: built-in fixed window, sliding window, leaky bucket, token bucket, and can be extended.
+* Multiple counting storage: memory and Redis.
+* Distributed friendly: Supports unified counting of distributed programs with Redis storage.
+* Flexible rate limiting targets: Each data can be extracted from the request to set rate limiting targets.
+* Support current limit penalty: the client can be locked for a period of time after the rate limit is triggered.
+* Dynamically change the rules: support the dynamic change of the rate limiting rules when the program is running.
+* Custom error: You can customize the error code and error message after the current limit is triggered.
+* Universality: In principle, it can meet any scenario that requires rate limiting.
 
 ## Unit Test
 Project: FireflySoft.RateLimit.Core.UnitTest
