@@ -210,7 +210,6 @@ var result = algorithm.Check(new SimulationRequest()
 SimulationRequest is a custom request that you can modify to any type.
 
 ### Todo List
-* Optimize the time consumption of sliding window algorithm in memory.
 * The same current time is used for different rule checking in the same request. 
 * Use 'TIME' command in lua script when redis support 'scripts effects replication'.
 * Run unit tests in the docker container to avoid installing redis.
