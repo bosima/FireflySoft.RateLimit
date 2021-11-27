@@ -1,4 +1,4 @@
-# FireflySoft.RateLimit　　　　　　　　　　　　　　　　　　[中文](https://github.com/bosima/FireflySoft.RateLimit/blob/master/README.zh-CN.md)
+# FireflySoft.RateLimit　　　　　　　　　　　　　　[中文](https://github.com/bosima/FireflySoft.RateLimit/blob/master/README.zh-CN.md)
 
 - [Introduction](#introduction)
 - [Features](#features)
