@@ -87,7 +87,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                 }
 
                 // maybe create a new period, so call it first, then call 'GetCount'
-                var periodindex = slidingWindow.GetPeriodIndex(currentMilliseconds);
+                var periodIndex = slidingWindow.LoadPeriod(currentMilliseconds);
 
                 var currentTotalAmount = slidingWindow.GetCount();
                 var totalAmount = currentTotalAmount + amount;
@@ -100,7 +100,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                     return Tuple.Create(true, currentTotalAmount);
                 }
 
-                slidingWindow.IncreamentPeriod(periodindex, amount);
+                slidingWindow.IncreamentPeriod(periodIndex, amount);
                 return Tuple.Create(false, totalAmount);
             }
         }

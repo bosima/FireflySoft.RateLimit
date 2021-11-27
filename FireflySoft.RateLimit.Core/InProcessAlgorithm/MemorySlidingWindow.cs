@@ -72,7 +72,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         /// Gets the period index of the current time in the sliding window
         /// </summary>
         /// <returns></returns>
-        public int GetPeriodIndex(long currentMilliseconds)
+        public int LoadPeriod(long currentMilliseconds)
         {
             var currentPeriodResult = GetCurrentPeriod(currentMilliseconds);
             var currentPeriod = currentPeriodResult.Item1;
