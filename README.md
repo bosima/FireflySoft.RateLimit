@@ -23,15 +23,6 @@ Fireflysoft.RateLimit is a rate limiting library based on .Net standard. Its cor
 * Custom error: You can customize the error code and error message after the current limit is triggered.
 * Universality: In principle, it can meet any scenario that requires rate limiting.
 
-## Unit Test
-Project: FireflySoft.RateLimit.Core.UnitTest
-
-Code coverage:
-
-| Module                     | Line   | Branch | Method |
-| -------------------------- | ------ | ------ | ------ |
-| FireflySoft.RateLimit.Core | 95.84% | 85.77% | 99.06% |
-
 ## Projects
 | Project                                  | Descriptioin                                           |
 | ---------------------------------------- | ------------------------------------------------------ |
