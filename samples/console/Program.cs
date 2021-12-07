@@ -18,10 +18,11 @@ namespace FireflySoft.RateLimit.Core.Sample
             await Task.FromResult("Start");
 
             Console.WriteLine("FireflySoft.RateLimit.Core.Sample");
-            
-            DoFixedWindow();
+
+            //DoFixedWindow();
             //await DoFixedWindowAsync();
             //DoLeakyBucket();
+            DoLTokenBucket();
             //TestLuaScriptMissing();
 
             Console.Read();
@@ -284,6 +285,55 @@ namespace FireflySoft.RateLimit.Core.Sample
                 if (i == 110 || i == 120 || i == 130 || i == 140 || i == 150)
                 {
                     Thread.Sleep(1000);
+                }
+
+                var result = algorithm.Check(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                // Wait in the return value is very useful, you can use it in the delay queue, 
+                // you can also make the current thread pause for a specified period of time.
+                foreach (var r in result.RuleCheckResults)
+                {
+                    Console.WriteLine($"[{i}] Target:{r.Target},IsLimit:{r.IsLimit},Count:{r.Count},Wait:{r.Wait}.");
+                }
+            }
+        }
+
+        private static void DoLTokenBucket()
+        {
+            var tokenBucketRules = new TokenBucketRule[]
+            {
+                new TokenBucketRule(30,10,TimeSpan.FromSeconds(3))
+                {
+                    Id="test",
+                    ExtractTarget = (request) =>
+                    {
+                        return (request as SimulationRequest).RequestResource;
+                    },
+                    CheckRuleMatching = (request) =>
+                    {
+                        return true;
+                    },
+                    LockSeconds = 3
+                }
+            };
+
+            var timeProvider = new LocalTimeProvider();
+            // var algorithm = new InProcessLeakyBucketAlgorithm(tokenBucketRules, timeProvider, true);
+            var redisClient = StackExchange.Redis.ConnectionMultiplexer.Connect("127.0.0.1:6391");
+            var algorithm = new RedisTokenBucketAlgorithm(tokenBucketRules, redisClient, timeProvider, true);
+
+            for (int i = 0; i < 16000; i++)
+            {
+                if (i % 30 == 0)
+                {
+                    Thread.Sleep(3000);
                 }
 
                 var result = algorithm.Check(new SimulationRequest()

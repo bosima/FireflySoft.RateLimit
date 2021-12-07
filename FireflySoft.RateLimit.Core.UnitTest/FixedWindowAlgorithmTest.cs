@@ -363,7 +363,7 @@ namespace FireflySoft.RateLimit.Core.UnitTest
 
             if (storageType == "redis")
             {
-                var redisClient = StackExchange.Redis.ConnectionMultiplexer.Connect("127.0.0.1");
+                var redisClient = RedisClientHelper.GetClient();
                 return new RedisFixedWindowAlgorithm(fixedWindowRules, redisClient);
             }
             else

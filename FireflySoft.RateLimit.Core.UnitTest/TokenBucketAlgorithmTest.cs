@@ -389,7 +389,7 @@ namespace FireflySoft.RateLimit.Core.UnitTest
                 {
                     SpinWait.SpinUntil(() => { return false; }, 3000);
 
-                    var redisClient = GetRedisClient();
+                    var redisClient = RedisClientHelper.GetClient();
                     bool exsit = redisClient.GetDatabase().KeyExists("1-home-st");
                     Assert.AreEqual(false, exsit);
                 }
@@ -431,20 +431,13 @@ namespace FireflySoft.RateLimit.Core.UnitTest
 
             if (storageType == "redis")
             {
-                var redisClient = GetRedisClient();
+                var redisClient = RedisClientHelper.GetClient();
                 return new RedisTokenBucketAlgorithm(tokenBucketRules, redisClient);
             }
             else
             {
                 return new InProcessTokenBucketAlgorithm(tokenBucketRules);
             }
-        }
-
-        private StackExchange.Redis.ConnectionMultiplexer _redisClient;
-        private StackExchange.Redis.ConnectionMultiplexer GetRedisClient()
-        {
-            _redisClient = StackExchange.Redis.ConnectionMultiplexer.Connect("127.0.0.1");
-            return _redisClient;
         }
     }
 }

@@ -26,7 +26,8 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
         {
             _slidingWindowIncrementLuaScript = new RedisLuaScript(_redisClient, "Src-IncrWithExpireSec",
                 @"local ret={}
-                local lock_key=KEYS[1] .. '-lock'
+                local cl_key='{' .. KEYS[1] .. '}'
+                local lock_key=cl_key .. '-lock'
                 local lock_val=redis.call('get',lock_key)
                 if lock_val == '1' then
                     ret[1]=1
@@ -34,7 +35,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                     return ret;
                 end
                 ret[1]=0
-                local st_key=KEYS[1] .. '-st'
+                local st_key=cl_key .. '-st'
                 local amount=tonumber(ARGV[1])
                 local period_expire_ms=tonumber(ARGV[2])
                 local period_ms=tonumber(ARGV[3])
@@ -51,7 +52,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 then
                     start_time=cal_start_time
                     current_period=start_time+period_ms-1
-                    current_period_key=KEYS[1] .. '-' .. current_period
+                    current_period_key=cl_key .. '-' .. current_period
                     redis.call('set',st_key,start_time,'PX',key_expire_time)
                     redis.call('set',current_period_key,amount,'PX',period_expire_ms)
                     ret[2]=amount
@@ -65,20 +66,20 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 local past_period_number_ceil=math.ceil(past_period_number)
 
                 local past_period_number_fixed=past_period_number_floor
-                if (past_period_number_ceil > past_period_number_floor)
+                if (past_period_number_ceil>past_period_number_floor)
                 then
-                    past_period_number_fixed = past_period_number_ceil
+                    past_period_number_fixed=past_period_number_ceil
                 end
                 if past_period_number_fixed==0
                 then
                     past_period_number_fixed=1
                 end
                 current_period=start_time + past_period_number_fixed * period_ms - 1
-                current_period_key=KEYS[1] .. '-' .. current_period
+                current_period_key=cl_key .. '-' .. current_period
 
                 local periods={current_period_key}
                 for i=1,period_number-1,1 do
-                    periods[i+1] = KEYS[1] .. '-' .. (current_period - period_ms * i)
+                    periods[i+1]=cl_key .. '-' .. (current_period - period_ms * i)
                 end
                 local periods_amount=0
                 local periods_amount_array=redis.call('mget',unpack(periods))
