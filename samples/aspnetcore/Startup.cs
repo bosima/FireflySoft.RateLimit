@@ -64,6 +64,7 @@ namespace FireflySoft.RateLimit.AspNetCore.Sample
                     {
                         ExtractTarget = context =>
                         {
+                            var goodsId = (context as HttpContext).Request.Query["GoodsId"].ToString();
                             return (context as HttpContext).Request.Path.Value;
                         },
                         CheckRuleMatching = context =>

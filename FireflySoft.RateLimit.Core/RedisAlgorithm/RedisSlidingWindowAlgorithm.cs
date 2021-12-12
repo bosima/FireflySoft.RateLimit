@@ -110,6 +110,17 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
         }
 
         /// <summary>
+        /// Take a peek at the result of the last processing of the specified target in the specified rule
+        /// </summary>
+        /// <param name="target"></param>
+        /// <param name="rule"></param>
+        /// <returns></returns>
+        protected override RuleCheckResult PeekSingleRule(string target, RateLimitRule rule)
+        {
+            throw new NotSupportedException();
+        }
+
+        /// <summary>
         /// check single rule for target
         /// </summary>
         /// <param name="target"></param>

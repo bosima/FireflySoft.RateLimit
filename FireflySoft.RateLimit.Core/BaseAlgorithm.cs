@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using FireflySoft.RateLimit.Core.Rule;
 using FireflySoft.RateLimit.Core.Time;
@@ -60,6 +59,14 @@ namespace FireflySoft.RateLimit.Core
         protected abstract RuleCheckResult CheckSingleRule(string target, RateLimitRule rule);
 
         /// <summary>
+        /// Take a peek at the result of the last processing of the specified target in the specified rule
+        /// </summary>
+        /// <param name="target"></param>
+        /// <param name="rule"></param>
+        /// <returns></returns>
+        protected abstract RuleCheckResult PeekSingleRule(string target, RateLimitRule rule);
+
+        /// <summary>
         /// Check single rule for target
         /// </summary>
         /// <param name="target"></param>
@@ -115,6 +122,24 @@ namespace FireflySoft.RateLimit.Core
         }
 
         /// <summary>
+        /// Take a peek at the result of the last rate limiting process
+        /// </summary>
+        /// <param name="target">A specified target</param>
+        /// <returns>The last check result</returns>
+        public AlgorithmCheckResult Peek(string target)
+        {
+            if (_updatable)
+            {
+                using (var l = _mutex.ReaderLock())
+                {
+                    return InnerPeek(target);
+                }
+            }
+
+            return InnerPeek(target);
+        }
+
+        /// <summary>
         /// check a request for rate limit
         /// </summary>
         /// <param name="request">a request</param>
@@ -125,27 +150,11 @@ namespace FireflySoft.RateLimit.Core
             {
                 using (var l = _mutex.ReaderLock())
                 {
-                    var originalRuleChecks = CheckAllRules(request);
-                    var ruleCheckResults = new List<RuleCheckResult>();
-                    foreach (var result in originalRuleChecks)
-                    {
-                        ruleCheckResults.Add(result);
-                    }
-
-                    return new AlgorithmCheckResult(ruleCheckResults);
+                    return InnerCheck(request);
                 }
             }
-            else
-            {
-                var originalRuleChecks = CheckAllRules(request);
-                var ruleCheckResults = new List<RuleCheckResult>();
-                foreach (var result in originalRuleChecks)
-                {
-                    ruleCheckResults.Add(result);
-                }
 
-                return new AlgorithmCheckResult(ruleCheckResults);
-            }
+            return InnerCheck(request);
         }
 
         /// <summary>
@@ -159,26 +168,61 @@ namespace FireflySoft.RateLimit.Core
             {
                 using (var l = await _mutex.ReaderLockAsync())
                 {
-                    var originalRuleChecks = CheckAllRulesAsync(request);
-                    var ruleCheckResults = new List<RuleCheckResult>();
-                    await foreach (var result in originalRuleChecks)
-                    {
-                        ruleCheckResults.Add(result);
-                    }
-
-                    return new AlgorithmCheckResult(ruleCheckResults);
+                    return await InnerCheckAsync(request);
                 }
             }
-            else
+
+            return await InnerCheckAsync(request);
+        }
+
+        private AlgorithmCheckResult InnerPeek(string target)
+        {
+            var originalRuleChecks = PeekAllRules(target);
+            var ruleCheckResults = new List<RuleCheckResult>();
+            foreach (var result in originalRuleChecks)
             {
-                var originalRuleChecks = CheckAllRulesAsync(request);
-                var ruleCheckResults = new List<RuleCheckResult>();
-                await foreach (var result in originalRuleChecks)
+                ruleCheckResults.Add(result);
+            }
+
+            return new AlgorithmCheckResult(ruleCheckResults);
+        }
+
+        private AlgorithmCheckResult InnerCheck(object request)
+        {
+            var originalRuleChecks = CheckAllRules(request);
+            var ruleCheckResults = new List<RuleCheckResult>();
+            foreach (var result in originalRuleChecks)
+            {
+                ruleCheckResults.Add(result);
+            }
+
+            return new AlgorithmCheckResult(ruleCheckResults);
+        }
+
+        private async Task<AlgorithmCheckResult> InnerCheckAsync(object request)
+        {
+            var originalRuleChecks = CheckAllRulesAsync(request);
+            var ruleCheckResults = new List<RuleCheckResult>();
+            await foreach (var result in originalRuleChecks)
+            {
+                ruleCheckResults.Add(result);
+            }
+
+            return new AlgorithmCheckResult(ruleCheckResults);
+        }
+
+        private IEnumerable<RuleCheckResult> PeekAllRules(string target)
+        {
+            foreach (var rule in _rules)
+            {
+                if (string.IsNullOrWhiteSpace(target))
                 {
-                    ruleCheckResults.Add(result);
+                    throw new NotSupportedException("Null target is not supported");
                 }
 
-                return new AlgorithmCheckResult(ruleCheckResults);
+                target = string.Concat(rule.Id, "-", target);
+                target = string.Intern(target);
+                yield return PeekSingleRule(target, rule);
             }
         }
 

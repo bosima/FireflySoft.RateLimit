@@ -23,6 +23,27 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         }
 
         /// <summary>
+        /// Take a peek at the result of the last processing of the specified target in the specified rule
+        /// </summary>
+        /// <param name="target"></param>
+        /// <param name="rule"></param>
+        /// <returns></returns>
+        protected override RuleCheckResult PeekSingleRule(string target, RateLimitRule rule)
+        {
+            var currentRule = rule as FixedWindowRule;
+            var amount = 1;
+
+            var result = InnerPeekSingleRule(target, amount, currentRule);
+            return new RuleCheckResult()
+            {
+                IsLimit = result.Item1,
+                Target = target,
+                Count = result.Item2,
+                Rule = rule
+            };
+        }
+
+        /// <summary>
         /// check single rule for target
         /// </summary>
         /// <param name="target"></param>
@@ -83,6 +104,30 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             }
 
             return Tuple.Create(checkResult, incrementResult.Item2);
+        }
+
+        private Tuple<bool, long> InnerPeekSingleRule(string target, int amount, FixedWindowRule currentRule)
+        {
+            bool locked = CheckLocked(target);
+            if (locked)
+            {
+                return Tuple.Create(true, -1L);
+            }
+
+            var result = _cache.GetCacheItem(target);
+            if (result != null)
+            {
+                // This result is inaccurate because it may not actually exceed this threshold
+                var countValue = (long)result.Value;
+                if (currentRule.LimitNumber >= 0 && countValue >= currentRule.LimitNumber)
+                {
+                    return Tuple.Create(true, countValue);
+                }
+                
+                return Tuple.Create(false, countValue);
+            }
+
+            return Tuple.Create(false, 0L);
         }
 
         /// <summary>

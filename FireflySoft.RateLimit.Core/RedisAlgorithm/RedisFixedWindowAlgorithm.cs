@@ -13,6 +13,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
     public class RedisFixedWindowAlgorithm : BaseRedisAlgorithm
     {
         private readonly RedisLuaScript _fixedWindowIncrementLuaScript;
+        private readonly RedisLuaScript _fixedWindowPeekLuaScript;
 
         /// <summary>
         /// create a new instance
@@ -59,6 +60,55 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                     end
                 end
                 return ret");
+
+                _fixedWindowPeekLuaScript = new RedisLuaScript(_redisClient, "Src-PeekIncrWithExpireSec",
+                @"local ret={}
+                local lock_key=KEYS[1] .. '-lock'
+                local lock_val=redis.call('get',lock_key)
+                if lock_val == '1' then
+                    ret[1]=1
+                    ret[2]=-1
+                    return ret;
+                end
+                ret[1]=0
+       
+                local limit_number=tonumber(ARGV[1])
+                local check_result=false
+                local current=redis.call('get',KEYS[1])
+                if current~=false then
+                    current = tonumber(current)
+                    if(limit_number>=0 and current>=limit_number) then
+                        check_result=true
+                    end
+                else
+                    current=0
+                end
+                ret[2]=current
+               
+                return ret");
+        }
+
+        /// <summary>
+        /// Take a peek at the result of the last processing of the specified target in the specified rule
+        /// </summary>
+        /// <param name="target"></param>
+        /// <param name="rule"></param>
+        /// <returns></returns>
+        protected override RuleCheckResult PeekSingleRule(string target, RateLimitRule rule)
+        {
+            var currentRule = rule as FixedWindowRule;
+
+            var ret = (long[])EvaluateScript(_fixedWindowPeekLuaScript,
+                new RedisKey[] { target },
+                new RedisValue[] { currentRule.LimitNumber });
+
+            return new RuleCheckResult()
+            {
+                IsLimit = ret[0] == 0 ? false : true,
+                Target = target,
+                Count = ret[1],
+                Rule = rule
+            };
         }
 
         /// <summary>
@@ -72,6 +122,11 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
             var currentRule = rule as FixedWindowRule;
             var amount = 1;
 
+            // 1. There may also be a millisecond delay in accessing redis. 
+            // At this time, some requests cannot be counted to the correct time window, but will be counted to the next time window and will not be missed.
+            // 2. In distributed deployment, the time of different machines is not completely synchronized, and there may be several milliseconds difference. 
+            // If the time is obtained from a unified address, there is still a certain network access delay.
+            // 3. Therefore, when the time window is much longer than these delays or differences, there will be no obvious problems.
             long expireTime = (long)currentRule.StatWindow.TotalMilliseconds;
             if (currentRule.StartTimeType == StartTimeType.FromNaturalPeriodBeign)
             {
