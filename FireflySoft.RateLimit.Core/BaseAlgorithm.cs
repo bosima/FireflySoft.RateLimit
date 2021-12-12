@@ -122,7 +122,7 @@ namespace FireflySoft.RateLimit.Core
         }
 
         /// <summary>
-        /// Take a peek at the result of the last rate limiting process
+        /// Take a peek at the result of the last rate limiting processing
         /// </summary>
         /// <param name="target">A specified target</param>
         /// <returns>The last check result</returns>

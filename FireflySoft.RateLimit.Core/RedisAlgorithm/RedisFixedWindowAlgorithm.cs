@@ -64,7 +64,8 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
 
                 _fixedWindowPeekLuaScript = new RedisLuaScript(_redisClient, "Src-PeekIncrWithExpireSec",
                 @"local ret={}
-                local lock_key=KEYS[1] .. '-lock'
+                local cl_key='{' .. KEYS[1] .. '}'
+                local lock_key=cl_key .. '-lock'
                 local lock_val=redis.call('get',lock_key)
                 if lock_val == '1' then
                     ret[1]=1
