@@ -29,7 +29,7 @@ namespace FireflySoft.RateLimit.Core.UnitTest
             IAlgorithm algorithm;
             if (storageType == "redis")
             {
-                var redisClient = StackExchange.Redis.ConnectionMultiplexer.Connect("127.0.0.1");
+                var redisClient = RedisClientHelper.GetClient();
                 algorithm = new RedisFixedWindowAlgorithm(fixedWindowRules, redisClient, updatable: true);
             }
             else
@@ -78,7 +78,7 @@ namespace FireflySoft.RateLimit.Core.UnitTest
             IAlgorithm algorithm;
             if (storageType == "redis")
             {
-                var redisClient = StackExchange.Redis.ConnectionMultiplexer.Connect("127.0.0.1");
+                var redisClient = RedisClientHelper.GetClient();
                 algorithm = new RedisFixedWindowAlgorithm(fixedWindowRules, redisClient, updatable: true);
             }
             else

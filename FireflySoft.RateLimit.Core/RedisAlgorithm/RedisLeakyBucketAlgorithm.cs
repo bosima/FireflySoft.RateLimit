@@ -26,16 +26,17 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
         {
             _leakyBucketIncrementLuaScript = new RedisLuaScript(_redisClient, "Src-IncrWithLeakyBucket",
                 @"local ret={}
-                local lock_key=KEYS[1] .. '-lock'
+                local cl_key='{' .. KEYS[1] .. '}'
+                local lock_key=cl_key .. '-lock'
                 local lock_val=redis.call('get',lock_key)
-                if lock_val == '1' then
+                if lock_val=='1' then
                     ret[1]=1
                     ret[2]=-1
                     ret[3]=-1
                     return ret;
                 end
                 ret[1]=0
-                local st_key= KEYS[1] .. '-st'
+                local st_key=cl_key .. '-st'
                 local amount=tonumber(ARGV[1])
                 local capacity=tonumber(ARGV[2])
                 local outflow_unit=tonumber(ARGV[3])

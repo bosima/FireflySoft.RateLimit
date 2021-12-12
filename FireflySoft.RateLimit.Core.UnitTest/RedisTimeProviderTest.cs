@@ -54,7 +54,7 @@ namespace FireflySoft.RateLimit.Core.UnitTest
 
         private ITimeProvider GetTimeProvider()
         {
-            return new RedisTimeProvider(StackExchange.Redis.ConnectionMultiplexer.Connect("127.0.0.1"));
+            return new RedisTimeProvider(RedisClientHelper.GetClient());
         }
     }
 }

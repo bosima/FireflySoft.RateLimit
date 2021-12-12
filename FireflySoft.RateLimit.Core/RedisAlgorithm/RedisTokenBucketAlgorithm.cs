@@ -26,23 +26,24 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
         {
             _tokenBucketDecrementLuaScript = new RedisLuaScript(_redisClient, "Src-DecrWithTokenBucket",
                 @"local ret={}
-                local lock_key=KEYS[1] .. '-lock'
-                local lock_val=redis.call('get',lock_key)
+                local cl_key = '{' .. KEYS[1] .. '}'
+                local lock_key = cl_key .. '-lock'
+                local lock_val = redis.call('get',lock_key)
                 if lock_val == '1' then
                     ret[1]=1
                     ret[2]=-1
                     return ret;
                 end
                 ret[1]=0
-                local st_key= KEYS[1] .. '-st'
+                local st_key= cl_key .. '-st'
                 local amount=tonumber(ARGV[1])
                 local capacity=tonumber(ARGV[2])
                 local inflow_unit=tonumber(ARGV[3])
                 local inflow_quantity_per_unit=tonumber(ARGV[4])
-                local key_expire_time=math.ceil((capacity/inflow_quantity_per_unit)*inflow_unit)+10
                 local current_time=tonumber(ARGV[5])
                 local start_time=tonumber(ARGV[6])
                 local lock_seconds=tonumber(ARGV[7])
+                local key_expire_time=math.ceil((capacity/inflow_quantity_per_unit)*inflow_unit)+10
                 local bucket_amount=0
                 local last_time=redis.call('get',st_key)
                 if(last_time==false)
