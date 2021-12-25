@@ -206,5 +206,6 @@ var result = algorithm.Check(new SimulationRequest()
 SimulationRequest是一个自定义请求，你可以把它修改为任何适合自己的请求类型。
 
 ### 待办
-* 同一个请求中的不同限流规则检查使用同一个当前时间。 
-* 当Redis支持 'scripts effects replication' 时在lua script中使用 'TIME' 命令获取当前时间。
+* 同一个请求中的不同限流规则检查使用同一个当前时间，包括Redis算法中的键值过期处理。 
+* 为进程内各种算法的限流规则变更处理逻辑增加单元测试。
+* 为Redis各种算法增加更多限流规则的属性变更的处理逻辑。
