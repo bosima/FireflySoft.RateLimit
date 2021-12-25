@@ -3,7 +3,7 @@ using FireflySoft.RateLimit.Core.InProcessAlgorithm;
 using FireflySoft.RateLimit.Core.Rule;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace FireflySoft.RateLimit.Core.UnitTest
+namespace FireflySoft.RateLimit.Core.Test
 {
     [TestClass]
     public class MemorySlidingWindowTest

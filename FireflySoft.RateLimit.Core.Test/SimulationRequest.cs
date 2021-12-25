@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace FireflySoft.RateLimit.Core.UnitTest
+namespace FireflySoft.RateLimit.Core.Test
 {
     public class SimulationRequest
     {

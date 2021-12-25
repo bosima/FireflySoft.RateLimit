@@ -2,7 +2,7 @@ using System;
 using FireflySoft.RateLimit.Core.Time;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace FireflySoft.RateLimit.Core.UnitTest
+namespace FireflySoft.RateLimit.Core.Test
 {
     [TestClass]
     public class AlgorithmStartTimeTest

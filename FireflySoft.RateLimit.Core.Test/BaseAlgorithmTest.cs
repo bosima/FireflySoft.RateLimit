@@ -8,7 +8,7 @@ using FireflySoft.RateLimit.Core.RedisAlgorithm;
 using FireflySoft.RateLimit.Core.Rule;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace FireflySoft.RateLimit.Core.UnitTest
+namespace FireflySoft.RateLimit.Core.Test
 {
     [TestClass]
     public class BaseAlgorithmTest
@@ -123,7 +123,7 @@ namespace FireflySoft.RateLimit.Core.UnitTest
                 {
                     new FixedWindowRule()
                     {
-                        Id="1",
+                        Id="TestUpdateRules-1",
                         StatWindow=TimeSpan.FromSeconds(1),
                         LimitNumber=limitNumber,
                         ExtractTarget = (request) =>

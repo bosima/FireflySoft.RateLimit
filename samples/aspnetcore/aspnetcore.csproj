@@ -4,6 +4,7 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
 
+  <PropertyGroup Condition=" '$(RunConfiguration)' == 'FireflySoft.RateLimit.AspNetCore.Sample' " />
   <ItemGroup>
     <ProjectReference Include="..\..\FireflySoft.RateLimit.AspNetCore\FireflySoft.RateLimit.AspNetCore.csproj">
       <GlobalPropertiesToRemove></GlobalPropertiesToRemove>

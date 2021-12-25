@@ -8,22 +8,18 @@ using FireflySoft.RateLimit.Core.Rule;
 using FireflySoft.RateLimit.Core.InProcessAlgorithm;
 using FireflySoft.RateLimit.Core.RedisAlgorithm;
 
-namespace FireflySoft.RateLimit.Core.UnitTest
+namespace FireflySoft.RateLimit.Core.Test
 {
     [TestClass]
-    public class TokenBucketAlgorithmTest
+    public class RedisTokenBucketAlgorithmTest
     {
         [DataTestMethod]
-        [DataRow("memory")]
-        [DataRow("redis")]
-        public void Test(string storageType)
+        public void Test()
         {
-            var processor = GetAlgorithm(storageType, 30, 10, TimeSpan.FromSeconds(1), 0);
+            var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 0);
 
             for (int i = 1; i <= 80; i++)
             {
-                Debug.WriteLine("for " + i);
-
                 var checkResult = processor.Check(new SimulationRequest()
                 {
                     RequestId = Guid.NewGuid().ToString(),
@@ -50,11 +46,9 @@ namespace FireflySoft.RateLimit.Core.UnitTest
         }
 
         [DataTestMethod]
-        [DataRow("memory")]
-        [DataRow("redis")]
-        public void TestLockSeconds(string storageType)
+        public void TestLockSeconds()
         {
-            var processor = GetAlgorithm(storageType, 30, 10, TimeSpan.FromSeconds(1), 3);
+            var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 3);
 
             for (int i = 1; i <= 70; i++)
             {
@@ -84,17 +78,15 @@ namespace FireflySoft.RateLimit.Core.UnitTest
         }
 
         [DataTestMethod]
-        [DataRow("memory")]
-        [DataRow("redis")]
-        public void TestFromNaturalPeriodBeign(string storageType)
+        public void TestFromNaturalPeriodBeign()
         {
-            var processor = GetAlgorithm(storageType, 30, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromNaturalPeriodBeign);
+            var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromNaturalPeriodBeign);
 
             while (true)
             {
                 if (DateTimeOffset.Now.Millisecond < 800)
                 {
-                    Thread.Sleep(50);
+                    Thread.Sleep(20);
                     continue;
                 }
                 break;
@@ -102,8 +94,6 @@ namespace FireflySoft.RateLimit.Core.UnitTest
 
             for (int i = 1; i <= 80; i++)
             {
-                Debug.WriteLine("for " + i);
-
                 var checkResult = processor.Check(new SimulationRequest()
                 {
                     RequestId = Guid.NewGuid().ToString(),
@@ -135,17 +125,15 @@ namespace FireflySoft.RateLimit.Core.UnitTest
         }
 
         [DataTestMethod]
-        [DataRow("memory")]
-        [DataRow("redis")]
-        public void TestFromCurrent(string storageType)
+        public void TestFromCurrent()
         {
-            var processor = GetAlgorithm(storageType, 30, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromCurrent);
+            var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromCurrent);
 
             while (true)
             {
                 if (DateTimeOffset.Now.Millisecond < 800)
                 {
-                    Thread.Sleep(50);
+                    Thread.Sleep(20);
                     continue;
                 }
                 break;
@@ -153,8 +141,6 @@ namespace FireflySoft.RateLimit.Core.UnitTest
 
             for (int i = 1; i <= 80; i++)
             {
-                Debug.WriteLine("for " + i);
-
                 var checkResult = processor.Check(new SimulationRequest()
                 {
                     RequestId = Guid.NewGuid().ToString(),
@@ -186,16 +172,12 @@ namespace FireflySoft.RateLimit.Core.UnitTest
         }
 
         [DataTestMethod]
-        [DataRow("memory")]
-        [DataRow("redis")]
-        public async Task TestAsync(string storageType)
+        public async Task TestAsync()
         {
-            var processor = GetAlgorithm(storageType, 30, 10, TimeSpan.FromSeconds(1), 1);
+            var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 1);
 
             for (int i = 1; i <= 80; i++)
             {
-                Debug.WriteLine("for " + i);
-
                 var checkResult = await processor.CheckAsync(new SimulationRequest()
                 {
                     RequestId = Guid.NewGuid().ToString(),
@@ -216,17 +198,15 @@ namespace FireflySoft.RateLimit.Core.UnitTest
 
                 if (i == 31 || i == 42)
                 {
-                    Thread.Sleep(1001);
+                    await Task.Delay(1000);
                 }
             }
         }
 
         [DataTestMethod]
-        [DataRow("memory")]
-        [DataRow("redis")]
-        public async Task TestLockSecondsAsync(string storageType)
+        public async Task TestLockSecondsAsync()
         {
-            var processor = GetAlgorithm(storageType, 30, 10, TimeSpan.FromSeconds(1), 3);
+            var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 3);
 
             for (int i = 1; i <= 70; i++)
             {
@@ -256,17 +236,17 @@ namespace FireflySoft.RateLimit.Core.UnitTest
         }
 
         [DataTestMethod]
-        [DataRow("memory")]
-        [DataRow("redis")]
-        public async Task TestFromNaturalPeriodBeignAsync(string storageType)
+
+
+        public async Task TestFromNaturalPeriodBeignAsync()
         {
-            var processor = GetAlgorithm(storageType, 30, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromNaturalPeriodBeign);
+            var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromNaturalPeriodBeign);
 
             while (true)
             {
                 if (DateTimeOffset.Now.Millisecond < 800)
                 {
-                    Thread.Sleep(50);
+                    Thread.Sleep(20);
                     continue;
                 }
                 break;
@@ -274,8 +254,6 @@ namespace FireflySoft.RateLimit.Core.UnitTest
 
             for (int i = 1; i <= 80; i++)
             {
-                Debug.WriteLine("for " + i);
-
                 var checkResult = await processor.CheckAsync(new SimulationRequest()
                 {
                     RequestId = Guid.NewGuid().ToString(),
@@ -296,28 +274,28 @@ namespace FireflySoft.RateLimit.Core.UnitTest
 
                 if (i == 31)
                 {
-                    Thread.Sleep(200);
+                    await Task.Delay(200);
                 }
 
                 if (i == 42)
                 {
-                    Thread.Sleep(1000);
+                    await Task.Delay(1000);
                 }
             }
         }
 
         [DataTestMethod]
-        [DataRow("memory")]
-        [DataRow("redis")]
-        public async Task TestFromCurrentAsync(string storageType)
+
+
+        public async Task TestFromCurrentAsync()
         {
-            var processor = GetAlgorithm(storageType, 30, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromCurrent);
+            var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromCurrent);
 
             while (true)
             {
                 if (DateTimeOffset.Now.Millisecond < 800)
                 {
-                    Thread.Sleep(50);
+                    Thread.Sleep(20);
                     continue;
                 }
                 break;
@@ -325,8 +303,6 @@ namespace FireflySoft.RateLimit.Core.UnitTest
 
             for (int i = 1; i <= 80; i++)
             {
-                Debug.WriteLine("for " + i);
-
                 var checkResult = await processor.CheckAsync(new SimulationRequest()
                 {
                     RequestId = Guid.NewGuid().ToString(),
@@ -347,21 +323,20 @@ namespace FireflySoft.RateLimit.Core.UnitTest
 
                 if (i == 31)
                 {
-                    Thread.Sleep(200);
+                    await Task.Delay(200);
                 }
 
                 if (i == 42)
                 {
-                    Thread.Sleep(1000);
+                    await Task.Delay(1000);
                 }
             }
         }
 
         [DataTestMethod]
-        [DataRow("redis")]
-        public void TestRedisKeyExpire(string storageType)
+        public void TestRedisKeyExpire()
         {
-            var processor = GetAlgorithm(storageType, 30, 10, TimeSpan.FromSeconds(1), 0, id: "1");
+            var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 0, id: "1");
 
             for (int i = 1; i <= 80; i++)
             {
@@ -373,8 +348,6 @@ namespace FireflySoft.RateLimit.Core.UnitTest
                                 { "from","sample" },
                         }
                 });
-
-                Debug.WriteLine("for " + i+":"+checkResult.IsLimit);
 
                 if (i == 31 || i == 62)
                 {
@@ -396,7 +369,7 @@ namespace FireflySoft.RateLimit.Core.UnitTest
             }
         }
 
-        private IAlgorithm GetAlgorithm(string storageType, int capacity, int inflowQuantity, TimeSpan inflowUnit, int lockSeconds, StartTimeType startTimeType = StartTimeType.FromCurrent, string id = "")
+        private IAlgorithm GetAlgorithm(int capacity, int inflowQuantity, TimeSpan inflowUnit, int lockSeconds, StartTimeType startTimeType = StartTimeType.FromCurrent, string id = "")
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -429,15 +402,8 @@ namespace FireflySoft.RateLimit.Core.UnitTest
                     }
                 };
 
-            if (storageType == "redis")
-            {
-                var redisClient = RedisClientHelper.GetClient();
-                return new RedisTokenBucketAlgorithm(tokenBucketRules, redisClient);
-            }
-            else
-            {
-                return new InProcessTokenBucketAlgorithm(tokenBucketRules);
-            }
+            var redisClient = RedisClientHelper.GetClient();
+            return new RedisTokenBucketAlgorithm(tokenBucketRules, redisClient);
         }
     }
 }
