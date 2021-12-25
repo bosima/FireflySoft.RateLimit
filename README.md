@@ -201,6 +201,6 @@ var result = algorithm.Check(new SimulationRequest()
 SimulationRequest is a custom request that you can modify to any type.
 
 ### Todo List
-* The same current time is used for different rule checking in the same request. 
-* Use 'TIME' command in lua script when redis support 'scripts effects replication'.
-* Run unit tests in the docker container to avoid installing redis.
+* Use the same current time for different rules in the same request, including kv expiration processing in redis algorithm.
+* Add more Unit tests for the rule change processing logic of various algorithms in the process.
+* Add more processing logic for attribute changes of rules for redis algorithms.
