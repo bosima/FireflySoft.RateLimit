@@ -24,6 +24,12 @@ namespace FireflySoft.RateLimit.Core.Rule
         public TimeSpan InflowUnit { get; private set; }
 
         /// <summary>
+        /// The min time of fill to the full.
+        /// </summary>
+        /// <value></value>
+        public TimeSpan MinFillTime { get; private set; }
+
+        /// <summary>
         /// create a new instance
         /// </summary>
         /// <param name="capacity"></param>
@@ -49,6 +55,7 @@ namespace FireflySoft.RateLimit.Core.Rule
             Capacity = capacity;
             InflowQuantityPerUnit = inflowQuantityPerUnit;
             InflowUnit = inflowUnit;
+            MinFillTime = TimeSpan.FromMilliseconds(((int)Math.Ceiling(capacity / (double)inflowQuantityPerUnit) + 1) * inflowUnit.TotalMilliseconds);
         }
     }
 }

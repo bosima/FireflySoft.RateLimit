@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace FireflySoft.RateLimit.Core.Rule
 {
     /// <summary>
-    /// the rule of leaky bucket algorithm
+    /// The rule of leaky bucket algorithm
     /// </summary>
     public class LeakyBucketRule : RateLimitRule
     {
@@ -22,6 +22,18 @@ namespace FireflySoft.RateLimit.Core.Rule
         /// The time unit of outflow from the leaky bucket
         /// </summary>
         public TimeSpan OutflowUnit { get; private set; }
+
+        /// <summary>
+        /// The threshold of triggering rate limiting in the statistical time window.
+        /// </summary>
+        /// <value></value>
+        public long LimitNumber { get; private set; }
+
+        /// <summary>
+        /// The length of drain time.
+        /// </summary>
+        /// <value></value>
+        public TimeSpan MaxDrainTime { get; private set; }
 
         /// <summary>
         /// create a new instance
@@ -49,6 +61,8 @@ namespace FireflySoft.RateLimit.Core.Rule
             Capacity = capacity;
             OutflowQuantityPerUnit = outflowQuantityPerUnit;
             OutflowUnit = outflowUnit;
+            LimitNumber = capacity + outflowQuantityPerUnit;
+            MaxDrainTime = TimeSpan.FromMilliseconds(((int)Math.Ceiling(capacity / (double)outflowQuantityPerUnit) + 1) * outflowUnit.TotalMilliseconds);
         }
     }
 }

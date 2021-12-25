@@ -15,15 +15,16 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
         private readonly RedisLuaScript _slidingWindowIncrementLuaScript;
 
         /// <summary>
-        /// 
+        /// Create a new instance
         /// </summary>
-        /// <param name="rules"></param>
-        /// <param name="redisClient"></param>
-        /// <param name="timeProvider"></param>
-        /// <param name="updatable"></param>
+        /// <param name="rules">The rate limit rules</param>
+        /// <param name="redisClient">The redis client</param>
+        /// <param name="timeProvider">The provider of current time</param>
+        /// <param name="updatable">If rules can be updated</param>
         public RedisSlidingWindowAlgorithm(IEnumerable<SlidingWindowRule> rules, ConnectionMultiplexer redisClient = null, ITimeProvider timeProvider = null, bool updatable = false)
         : base(rules, redisClient, timeProvider, updatable)
         {
+
             _slidingWindowIncrementLuaScript = new RedisLuaScript(_redisClient, "Src-IncrWithExpireSec",
                 @"local ret={}
                 local cl_key='{' .. KEYS[1] .. '}'

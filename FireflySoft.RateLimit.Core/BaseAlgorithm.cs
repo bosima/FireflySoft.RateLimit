@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FireflySoft.RateLimit.Core.Rule;
 using FireflySoft.RateLimit.Core.Time;
@@ -23,27 +24,18 @@ namespace FireflySoft.RateLimit.Core
         private readonly AsyncReaderWriterLock _mutex = new AsyncReaderWriterLock();
 
         /// <summary>
-        /// create a new instance
+        /// Create a new instance
         /// </summary>
         /// <param name="rules">The rate limit rules</param>
         /// <param name="timeProvider">The time provider, it is a instance of LocalTimeProvider by default.</param>
         /// <param name="updatable">If rules can be updated</param>
         public BaseAlgorithm(IEnumerable<RateLimitRule> rules, ITimeProvider timeProvider = null, bool updatable = false)
         {
+            CheckRules(rules);
             _rules = rules;
-            _timeProvider = timeProvider;
             _updatable = updatable;
 
-            if (_rules.Any(d => string.IsNullOrWhiteSpace(d.Id)))
-            {
-                throw new ArgumentNullException("Empty rule ID in collection.");
-            }
-
-            if (_rules.GroupBy(d => d.Id).Any(g => g.Count() > 1))
-            {
-                throw new ArgumentNullException("Duplicate rule ID in collection.");
-            }
-
+            _timeProvider = timeProvider;
             if (_timeProvider == null)
             {
                 _timeProvider = new LocalTimeProvider();
@@ -75,13 +67,6 @@ namespace FireflySoft.RateLimit.Core
         protected abstract Task<RuleCheckResult> CheckSingleRuleAsync(string target, RateLimitRule rule);
 
         /// <summary>
-        /// Reset something after update rules
-        /// </summary>
-        protected virtual void ResetAfterUpdateRules()
-        {
-        }
-
-        /// <summary>
         /// Update the current rules
         /// </summary>
         /// <param name="rules"></param>
@@ -89,14 +74,14 @@ namespace FireflySoft.RateLimit.Core
         {
             if (_updatable)
             {
+                CheckRules(rules);
+
                 using (var l = _mutex.WriterLock())
                 {
                     if (!_rules.Equals(rules))
                     {
                         _rules = rules;
                     }
-
-                    ResetAfterUpdateRules();
                 }
             }
         }
@@ -115,8 +100,6 @@ namespace FireflySoft.RateLimit.Core
                     {
                         _rules = rules;
                     }
-
-                    ResetAfterUpdateRules();
                 }
             }
         }
@@ -140,13 +123,13 @@ namespace FireflySoft.RateLimit.Core
         }
 
         /// <summary>
-        /// check a request for rate limit
+        /// Check a request for rate limiting
         /// </summary>
         /// <param name="request">a request</param>
         /// <returns>the stream of check result</returns>
         public AlgorithmCheckResult Check(object request)
         {
-            if (_updatable)
+           if (_updatable)
             {
                 using (var l = _mutex.ReaderLock())
                 {
@@ -173,6 +156,19 @@ namespace FireflySoft.RateLimit.Core
             }
 
             return await InnerCheckAsync(request);
+        }
+
+        private void CheckRules(IEnumerable<RateLimitRule> rules)
+        {
+            if (rules.Any(d => string.IsNullOrWhiteSpace(d.Id)))
+            {
+                throw new ArgumentNullException("Empty rule ID in collection.");
+            }
+
+            if (rules.GroupBy(d => d.Id).Any(g => g.Count() > 1))
+            {
+                throw new ArgumentNullException("Duplicate rule ID in collection.");
+            }
         }
 
         private AlgorithmCheckResult InnerPeek(string target)

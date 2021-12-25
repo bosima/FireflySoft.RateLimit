@@ -26,12 +26,11 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
     /// </summary>
     public class MemorySlidingWindow
     {
-        readonly int _length;
-        readonly SlidingWindowPeriod[] _queue;
-        readonly SlidingWindowRule _rule;
-        readonly long _statPeriodMilliseconds;
+        int _length;
+        SlidingWindowPeriod[] _queue;
+        SlidingWindowRule _rule;
+        long _statPeriodMilliseconds;
         long _startPeriod;
-
         int _head = 0;
         int _tail = 0;
 
@@ -45,6 +44,49 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             _queue = new SlidingWindowPeriod[_length];
             _rule = rule;
             _statPeriodMilliseconds = (long)rule.StatPeriod.TotalMilliseconds;
+        }
+
+        /// <summary>
+        /// Reset when rule changed
+        /// </summary>
+        /// <param name="rule"></param>
+        public void ResetIfRuleChanged(SlidingWindowRule rule)
+        {
+            if (rule.StatPeriod.Ticks == _rule.StatPeriod.Ticks &&
+            rule.StatWindow.Ticks == _rule.StatWindow.Ticks)
+            {
+                return;
+            }
+
+            var newLength = rule.PeriodNumber;
+            var newQueue = new SlidingWindowPeriod[newLength];
+            var newTail = 0;
+
+            if (rule.StatPeriod.Ticks == _rule.StatPeriod.Ticks)
+            {
+                var loopIndex = _tail;
+                newTail = _length - 1;
+                if (rule.StatWindow.Ticks < _rule.StatWindow.Ticks)
+                {
+                    newTail = newLength - 1;
+                }
+
+                for (int i = newTail; i >= 0; i--)
+                {
+                    newQueue[i] = _queue[loopIndex];
+                    loopIndex--;
+                    if (loopIndex < 0)
+                    {
+                        loopIndex = _length - 1;
+                    }
+                }
+            }
+
+            _length = newQueue.Length;
+            _queue = newQueue;
+            _head = 0;
+            _tail = newTail;
+            _rule = rule;
         }
 
         /// <summary>

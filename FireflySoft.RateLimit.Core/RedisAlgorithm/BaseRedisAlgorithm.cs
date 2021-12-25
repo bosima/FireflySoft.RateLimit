@@ -21,8 +21,12 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
         protected readonly ConnectionMultiplexer _redisClient;
 
         /// <summary>
-        /// Create a new instance
+        /// 
         /// </summary>
+        /// <param name="rules"></param>
+        /// <param name="redisClient">An instance of StackExchange.Redis.ConnectionMultiplexer.</param>
+        /// <param name="timeProvider"></param>
+        /// <param name="updatable">Used to identify whether the rule can be updated.</param>
         public BaseRedisAlgorithm(IEnumerable<RateLimitRule> rules, ConnectionMultiplexer redisClient = null, ITimeProvider timeProvider = null, bool updatable = false)
         : base(rules, timeProvider, updatable)
         {

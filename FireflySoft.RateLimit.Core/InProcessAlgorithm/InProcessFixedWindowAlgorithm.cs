@@ -11,8 +11,10 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
     /// </summary>
     public class InProcessFixedWindowAlgorithm : BaseInProcessAlgorithm
     {
+        readonly CounterDictionary<FixedWindowCounter> _fixedWindows;
+
         /// <summary>
-        /// create a new instance
+        /// Create a new instance
         /// </summary>
         /// <param name="rules">The rate limit rules</param>
         /// <param name="timeProvider">The time provider</param>
@@ -20,6 +22,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         public InProcessFixedWindowAlgorithm(IEnumerable<FixedWindowRule> rules, ITimeProvider timeProvider = null, bool updatable = false)
         : base(rules, timeProvider, updatable)
         {
+            _fixedWindows = new CounterDictionary<FixedWindowCounter>(_timeProvider);
         }
 
         /// <summary>
@@ -31,9 +34,8 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         protected override RuleCheckResult PeekSingleRule(string target, RateLimitRule rule)
         {
             var currentRule = rule as FixedWindowRule;
-            var amount = 1;
 
-            var result = InnerPeekSingleRule(target, amount, currentRule);
+            var result = InnerPeekSingleRule(target, currentRule);
             return new RuleCheckResult()
             {
                 IsLimit = result.Item1,
@@ -65,7 +67,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         }
 
         /// <summary>
-        /// check single rule for target
+        /// Check single rule for target.
         /// </summary>
         /// <param name="target"></param>
         /// <param name="rule"></param>
@@ -84,29 +86,26 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             }
 
             var currentTime = _timeProvider.GetCurrentLocalTime();
-            var startTime = AlgorithmStartTime.ToSpecifiedTypeTime(currentTime, currentRule.StatWindow, currentRule.StartTimeType);
-
-            Tuple<bool, long> incrementResult;
+            Tuple<bool, long> countResult;
             lock (target)
             {
-                DateTimeOffset expireTime = startTime.Add(currentRule.StatWindow);
-                incrementResult = SimpleIncrement(target, amount, expireTime, currentRule.LimitNumber);
+                countResult = Count(target, amount, currentTime, currentRule);
             }
 
-            var checkResult = incrementResult.Item1;
+            // do free lock
+            var checkResult = countResult.Item1;
             if (checkResult)
             {
                 if (currentRule.LockSeconds > 0)
                 {
                     TryLock(target, currentTime, TimeSpan.FromSeconds(currentRule.LockSeconds));
-                    return Tuple.Create(checkResult, incrementResult.Item2);
                 }
             }
 
-            return Tuple.Create(checkResult, incrementResult.Item2);
+            return Tuple.Create(checkResult, countResult.Item2);
         }
 
-        private Tuple<bool, long> InnerPeekSingleRule(string target, int amount, FixedWindowRule currentRule)
+        private Tuple<bool, long> InnerPeekSingleRule(string target, FixedWindowRule currentRule)
         {
             bool locked = CheckLocked(target);
             if (locked)
@@ -114,16 +113,16 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                 return Tuple.Create(true, -1L);
             }
 
-            var result = _cache.GetCacheItem(target);
-            if (result != null)
+            if (_fixedWindows.TryGet(target, out var cacheItem))
             {
+                var countValue = cacheItem.Counter.Value;
+
                 // This result is inaccurate because it may not actually exceed this threshold
-                var countValue = (long)result.Value;
                 if (currentRule.LimitNumber >= 0 && countValue >= currentRule.LimitNumber)
                 {
                     return Tuple.Create(true, countValue);
                 }
-                
+
                 return Tuple.Create(false, countValue);
             }
 
@@ -131,30 +130,99 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         }
 
         /// <summary>
-        /// Increment a value with expire time and limit value
+        /// Count
         /// </summary>
         /// <param name="target"></param>
         /// <param name="amount"></param>
-        /// <param name="expireTime"></param>
-        /// <param name="checkNumber"></param>
+        /// <param name="currentTime"></param>
+        /// <param name="currentRule"></param>
         /// <returns></returns>
-        private Tuple<bool, long> SimpleIncrement(string target, long amount, DateTimeOffset expireTime, int checkNumber = -1)
+        private Tuple<bool, long> Count(string target, long amount, DateTimeOffset currentTime, FixedWindowRule currentRule)
         {
-            var result = _cache.GetCacheItem(target);
-            if (result != null)
+            FixedWindowCounter counter;
+
+            if (_fixedWindows.TryGet(target, out var cacheItem))
             {
-                var countValue = (long)result.Value;
-                if (checkNumber >= 0 && countValue >= checkNumber)
+                counter = (FixedWindowCounter)cacheItem.Counter;
+
+                // rule changed, the statistical time window is narrowed
+                if (counter.StatWindow > currentRule.StatWindow)
                 {
-                    return Tuple.Create(true, countValue);
+                    if (counter.StartTime.Add(currentRule.StatWindow) <= currentTime)
+                    {
+                        counter = ResetWindow(currentRule, cacheItem, currentTime);
+                    }
+                    else
+                    {
+                        counter = ResizeWindow(currentRule, cacheItem, counter);
+                    }
                 }
-                var newCountValue = countValue + amount;
-                result.Value = newCountValue;
-                return Tuple.Create(false, newCountValue);
+
+                // rule changed, the statistical time window is enlarged
+                if (counter.StatWindow < currentRule.StatWindow)
+                {
+                    counter = ResizeWindow(currentRule, cacheItem, counter);
+                }
+            }
+            else
+            {
+                cacheItem = CreateWindow(target, currentTime, currentRule);
+                _fixedWindows.Set(target, cacheItem);
+                counter = cacheItem.Counter;
             }
 
-            _cache.Add(target, amount, expireTime);
-            return Tuple.Create(false, amount);
+            // check rate limiting threshold
+            if (currentRule.LimitNumber >= 0 && counter.Value >= currentRule.LimitNumber)
+            {
+                return Tuple.Create(true, counter.Value);
+            }
+
+            // just increment the counter
+            counter.Value += amount;
+
+            return Tuple.Create(false, counter.Value);
+        }
+
+        private CounterDictionaryItem<FixedWindowCounter> CreateWindow(string target, DateTimeOffset currentTime, FixedWindowRule currentRule)
+        {
+            var counter = CreateNewCounter(currentTime, currentRule);
+            var cacheItem = new CounterDictionaryItem<FixedWindowCounter>(target, counter)
+            {
+                ExpireTime = counter.StartTime.Add(currentRule.StatWindow)
+            };
+            return cacheItem;
+        }
+
+        private FixedWindowCounter ResetWindow(FixedWindowRule currentRule, CounterDictionaryItem<FixedWindowCounter> cacheItem, DateTimeOffset currentTime)
+        {
+            FixedWindowCounter counter = CreateNewCounter(currentTime, currentRule);
+            cacheItem.Counter = counter;
+            cacheItem.ExpireTime = counter.StartTime.Add(currentRule.StatWindow);
+            return counter;
+        }
+
+        private FixedWindowCounter ResizeWindow(FixedWindowRule currentRule, CounterDictionaryItem<FixedWindowCounter> cacheItem, FixedWindowCounter counter)
+        {
+            counter = CreateCounter(counter.Value, counter.StartTime, currentRule);
+            cacheItem.Counter = counter;
+            cacheItem.ExpireTime = counter.StartTime.Add(currentRule.StatWindow);
+            return counter;
+        }
+
+        private FixedWindowCounter CreateNewCounter(DateTimeOffset currentTime, FixedWindowRule currentRule)
+        {
+            DateTimeOffset startTime = AlgorithmStartTime.ToSpecifiedTypeTime(currentTime, currentRule.StatWindow, currentRule.StartTimeType);
+            return CreateCounter(0, startTime, currentRule);
+        }
+
+        private FixedWindowCounter CreateCounter(long amount, DateTimeOffset startTime, FixedWindowRule currentRule)
+        {
+            return new FixedWindowCounter()
+            {
+                Value = amount,
+                StartTime = startTime,
+                StatWindow = currentRule.StatWindow,
+            };
         }
     }
 }

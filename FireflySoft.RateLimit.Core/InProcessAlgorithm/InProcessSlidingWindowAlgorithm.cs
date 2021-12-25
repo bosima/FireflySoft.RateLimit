@@ -11,10 +11,10 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
     /// </summary>
     public class InProcessSlidingWindowAlgorithm : BaseInProcessAlgorithm
     {
-        readonly Dictionary<string, MemorySlidingWindow> _slidingWindows;
+        readonly CounterDictionary<MemorySlidingWindow> _slidingWindows;
 
         /// <summary>
-        /// create a new instance
+        /// Create a new instance
         /// </summary>
         /// <param name="rules">The rate limit rules</param>
         /// <param name="timeProvider">The time provider</param>
@@ -22,15 +22,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         public InProcessSlidingWindowAlgorithm(IEnumerable<SlidingWindowRule> rules, ITimeProvider timeProvider = null, bool updatable = false)
         : base(rules, timeProvider, updatable)
         {
-            _slidingWindows = new Dictionary<string, MemorySlidingWindow>();
-        }
-
-        /// <summary>
-        /// Clear sliding windows after update rules, because the instance of 'MemorySlidingWindow' is cached
-        /// </summary>
-        protected override void ResetAfterUpdateRules()
-        {
-            _slidingWindows.Clear();
+            _slidingWindows = new CounterDictionary<MemorySlidingWindow>(_timeProvider);
         }
 
         /// <summary>
@@ -90,16 +82,33 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
 
             lock (target)
             {
+                // gets or sets the sliding window for current target
                 MemorySlidingWindow slidingWindow;
-                if (!_slidingWindows.TryGetValue(target, out slidingWindow))
+                CounterDictionaryItem<MemorySlidingWindow> slidingWindowItem;
+                if (!_slidingWindows.TryGet(target, out slidingWindowItem))
                 {
                     slidingWindow = new MemorySlidingWindow(currentRule);
-                    _slidingWindows.Add(target, slidingWindow);
+                    slidingWindowItem = new CounterDictionaryItem<MemorySlidingWindow>(
+                        target,
+                        slidingWindow)
+                    {
+                        ExpireTime = currentTime.AddMilliseconds(currentRule.StatWindow.TotalMilliseconds * 2)
+                    };
+
+                    _slidingWindows.Set(target, slidingWindowItem);
+                }
+                else
+                {
+                    slidingWindow = slidingWindowItem.Counter;
                 }
 
-                // maybe create a new period, so call it first, then call 'GetCount'
+                // rule changed, reset the counter
+                slidingWindow.ResetIfRuleChanged(currentRule);
+
+                // maybe replace a period, so call it first
                 var periodIndex = slidingWindow.LoadPeriod(currentMilliseconds);
 
+                // compare the count and the threshold
                 var currentTotalAmount = slidingWindow.GetCount();
                 var totalAmount = currentTotalAmount + amount;
                 if (currentRule.LimitNumber >= 0 && totalAmount > currentRule.LimitNumber)
@@ -111,7 +120,15 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                     return Tuple.Create(true, currentTotalAmount);
                 }
 
+                // increment the count value
                 slidingWindow.IncreamentPeriod(periodIndex, amount);
+
+                // renewal the window
+                if (slidingWindowItem.ExpireTime < currentTime.Add(currentRule.StatWindow))
+                {
+                    slidingWindowItem.ExpireTime = currentTime.AddMilliseconds(currentRule.StatWindow.TotalMilliseconds * 2);
+                }
+
                 return Tuple.Create(false, totalAmount);
             }
         }

@@ -9,13 +9,14 @@ namespace FireflySoft.RateLimit.Core.Rule
     public class FixedWindowRule : RateLimitRule
     {
         /// <summary>
-        /// Statistical time window, which counts the number of requests in this time.
+        /// The statistical time window, which counts the number of requests in this time.
         /// When using redis storage, it needs to be an integral multiple of one second.
         /// </summary>
         public TimeSpan StatWindow { get; set; }
 
         /// <summary>
-        /// The threshold of triggering rate limit in the statistical time window。
+        /// The threshold of triggering rate limiting in the statistical time window.
+        /// If less than 0, it means no limit.
         /// </summary>
         public int LimitNumber { get; set; }
     }

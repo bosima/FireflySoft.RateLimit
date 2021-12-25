@@ -15,15 +15,16 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
         private readonly RedisLuaScript _tokenBucketDecrementLuaScript;
 
         /// <summary>
-        /// create a new instance
+        /// Create a new instance
         /// </summary>
         /// <param name="rules">The rate limit rules</param>
         /// <param name="redisClient">The redis client</param>
-        /// <param name="timeProvider">The time provider</param>
+        /// <param name="timeProvider">The provider of current time</param>
         /// <param name="updatable">If rules can be updated</param>
         public RedisTokenBucketAlgorithm(IEnumerable<TokenBucketRule> rules, ConnectionMultiplexer redisClient = null, ITimeProvider timeProvider = null, bool updatable = false)
         : base(rules, redisClient, timeProvider, updatable)
         {
+
             _tokenBucketDecrementLuaScript = new RedisLuaScript(_redisClient, "Src-DecrWithTokenBucket",
                 @"local ret={}
                 local cl_key = '{' .. KEYS[1] .. '}'

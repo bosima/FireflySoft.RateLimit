@@ -13,19 +13,22 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
     /// </summary>
     public abstract class BaseInProcessAlgorithm : BaseAlgorithm
     {
-        /// <summary>
-        /// in-process memory cache
-        /// </summary>
-        protected readonly MemoryCache _cache;
+        readonly CounterDictionary<bool> _lockDictionary;
 
         /// <summary>
         /// Create a new instance
         /// </summary>
+        /// <param name="rules">The rate limit rules</param>
+        /// <param name="timeProvider">The time provider, it is a instance of LocalTimeProvider by default.</param>
+        /// <param name="updatable">If rules can be updated</param>
         public BaseInProcessAlgorithm(IEnumerable<RateLimitRule> rules, ITimeProvider timeProvider = null, bool updatable = false)
         : base(rules, timeProvider, updatable)
         {
-            _cache = new MemoryCache("IPMS-" + Guid.NewGuid().ToString());
-            _cache.Add("IPMS", 1, DateTimeOffset.MaxValue);
+            _lockDictionary = new CounterDictionary<bool>(_timeProvider);
+            _lockDictionary.Set("IPMS", new CounterDictionaryItem<bool>("IMPS", true)
+            {
+                ExpireTime = DateTimeOffset.MaxValue
+            });
         }
 
         /// <summary>
@@ -37,7 +40,13 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         protected bool TryLock(string target, DateTimeOffset currentTime, TimeSpan expireTimeSpan)
         {
             var expireTime = currentTime.Add(expireTimeSpan);
-            return _cache.Add($"{target}-lock", 1, expireTime);
+            var key = $"{target}-lock";
+             _lockDictionary.Set($"{target}-lock", new CounterDictionaryItem<bool>(key, true)
+            {
+                ExpireTime= expireTime
+            });
+
+            return true;
         }
 
         /// <summary>
@@ -47,34 +56,13 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         /// <returns></returns>
         protected bool CheckLocked(string target)
         {
-            return _cache.Get($"{target}-lock") == null ? false : true;
-        }
-
-        /// <summary>
-        /// Defines in-process count value
-        /// </summary>
-        protected class CountValue
-        {
-            /// <summary>
-            /// Create a new instance
-            /// </summary>
-            /// <param name="value"></param>
-            public CountValue(long value)
+            var key = $"{target}-lock";
+            if (_lockDictionary.TryGet(key,out var item))
             {
-                Value = value;
+                return item.Counter;
             }
 
-            /// <summary>
-            /// The Count Value
-            /// </summary>
-            /// <value></value>
-            public long Value { get; set; }
-
-            /// <summary>
-            /// The last flow-out or flow-in time for leaky bucket and token bucket
-            /// </summary>
-            /// <value></value>
-            public DateTimeOffset LastFlowTime { get; set; }
+            return false;
         }
     }
 }

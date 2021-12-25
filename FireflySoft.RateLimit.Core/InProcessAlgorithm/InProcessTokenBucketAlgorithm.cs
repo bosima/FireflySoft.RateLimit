@@ -11,8 +11,10 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
     /// </summary>
     public class InProcessTokenBucketAlgorithm : BaseInProcessAlgorithm
     {
+        readonly CounterDictionary<TokenBucketCounter> _tokenBuckets;
+
         /// <summary>
-        /// create a new instance
+        /// Create a new instance
         /// </summary>
         /// <param name="rules">The rate limit rules</param>
         /// <param name="timeProvider">The time provider</param>
@@ -20,6 +22,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         public InProcessTokenBucketAlgorithm(IEnumerable<TokenBucketRule> rules, ITimeProvider timeProvider = null, bool updatable = false)
         : base(rules, timeProvider, updatable)
         {
+            _tokenBuckets = new CounterDictionary<TokenBucketCounter>(_timeProvider);
         }
 
         /// <summary>
@@ -80,62 +83,95 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                 return new Tuple<bool, long>(true, -1);
             }
 
-            var inflowUnit = currentRule.InflowUnit.TotalMilliseconds;
+            var currentTime = _timeProvider.GetCurrentLocalTime();
+            Tuple<bool, long> countResult;
 
             lock (target)
             {
-                var currentTime = _timeProvider.GetCurrentLocalTime();
-                long bucketAmount = 0;
-                var result = _cache.GetCacheItem(target);
-                if (result == null)
-                {
-                    var startTime = AlgorithmStartTime.ToSpecifiedTypeTime(currentTime, TimeSpan.FromMilliseconds(inflowUnit), currentRule.StartTimeType);
-                    bucketAmount = currentRule.Capacity - amount;
-                    _cache.Add(target, new CountValue(bucketAmount) { LastFlowTime = startTime }, DateTimeOffset.MaxValue);
-                    return new Tuple<bool, long>(false, bucketAmount);
-                }
-
-                var countValue = (CountValue)result.Value;
-                var lastTime = countValue.LastFlowTime;
-                var lastTimeChanged = false;
-                var pastTime = currentTime - lastTime;
-                var pastTimeMilliseconds = pastTime.TotalMilliseconds;
-                // Debug.WriteLine(currentTime.ToString("mm:ss.fff") + "," + lastTime.ToString("mm:ss.fff") + "," + pastTimeMilliseconds);
-                if (pastTimeMilliseconds < inflowUnit)
-                {
-                    bucketAmount = countValue.Value - amount;
-                }
-                else
-                {
-                    var pastInflowUnitQuantity = (int)(pastTimeMilliseconds / inflowUnit);
-                    lastTime = lastTime.AddMilliseconds(pastInflowUnitQuantity * inflowUnit);
-                    lastTimeChanged = true;
-                    var pastInflowQuantity = currentRule.InflowQuantityPerUnit * pastInflowUnitQuantity;
-                    bucketAmount = (countValue.Value < 0 ? 0 : countValue.Value) + pastInflowQuantity - amount;
-                }
-
-                if (bucketAmount < 0)
-                {
-                    if (currentRule.LockSeconds > 0)
-                    {
-                        TryLock(target, currentTime, TimeSpan.FromSeconds(currentRule.LockSeconds));
-                    }
-
-                    return new Tuple<bool, long>(true, bucketAmount);
-                }
-
-                if (bucketAmount >= currentRule.Capacity)
-                {
-                    bucketAmount = currentRule.Capacity - amount;
-                }
-
-                countValue.Value = bucketAmount;
-                if (lastTimeChanged)
-                {
-                    countValue.LastFlowTime = lastTime;
-                }
-                return new Tuple<bool, long>(false, countValue.Value);
+                countResult = Count(target, amount, currentRule, currentTime);
             }
+
+             // do free lock
+            var checkResult = countResult.Item1;
+            if (checkResult)
+            {
+                if (currentRule.LockSeconds > 0)
+                {
+                    TryLock(target, currentTime, TimeSpan.FromSeconds(currentRule.LockSeconds));
+                }
+            }
+
+            return Tuple.Create(checkResult, countResult.Item2);
+        }
+
+        private Tuple<bool, long> Count(string target, long amount, TokenBucketRule currentRule, DateTimeOffset currentTime)
+        {
+            long bucketAmount = 0;
+            var inflowUnit = currentRule.InflowUnit.TotalMilliseconds;
+
+            if (!_tokenBuckets.TryGet(target, out var cacheItem))
+            {
+                bucketAmount = currentRule.Capacity - amount;
+                AddNewCounter(target, bucketAmount, currentRule, currentTime);
+                return new Tuple<bool, long>(false, bucketAmount);
+            }
+
+            var counter = (TokenBucketCounter)cacheItem.Counter;
+
+            // if rule version less than input rule version, do nothing
+
+            var lastTime = counter.LastFlowInTime;
+            var lastTimeChanged = false;
+            var pastTime = currentTime - lastTime;
+            var pastTimeMilliseconds = pastTime.TotalMilliseconds;
+            if (pastTimeMilliseconds < inflowUnit)
+            {
+                bucketAmount = counter.Value - amount;
+            }
+            else
+            {
+                var pastInflowUnitQuantity = (int)(pastTimeMilliseconds / inflowUnit);
+                lastTime = lastTime.AddMilliseconds(pastInflowUnitQuantity * inflowUnit);
+                lastTimeChanged = true;
+                var pastInflowQuantity = currentRule.InflowQuantityPerUnit * pastInflowUnitQuantity;
+                bucketAmount = (counter.Value < 0 ? 0 : counter.Value) + pastInflowQuantity - amount;
+            }
+
+            if (bucketAmount < 0)
+            {
+                return new Tuple<bool, long>(true, bucketAmount);
+            }
+
+            if (bucketAmount >= currentRule.Capacity)
+            {
+                bucketAmount = currentRule.Capacity - amount;
+            }
+
+            counter.Value = bucketAmount;
+
+            if (lastTimeChanged)
+            {
+                counter.LastFlowInTime = lastTime;
+                cacheItem.ExpireTime = lastTime.Add(currentRule.MinFillTime);
+            }
+
+            return new Tuple<bool, long>(false, counter.Value);
+        }
+
+        private TokenBucketCounter AddNewCounter(string target, long amount, TokenBucketRule currentRule, DateTimeOffset currentTime)
+        {
+            var startTime = AlgorithmStartTime.ToSpecifiedTypeTime(currentTime, currentRule.InflowUnit, currentRule.StartTimeType);
+            var counter = new TokenBucketCounter()
+            {
+                Value = amount,
+                LastFlowInTime = startTime,
+            };
+            DateTimeOffset expireTime = startTime.Add(currentRule.MinFillTime);
+            _tokenBuckets.Set(target, new CounterDictionaryItem<TokenBucketCounter>(target, counter)
+            {
+                ExpireTime = expireTime
+            });
+            return counter;
         }
     }
 }

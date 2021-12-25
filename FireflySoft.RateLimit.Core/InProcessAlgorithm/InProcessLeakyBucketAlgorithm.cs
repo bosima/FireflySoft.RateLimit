@@ -11,8 +11,10 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
     /// </summary>
     public class InProcessLeakyBucketAlgorithm : BaseInProcessAlgorithm
     {
+        readonly CounterDictionary<LeakyBucketCounter> _leakyBuckets;
+
         /// <summary>
-        /// create a new instance
+        /// Create a new instance
         /// </summary>
         /// <param name="rules">The rate limit rules</param>
         /// <param name="timeProvider">The time provider</param>
@@ -20,6 +22,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         public InProcessLeakyBucketAlgorithm(IEnumerable<LeakyBucketRule> rules, ITimeProvider timeProvider = null, bool updatable = false)
         : base(rules, timeProvider, updatable)
         {
+            _leakyBuckets = new CounterDictionary<LeakyBucketCounter>(_timeProvider);
         }
 
         /// <summary>
@@ -34,7 +37,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         }
 
         /// <summary>
-        /// check single rule for target
+        /// Check single rule for target
         /// </summary>
         /// <param name="target"></param>
         /// <param name="rule"></param>
@@ -56,7 +59,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         }
 
         /// <summary>
-        /// 
+        /// Check single rule for target
         /// </summary>
         /// <param name="target"></param>
         /// <param name="rule"></param>
@@ -81,91 +84,119 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                 return Tuple.Create(true, -1L, -1L);
             }
 
-            var outflowUnit = (int)currentRule.OutflowUnit.TotalMilliseconds;
             var currentTime = _timeProvider.GetCurrentLocalTime();
+            Tuple<bool, long, long> countResult;
 
             lock (target)
             {
-                var countData = _cache.GetCacheItem(target);
-                if (countData == null)
-                {
-                    var startTime = AlgorithmStartTime.ToSpecifiedTypeTime(currentTime, TimeSpan.FromMilliseconds(outflowUnit), currentRule.StartTimeType);
-                    _cache.Add(target, new CountValue(amount) { LastFlowTime = startTime }, DateTimeOffset.MaxValue);
-                    return Tuple.Create(false, 0L, 0L);
-                }
-
-                var countValue = (CountValue)countData.Value;
-                var lastTime = countValue.LastFlowTime;
-                var pastTime = currentTime - lastTime;
-                var lastTimeChanged = false;
-                var pastTimeMilliseconds = pastTime.TotalMilliseconds;
-
-                long newCount = 0;
-                long wait = 0;
-                if (pastTimeMilliseconds < outflowUnit)
-                {
-                    newCount = countValue.Value + amount;
-                    if (newCount <= currentRule.Capacity + currentRule.OutflowQuantityPerUnit)
-                    {
-                        var currentUnitRestTime = outflowUnit - pastTimeMilliseconds;
-                        wait = CalculateWaitTime(currentRule.OutflowQuantityPerUnit, outflowUnit, newCount, currentUnitRestTime);
-                    }
-                    else
-                    {
-                        if (currentRule.LockSeconds > 0)
-                        {
-                            TryLock(target, currentTime, TimeSpan.FromSeconds(currentRule.LockSeconds));
-                        }
-                        return Tuple.Create(true, currentRule.Capacity, -1L);
-                    }
-                }
-                else
-                {
-                    var pastOutflowUnitQuantity = (int)(pastTimeMilliseconds / outflowUnit);
-                    lastTime = lastTime.AddMilliseconds(pastOutflowUnitQuantity * outflowUnit);
-                    lastTimeChanged = true;
-
-                    if (countValue.Value < currentRule.OutflowQuantityPerUnit)
-                    {
-                        newCount = amount;
-                        wait = 0;
-                    }
-                    else
-                    {
-                        var pastOutflowQuantity = currentRule.OutflowQuantityPerUnit * pastOutflowUnitQuantity;
-                        newCount = countValue.Value - pastOutflowQuantity + amount;
-                        newCount = newCount > 0 ? newCount : amount;
-                        var currentUnitRestTime = outflowUnit - (currentTime - lastTime).TotalMilliseconds;
-                        wait = CalculateWaitTime(currentRule.OutflowQuantityPerUnit, outflowUnit, newCount, currentUnitRestTime);
-                    }
-                }
-
-                countValue.Value = newCount;
-                if (lastTimeChanged)
-                {
-                    countValue.LastFlowTime = lastTime;
-                }
-
-                var viewCount = newCount - currentRule.OutflowQuantityPerUnit;
-                viewCount = viewCount < 0 ? 0 : viewCount;
-                return Tuple.Create(false, viewCount, wait);
+                countResult = Count(target, amount, currentRule, currentTime);
             }
+
+            // do free lock
+            var checkResult = countResult.Item1;
+            if (checkResult)
+            {
+                if (currentRule.LockSeconds > 0)
+                {
+                    TryLock(target, currentTime, TimeSpan.FromSeconds(currentRule.LockSeconds));
+                }
+            }
+
+            return Tuple.Create(checkResult, countResult.Item2, countResult.Item3);
         }
 
-        private static long CalculateWaitTime(long outflowQuantityPerUnit, long outflowUnit, long bucketCount, double currentUnitRestTime)
+        private Tuple<bool, long, long> Count(string target, long amount, LeakyBucketRule currentRule, DateTimeOffset currentTime)
         {
-            long wait = 0;
-            if (bucketCount > outflowQuantityPerUnit)
+            if (!_leakyBuckets.TryGet(target, out var cacheItem))
             {
-                var batchNumber = (int)Math.Ceiling(bucketCount / (double)outflowQuantityPerUnit) - 1;
-                if (batchNumber == 1)
+                // counter does not exist
+                AddNewCounter(target, amount, currentRule, currentTime);
+                return Tuple.Create(false, amount, 0L);
+            }
+
+            var counter = (LeakyBucketCounter)cacheItem.Counter;
+
+            // if rule version less than input rule version, do nothing
+
+            long countValue = counter.Value;
+            var lastTime = counter.LastFlowOutTime;
+            var lastTimeChanged = false;
+            var pastTimeMilliseconds = (currentTime - lastTime).TotalMilliseconds;
+            var outflowUnit = (int)currentRule.OutflowUnit.TotalMilliseconds;
+
+            // start new time window
+            if (pastTimeMilliseconds >= outflowUnit)
+            {
+                var pastOutflowUnitQuantity = (int)(pastTimeMilliseconds / outflowUnit);
+                if (countValue < currentRule.OutflowQuantityPerUnit)
                 {
-                    wait = (long)currentUnitRestTime;
+                    countValue = 0;
                 }
                 else
                 {
-                    wait = (long)(outflowUnit * (batchNumber - 1) + currentUnitRestTime);
+                    var pastOutflowQuantity = currentRule.OutflowQuantityPerUnit * pastOutflowUnitQuantity;
+                    countValue = countValue - pastOutflowQuantity;
+                    countValue = countValue > 0 ? countValue : 0;
                 }
+
+                lastTime = lastTime.AddMilliseconds(pastOutflowUnitQuantity * outflowUnit);
+                lastTimeChanged = true;
+                pastTimeMilliseconds = (currentTime - lastTime).TotalMilliseconds;
+            }
+
+            // within an existing time window
+            countValue = countValue + amount;
+            if (countValue <= currentRule.OutflowQuantityPerUnit)
+            {
+                counter.Value = countValue;
+                return Tuple.Create(false, countValue, 0L);
+            }
+
+            if (countValue > currentRule.LimitNumber)
+            {
+                return Tuple.Create(true, countValue, -1L);
+            }
+
+            counter.Value = countValue;
+            if (lastTimeChanged)
+            {
+                counter.LastFlowOutTime = lastTime;
+                cacheItem.ExpireTime = lastTime.Add(currentRule.MaxDrainTime);
+            }
+
+            long wait = CalculateWaitTime(currentRule.OutflowQuantityPerUnit, outflowUnit, pastTimeMilliseconds, countValue);
+            return Tuple.Create(false, countValue, wait);
+        }
+
+        private LeakyBucketCounter AddNewCounter(string target, long amount, LeakyBucketRule currentRule, DateTimeOffset currentTime)
+        {
+            var startTime = AlgorithmStartTime.ToSpecifiedTypeTime(currentTime, currentRule.OutflowUnit, currentRule.StartTimeType);
+            var counter = new LeakyBucketCounter()
+            {
+                Value = amount,
+                LastFlowOutTime = startTime,
+            };
+            DateTimeOffset expireTime = startTime.Add(currentRule.MaxDrainTime);
+            _leakyBuckets.Set(target, new CounterDictionaryItem<LeakyBucketCounter>(target, counter)
+            {
+                ExpireTime = expireTime
+            });
+
+            return counter;
+        }
+
+        private static long CalculateWaitTime(long outflowQuantityPerUnit, long outflowUnit, double pastTimeMilliseconds, long countValue)
+        {
+            long wait = 0;
+
+            var batchNumber = (int)Math.Ceiling(countValue / (double)outflowQuantityPerUnit) - 1;
+            if (batchNumber == 1)
+            {
+                wait = (long)(outflowUnit - pastTimeMilliseconds);
+            }
+            else
+            {
+                wait = (long)(outflowUnit * (batchNumber - 1) + (outflowUnit - pastTimeMilliseconds));
             }
 
             return wait;

@@ -16,7 +16,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
         private readonly RedisLuaScript _fixedWindowPeekLuaScript;
 
         /// <summary>
-        /// create a new instance
+        /// Create a new instance
         /// </summary>
         /// <param name="rules">The rate limit rules</param>
         /// <param name="redisClient">The redis client</param>
@@ -25,6 +25,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
         public RedisFixedWindowAlgorithm(IEnumerable<FixedWindowRule> rules, ConnectionMultiplexer redisClient = null, ITimeProvider timeProvider = null, bool updatable = false)
         : base(rules, redisClient, timeProvider, updatable)
         {
+
             _fixedWindowIncrementLuaScript = new RedisLuaScript(_redisClient, "Src-IncrWithExpireSec",
                 @"local ret={}
                 local cl_key='{' .. KEYS[1] .. '}'
@@ -62,8 +63,8 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 end
                 return ret");
 
-                _fixedWindowPeekLuaScript = new RedisLuaScript(_redisClient, "Src-PeekIncrWithExpireSec",
-                @"local ret={}
+            _fixedWindowPeekLuaScript = new RedisLuaScript(_redisClient, "Src-PeekIncrWithExpireSec",
+            @"local ret={}
                 local cl_key='{' .. KEYS[1] .. '}'
                 local lock_key=cl_key .. '-lock'
                 local lock_val=redis.call('get',lock_key)

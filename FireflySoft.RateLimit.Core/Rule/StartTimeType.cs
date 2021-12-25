@@ -14,6 +14,7 @@ namespace FireflySoft.RateLimit.Core
         /// <summary>
         /// From the beginning of the natural period.
         /// In this way, the statistical time window must be an integer and coincide with the natural time period.
+        /// This type is not valid for statistical time windows less than 1 second, which is equivalent to 'FromCurrent' type.
         /// </summary>
         FromNaturalPeriodBeign = 2
     }

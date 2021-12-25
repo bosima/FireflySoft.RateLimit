@@ -15,11 +15,11 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
         private readonly RedisLuaScript _leakyBucketIncrementLuaScript;
 
         /// <summary>
-        /// create a new instance
+        /// Create a new instance
         /// </summary>
         /// <param name="rules">The rate limit rules</param>
         /// <param name="redisClient">The redis client</param>
-        /// <param name="timeProvider">The time provider</param>
+        /// <param name="timeProvider">The provider of current time</param>
         /// <param name="updatable">If rules can be updated</param>
         public RedisLeakyBucketAlgorithm(IEnumerable<LeakyBucketRule> rules, ConnectionMultiplexer redisClient = null, ITimeProvider timeProvider = null, bool updatable = false)
         : base(rules, redisClient, timeProvider, updatable)

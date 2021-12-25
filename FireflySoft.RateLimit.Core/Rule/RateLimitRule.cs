@@ -20,14 +20,14 @@ namespace FireflySoft.RateLimit.Core.Rule
         public string Name { get; set; }
 
         /// <summary>
-        /// The number of seconds locked after triggering rate limiting. 0 means not locked
+        /// The number of seconds locked after triggering rate limiting. 0 means not locked.
         /// </summary>
         public int LockSeconds { get; set; }
 
         /// <summary>
         /// The type of statistics start time
         /// </summary>
-        public StartTimeType StartTimeType { get; set; }
+        public StartTimeType StartTimeType { get; set; } = StartTimeType.FromCurrent;
 
         /// <summary>
         /// Extract the rate limit target from the instance of T, such as a value in HTTP Header. A fixed value can be returned to restrict the access of all users.
