@@ -204,3 +204,4 @@ SimulationRequest is a custom request that you can modify to any type.
 * Use the same current time for different rules in the same request, including kv expiration processing in redis algorithm.
 * Add more Unit tests for the rule change processing logic of various algorithms in the process.
 * Add more processing logic for attribute changes of rules for redis algorithms.
+* Let ASP.Net Core rate limiting middleware returns the current count information.
