@@ -160,8 +160,6 @@ namespace FireflySoft.RateLimit.Core.Test
         }
 
         [DataTestMethod]
-
-
         public void TestFromCurrent()
         {
             var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromCurrent);
@@ -241,8 +239,6 @@ namespace FireflySoft.RateLimit.Core.Test
         }
 
         [DataTestMethod]
-
-
         public async Task TestFromNaturalPeriodBeignAsync()
         {
             var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromNaturalPeriodBeign);
@@ -290,8 +286,6 @@ namespace FireflySoft.RateLimit.Core.Test
         }
 
         [DataTestMethod]
-
-
         public async Task TestFromCurrentAsync()
         {
             var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromCurrent);
@@ -372,6 +366,53 @@ namespace FireflySoft.RateLimit.Core.Test
                     var redisClient = RedisClientHelper.GetClient();
                     bool exsit = redisClient.GetDatabase().KeyExists("1-home-st");
                     Assert.AreEqual(false, exsit);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public void TestFirstPeriodOverflow()
+        {
+            // capacity: 20
+            // outflow_unit: 500ms
+            // outflow_quantity_per_unit: 5
+            // amount: 1
+            var processor = GetAlgorithm(20, 5, TimeSpan.FromMilliseconds(500), 0);
+
+            for (int i = 1; i <= 30; i++)
+            {
+                // take to the second period after 25th request
+                if (i == 26)
+                {
+                    Thread.Sleep(500);
+                }
+
+                var checkResult = processor.Check(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                // the last request of the first period
+                if (i == 25)
+                {
+                    Assert.AreEqual(20, checkResult.RuleCheckResults.First().Count);
+                    Assert.IsTrue(checkResult.RuleCheckResults.First().Wait > 1900);
+                }
+
+                // the first request of the second period
+                if (i == 26)
+                {
+                    // first, five requests flow out of the leaky bucket, 
+                    // then, one request is added to the leaky bucket.
+                    // the current number of requests in the leaky bucket is: 16 = 20 - 5 + 1, 
+                    // and this request will be processed after the last 15th requests,
+                    // so the current request must wait, and all requests in the second period must wait.
+                    Assert.AreEqual(16, checkResult.RuleCheckResults.First().Count);
+                    Assert.IsTrue(checkResult.RuleCheckResults.First().Wait > 1900);
                 }
             }
         }
