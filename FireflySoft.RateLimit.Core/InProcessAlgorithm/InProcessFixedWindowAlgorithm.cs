@@ -146,7 +146,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                 counter = (FixedWindowCounter)cacheItem.Counter;
 
                 // rule changed, the statistical time window is narrowed
-                if (counter.StatWindow > currentRule.StatWindow)
+                if (counter.StatWindow.CompareTo(currentRule.StatWindow) > 0)
                 {
                     if (counter.StartTime.Add(currentRule.StatWindow) <= currentTime)
                     {
@@ -159,7 +159,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                 }
 
                 // rule changed, the statistical time window is enlarged
-                if (counter.StatWindow < currentRule.StatWindow)
+                if (counter.StatWindow.CompareTo(currentRule.StatWindow) < 0)
                 {
                     counter = ResizeWindow(currentRule, cacheItem, counter);
                 }

@@ -12,8 +12,8 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
     /// </summary>
     public class RedisFixedWindowAlgorithm : BaseRedisAlgorithm
     {
-        private readonly RedisLuaScript _fixedWindowIncrementLuaScript;
-        private readonly RedisLuaScript _fixedWindowPeekLuaScript;
+        private readonly RedisLuaScript _incrementLuaScript;
+        private readonly RedisLuaScript _peekLuaScript;
 
         /// <summary>
         /// Create a new instance
@@ -25,13 +25,11 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
         public RedisFixedWindowAlgorithm(IEnumerable<FixedWindowRule> rules, ConnectionMultiplexer redisClient = null, ITimeProvider timeProvider = null, bool updatable = false)
         : base(rules, redisClient, timeProvider, updatable)
         {
-
-            _fixedWindowIncrementLuaScript = new RedisLuaScript(_redisClient, "Src-IncrWithExpireSec",
-                @"local ret={}
+            string _incrementLuaScriptText = @"local ret={}
                 local cl_key='{' .. KEYS[1] .. '}'
                 local lock_key=cl_key .. '-lock'
                 local lock_val=redis.call('get',lock_key)
-                if lock_val == '1' then
+                if lock_val=='1' then
                     ret[1]=1
                     ret[2]=-1
                     return ret;
@@ -41,9 +39,47 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 local limit_number=tonumber(ARGV[3])
                 local lock_seconds=tonumber(ARGV[4])
                 local check_result=false
-                local current=redis.call('get',KEYS[1])
+                local current=redis.call('get',KEYS[1])";
+
+            if (updatable)
+            {
+                _incrementLuaScriptText += @"
+                local sw_key=cl_key .. '-sw'";
+            }
+
+            _incrementLuaScriptText += @"
                 if current~=false then
-                    current = tonumber(current)
+                    current = tonumber(current)";
+
+            if (updatable)
+            {
+                _incrementLuaScriptText += @"
+                    local rule_sw=tonumber(ARGV[5])
+                    local cur_sw=redis.call('get',sw_key)
+                    if cur_sw~=false then
+                        cur_sw=tonumber(cur_sw)
+                    else
+                        cur_sw=rule_sw
+                    end
+                    if cur_sw>rule_sw then
+                        local pttl=redis.call('PTTL',KEYS[1])
+                        pttl=pttl+rule_sw-cur_sw
+                        if pttl>0 then
+                            redis.call('PEXPIRE',KEYS[1],pttl)
+                            redis.call('set',sw_key,ARGV[5],'PX',pttl+3)
+                        else
+                            current=-1
+                        end
+                    end
+                    if cur_sw<rule_sw then
+                        local pttl=redis.call('PTTL',KEYS[1])
+                        pttl=pttl+rule_sw-cur_sw
+                        redis.call('PEXPIRE',KEYS[1],pttl)
+                        redis.call('set',sw_key,ARGV[5],'PX',pttl+3)
+                    end";
+            }
+
+            _incrementLuaScriptText += @"
                     if(limit_number>=0 and current>=limit_number) then
                         check_result=true
                     else
@@ -51,8 +87,19 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                         current=current+amount
                     end
                 else
+                    current=-1
+                end
+                if current==-1 then
                     redis.call('set',KEYS[1],amount,'PX',ARGV[2])
-                    current=amount
+                    current=amount";
+
+            if (updatable)
+            {
+                _incrementLuaScriptText += @"
+                    redis.call('set',sw_key,ARGV[5],'PX',ARGV[2]+3)";
+            }
+
+            _incrementLuaScriptText += @"
                 end
                 ret[2]=current
                 if check_result then
@@ -61,9 +108,11 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                         redis.call('set',lock_key,'1','EX',lock_seconds,'NX')
                     end
                 end
-                return ret");
+                return ret";
 
-            _fixedWindowPeekLuaScript = new RedisLuaScript(_redisClient, "Src-PeekIncrWithExpireSec",
+            _incrementLuaScript = new RedisLuaScript(_redisClient, "Src-IncrWithExpireSec", _incrementLuaScriptText);
+
+            _peekLuaScript = new RedisLuaScript(_redisClient, "Src-PeekIncrWithExpireSec",
             @"local ret={}
                 local cl_key='{' .. KEYS[1] .. '}'
                 local lock_key=cl_key .. '-lock'
@@ -101,7 +150,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
         {
             var currentRule = rule as FixedWindowRule;
 
-            var ret = (long[])EvaluateScript(_fixedWindowPeekLuaScript,
+            var ret = (long[])EvaluateScript(_peekLuaScript,
                 new RedisKey[] { target },
                 new RedisValue[] { currentRule.LimitNumber });
 
@@ -125,7 +174,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
             var currentRule = rule as FixedWindowRule;
             var amount = 1;
 
-            // 1. There may also be a millisecond delay in accessing redis. 
+            // 1. There may be a millisecond delay in accessing redis. 
             // At this time, some requests cannot be counted to the correct time window, but will be counted to the next time window and will not be missed.
             // 2. In distributed deployment, the time of different machines is not completely synchronized, and there may be several milliseconds difference. 
             // If the time is obtained from a unified address, there is still a certain network access delay.
@@ -137,9 +186,9 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 expireTime = GetExpireTimeFromNaturalPeriodBeign(currentRule.StatWindow, now);
             }
 
-            var ret = (long[])EvaluateScript(_fixedWindowIncrementLuaScript,
+            var ret = (long[])EvaluateScript(_incrementLuaScript,
                 new RedisKey[] { target },
-                new RedisValue[] { amount, expireTime, currentRule.LimitNumber, currentRule.LockSeconds });
+                new RedisValue[] { amount, expireTime, currentRule.LimitNumber, currentRule.LockSeconds, currentRule.StatWindow.TotalMilliseconds });
 
             return new RuleCheckResult()
             {
@@ -168,9 +217,9 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 expireTime = GetExpireTimeFromNaturalPeriodBeign(currentRule.StatWindow, now);
             }
 
-            var ret = (long[])await EvaluateScriptAsync(_fixedWindowIncrementLuaScript,
+            var ret = (long[])await EvaluateScriptAsync(_incrementLuaScript,
                 new RedisKey[] { target },
-                new RedisValue[] { amount, expireTime, currentRule.LimitNumber, currentRule.LockSeconds }).ConfigureAwait(false);
+                new RedisValue[] { amount, expireTime, currentRule.LimitNumber, currentRule.LockSeconds, currentRule.StatWindow.TotalMilliseconds }).ConfigureAwait(false);
 
             return new RuleCheckResult()
             {
