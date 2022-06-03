@@ -24,7 +24,12 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
         public RedisSlidingWindowAlgorithm(IEnumerable<SlidingWindowRule> rules, ConnectionMultiplexer redisClient = null, ITimeProvider timeProvider = null, bool updatable = false)
         : base(rules, redisClient, timeProvider, updatable)
         {
-
+            // Processing logic for changing the rate limiting rule:
+            // If only the StatWindow is changed, the Period KV that has been created continues to be valid,
+            // so the program does not need to do anything.
+            // If StatPeriod changes,
+            // the already generated Period is valid only if its value is a multiple or submultiple of the original value,
+            // otherwise the sliding window is restarted.
             _slidingWindowIncrementLuaScript = new RedisLuaScript(_redisClient, "Src-IncrWithExpireSec",
                 @"local ret={}
                 local cl_key='{' .. KEYS[1] .. '}'
@@ -38,24 +43,24 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 ret[1]=0
                 local st_key=cl_key .. '-st'
                 local amount=tonumber(ARGV[1])
-                local period_expire_ms=tonumber(ARGV[2])
+                local st_expire_ms=tonumber(ARGV[2])
                 local period_ms=tonumber(ARGV[3])
                 local period_number=tonumber(ARGV[4])
                 local current_time=tonumber(ARGV[5])
                 local cal_start_time=tonumber(ARGV[6])
                 local limit_number=tonumber(ARGV[7])
                 local lock_seconds=tonumber(ARGV[8])
-                local key_expire_time=period_expire_ms+10
-                local current_period
-                local current_period_key
+                local period_expire_ms=st_expire_ms+16
+                local cur_period
+                local cur_period_key
                 local start_time=redis.call('get',st_key)
                 if(start_time==false)
                 then
                     start_time=cal_start_time
-                    current_period=start_time+period_ms-1
-                    current_period_key=cl_key .. '-' .. current_period
-                    redis.call('set',st_key,start_time,'PX',key_expire_time)
-                    redis.call('set',current_period_key,amount,'PX',period_expire_ms)
+                    cur_period=start_time+period_ms-1
+                    cur_period_key=cl_key .. '-' .. cur_period
+                    redis.call('set',st_key,start_time,'PX',st_expire_ms)
+                    redis.call('set',cur_period_key,amount,'PX',period_expire_ms)
                     ret[2]=amount
                     return ret
                 end
@@ -75,12 +80,12 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 then
                     past_period_number_fixed=1
                 end
-                current_period=start_time + past_period_number_fixed * period_ms - 1
-                current_period_key=cl_key .. '-' .. current_period
+                cur_period=start_time + past_period_number_fixed * period_ms - 1
+                cur_period_key=cl_key .. '-' .. cur_period
 
-                local periods={current_period_key}
+                local periods={cur_period_key}
                 for i=1,period_number-1,1 do
-                    periods[i+1]=cl_key .. '-' .. (current_period - period_ms * i)
+                    periods[i+1]=cl_key .. '-' .. (cur_period - period_ms * i)
                 end
                 local periods_amount=0
                 local periods_amount_array=redis.call('mget',unpack(periods))
@@ -102,10 +107,11 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 end
 
                 local current_amount
-                current_amount = redis.call('incrby',current_period_key,amount)
+                current_amount = redis.call('incrby',cur_period_key,amount)
                 current_amount = tonumber(current_amount)
                 if current_amount == amount then
-                    redis.call('PEXPIRE',current_period_key,period_expire_ms)
+                    redis.call('PEXPIRE',cur_period_key,period_expire_ms)
+                    redis.call('PEXPIRE',st_key,st_expire_ms)
                 end
 
                 return ret");

@@ -91,7 +91,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                 countResult = Count(target, amount, currentRule, currentTime);
             }
 
-             // do free lock
+            // do free lock
             var checkResult = countResult.Item1;
             if (checkResult)
             {
@@ -107,10 +107,10 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         private Tuple<bool, long> Count(string target, long amount, TokenBucketRule currentRule, DateTimeOffset currentTime)
         {
             long bucketAmount = 0;
-            var inflowUnit = currentRule.InflowUnit.TotalMilliseconds;
 
             if (!_tokenBuckets.TryGet(target, out var cacheItem))
             {
+                // In the initial state, the bucket is full
                 bucketAmount = currentRule.Capacity - amount;
                 AddNewCounter(target, bucketAmount, currentRule, currentTime);
                 return new Tuple<bool, long>(false, bucketAmount);
@@ -118,41 +118,48 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
 
             var counter = (TokenBucketCounter)cacheItem.Counter;
 
-            // if rule version less than input rule version, do nothing
+            // If the rule is changed, the token bucket will not be updated directly.
+            // For example:
+            // After the capacity increases, the number of tokens in the bucket will not increase directly,
+            // which will gradually increase with the inflow.
 
-            var lastTime = counter.LastFlowInTime;
+            var inflowUnitMilliseconds = currentRule.InflowUnit.TotalMilliseconds;
+            var lastInflowTime = counter.LastInflowTime;
             var lastTimeChanged = false;
-            var pastTime = currentTime - lastTime;
-            var pastTimeMilliseconds = pastTime.TotalMilliseconds;
-            if (pastTimeMilliseconds < inflowUnit)
+            var pastMilliseconds = (currentTime - lastInflowTime).TotalMilliseconds;
+            if (pastMilliseconds < inflowUnitMilliseconds)
             {
+                // In the same time window as the previous request, only the token is taken from the bucket
                 bucketAmount = counter.Value - amount;
             }
             else
             {
-                var pastInflowUnitQuantity = (int)(pastTimeMilliseconds / inflowUnit);
-                lastTime = lastTime.AddMilliseconds(pastInflowUnitQuantity * inflowUnit);
+                // After one or more time windows, some tokens need to be put into the bucket,
+                // and the number of tokens in the bucket needs to be recalculated.
+                var pastInflowUnits = (int)(pastMilliseconds / inflowUnitMilliseconds);
+                lastInflowTime = lastInflowTime.AddMilliseconds(pastInflowUnits * inflowUnitMilliseconds);
                 lastTimeChanged = true;
-                var pastInflowQuantity = currentRule.InflowQuantityPerUnit * pastInflowUnitQuantity;
+                var pastInflowQuantity = currentRule.InflowQuantityPerUnit * pastInflowUnits;
                 bucketAmount = (counter.Value < 0 ? 0 : counter.Value) + pastInflowQuantity - amount;
             }
 
+            // Trigger rate limiting
             if (bucketAmount < 0)
             {
                 return new Tuple<bool, long>(true, bucketAmount);
             }
 
+            // Token bucket full
             if (bucketAmount >= currentRule.Capacity)
             {
                 bucketAmount = currentRule.Capacity - amount;
             }
-
             counter.Value = bucketAmount;
 
             if (lastTimeChanged)
             {
-                counter.LastFlowInTime = lastTime;
-                cacheItem.ExpireTime = lastTime.Add(currentRule.MinFillTime);
+                counter.LastInflowTime = lastInflowTime;
+                cacheItem.ExpireTime = lastInflowTime.Add(currentRule.MinFillTime);
             }
 
             return new Tuple<bool, long>(false, counter.Value);
@@ -164,12 +171,11 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             var counter = new TokenBucketCounter()
             {
                 Value = amount,
-                LastFlowInTime = startTime,
+                LastInflowTime = startTime,
             };
-            DateTimeOffset expireTime = startTime.Add(currentRule.MinFillTime);
             _tokenBuckets.Set(target, new CounterDictionaryItem<TokenBucketCounter>(target, counter)
             {
-                ExpireTime = expireTime
+                ExpireTime = startTime.Add(currentRule.MinFillTime)
             });
             return counter;
         }

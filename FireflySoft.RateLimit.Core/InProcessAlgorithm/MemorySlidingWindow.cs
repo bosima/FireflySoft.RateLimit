@@ -62,6 +62,11 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             var newQueue = new SlidingWindowPeriod[newLength];
             var newTail = 0;
 
+            // Only handle the case where 'StatPeriod' has not changed.
+            // When StatPeriod changes, simply restart the sliding window.
+            // Because 'Period' is the minimum count period,
+            // the value of the smaller count period cannot be accurately calculated,
+            // so the count value of the new 'Period' cannot be calculated.
             if (rule.StatPeriod.Ticks == _rule.StatPeriod.Ticks)
             {
                 var loopIndex = _tail;
@@ -141,7 +146,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             }
 
             // In the case of high concurrency, the previous period may be obtained
-            // It is simply considered as the previous one
+            // It is simply considered as the previous period
             if (currentPeriod < tailPeriod.Key)
             {
                 int index = _tail;

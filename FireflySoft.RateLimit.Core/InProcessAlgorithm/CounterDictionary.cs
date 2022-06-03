@@ -124,6 +124,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             return false;
         }
 
+        // reference: https://github.com/dotnet/runtime/blob/1466e404dfac7ad6af7e6877d26885ce42414120/src/libraries/Microsoft.Extensions.Caching.Memory/src/MemoryCache.cs#L327
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void StartScanForExpiredItemsIfNeeded(DateTimeOffset now)
         {
@@ -135,29 +136,22 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             void ScheduleTask(DateTimeOffset now)
             {
                 _lastExpirationScan = now;
-                Task.Factory.StartNew(state =>
-                {
-                    if (state != null)
-                    {
-                        ScanForExpiredItems((CounterDictionary<T>)state);
-                    }
-
-                }, this,
+                Task.Factory.StartNew(state => ((CounterDictionary<T>)state!).ScanForExpiredItems(), this,
                     CancellationToken.None, TaskCreationOptions.DenyChildAttach, TaskScheduler.Default);
             }
         }
 
-        private static void ScanForExpiredItems(CounterDictionary<T> cache)
+        private void ScanForExpiredItems()
         {
-            DateTimeOffset now = cache._lastExpirationScan = cache._timeProvider.GetCurrentLocalTime();
+            DateTimeOffset now = _lastExpirationScan = _timeProvider.GetCurrentLocalTime();
 
-            foreach (KeyValuePair<string, CounterDictionaryItem<T>> entry in cache._items)
+            foreach (KeyValuePair<string, CounterDictionaryItem<T>> entry in _items)
             {
                 var item = entry.Value;
 
                 if (item.CheckExpired(now))
                 {
-                    cache._itemsCollection.Remove(new KeyValuePair<string, CounterDictionaryItem<T>>(item.Key, item));
+                    _itemsCollection.Remove(new KeyValuePair<string, CounterDictionaryItem<T>>(item.Key, item));
                 }
             }
         }

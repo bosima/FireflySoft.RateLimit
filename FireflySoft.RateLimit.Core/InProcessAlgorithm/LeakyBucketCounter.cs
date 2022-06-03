@@ -14,7 +14,8 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
     public class LeakyBucketCounter
     {
         /// <summary>
-        /// The Count Value
+        /// The number of requests that allowed to be processed in the current time window,
+        /// including the requests in the leaky bucket and the requests that have flowed out in the current time window.
         /// </summary>
         /// <value></value>
         public long Value { get; set; }

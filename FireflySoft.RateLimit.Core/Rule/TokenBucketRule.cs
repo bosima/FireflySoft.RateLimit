@@ -9,7 +9,7 @@ namespace FireflySoft.RateLimit.Core.Rule
     public class TokenBucketRule : RateLimitRule
     {
         /// <summary>
-        /// Rhe capacity of token bucket
+        /// the capacity of token bucket
         /// </summary>
         public int Capacity { get; private set; }
 
@@ -19,7 +19,7 @@ namespace FireflySoft.RateLimit.Core.Rule
         public int InflowQuantityPerUnit { get; private set; }
 
         /// <summary>
-        /// The time unit of inflow to the bucket bucket
+        /// The time unit of inflow to the token bucket
         /// </summary>
         public TimeSpan InflowUnit { get; private set; }
 

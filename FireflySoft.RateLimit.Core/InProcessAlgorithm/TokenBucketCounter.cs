@@ -14,9 +14,9 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         public long Value { get; set; }
 
         /// <summary>
-        /// The last flow-in time
+        /// The last inflow time
         /// </summary>
         /// <value></value>
-        public DateTimeOffset LastFlowInTime { get; set; }
+        public DateTimeOffset LastInflowTime { get; set; }
     }
 }

@@ -29,6 +29,7 @@ namespace FireflySoft.RateLimit.Core.Rule
 
         /// <summary>
         /// Gets or sets the threshold of triggering rate limiting in the statistical time window.
+        /// If less than 0, it means no limit.
         /// </summary>
         public int LimitNumber { get; set; }
 

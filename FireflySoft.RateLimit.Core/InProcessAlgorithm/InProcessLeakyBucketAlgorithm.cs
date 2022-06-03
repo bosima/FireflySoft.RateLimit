@@ -109,25 +109,22 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         {
             if (!_leakyBuckets.TryGet(target, out var cacheItem))
             {
-                // counter does not exist
                 AddNewCounter(target, amount, currentRule, currentTime);
                 return Tuple.Create(false, amount, 0L);
             }
 
             var counter = (LeakyBucketCounter)cacheItem.Counter;
-
-            // if rule version less than input rule version, do nothing
-
-            long countValue = counter.Value;
-            var lastTime = counter.LastFlowOutTime;
+            var countValue = counter.Value;
+            var lastFlowOutTime = counter.LastFlowOutTime;
             var lastTimeChanged = false;
-            var pastTimeMilliseconds = (currentTime - lastTime).TotalMilliseconds;
-            var outflowUnit = (int)currentRule.OutflowUnit.TotalMilliseconds;
+            var pastMilliseconds = (currentTime - lastFlowOutTime).TotalMilliseconds;
+            var outflowUnitMilliseconds = (int)currentRule.OutflowUnit.TotalMilliseconds;
 
-            // start new time window
-            if (pastTimeMilliseconds >= outflowUnit)
+            // After several time windows, some requests flow out,
+            // and the number of requests in the leaky bucket needs to be recalculated
+            if (pastMilliseconds >= outflowUnitMilliseconds)
             {
-                var pastOutflowUnitQuantity = (int)(pastTimeMilliseconds / outflowUnit);
+                var pastOutflowUnitQuantity = (int)(pastMilliseconds / outflowUnitMilliseconds);
                 if (countValue < currentRule.OutflowQuantityPerUnit)
                 {
                     countValue = 0;
@@ -139,12 +136,13 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                     countValue = countValue > 0 ? countValue : 0;
                 }
 
-                lastTime = lastTime.AddMilliseconds(pastOutflowUnitQuantity * outflowUnit);
+                lastFlowOutTime = lastFlowOutTime.AddMilliseconds(pastOutflowUnitQuantity * outflowUnitMilliseconds);
                 lastTimeChanged = true;
-                pastTimeMilliseconds = (currentTime - lastTime).TotalMilliseconds;
+                pastMilliseconds = (currentTime - lastFlowOutTime).TotalMilliseconds;
             }
 
-            // within an existing time window
+            // If the number of requests in the current time window is less than the outflow rate,
+            // the request passes directly without waiting.
             countValue = countValue + amount;
             if (countValue <= currentRule.OutflowQuantityPerUnit)
             {
@@ -152,6 +150,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                 return Tuple.Create(false, countValue, 0L);
             }
 
+            // Trigger rate limiting
             if (countValue > currentRule.LimitNumber)
             {
                 return Tuple.Create(true, countValue, -1L);
@@ -160,11 +159,12 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             counter.Value = countValue;
             if (lastTimeChanged)
             {
-                counter.LastFlowOutTime = lastTime;
-                cacheItem.ExpireTime = lastTime.Add(currentRule.MaxDrainTime);
+                counter.LastFlowOutTime = lastFlowOutTime;
+                cacheItem.ExpireTime = lastFlowOutTime.Add(currentRule.MaxDrainTime);
             }
 
-            long wait = CalculateWaitTime(currentRule.OutflowQuantityPerUnit, outflowUnit, pastTimeMilliseconds, countValue);
+            // The requests in the leaky bucket will be processed after one or more time windows.
+            long wait = CalculateWaitTime(currentRule.OutflowQuantityPerUnit, outflowUnitMilliseconds, pastMilliseconds, countValue);
             return Tuple.Create(false, countValue, wait);
         }
 

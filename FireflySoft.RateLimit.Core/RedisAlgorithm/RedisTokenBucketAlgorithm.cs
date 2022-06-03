@@ -24,7 +24,6 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
         public RedisTokenBucketAlgorithm(IEnumerable<TokenBucketRule> rules, ConnectionMultiplexer redisClient = null, ITimeProvider timeProvider = null, bool updatable = false)
         : base(rules, redisClient, timeProvider, updatable)
         {
-
             _tokenBucketDecrementLuaScript = new RedisLuaScript(_redisClient, "Src-DecrWithTokenBucket",
                 @"local ret={}
                 local cl_key = '{' .. KEYS[1] .. '}'
