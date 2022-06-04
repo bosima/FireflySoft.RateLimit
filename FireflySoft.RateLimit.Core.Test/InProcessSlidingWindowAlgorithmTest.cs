@@ -1,11 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using FireflySoft.RateLimit.Core.InProcessAlgorithm;
-using FireflySoft.RateLimit.Core.RedisAlgorithm;
 using FireflySoft.RateLimit.Core.Rule;
 using FireflySoft.RateLimit.Core.Time;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -319,6 +316,836 @@ namespace FireflySoft.RateLimit.Core.Test
                     stubTimeProvider.IncrementSeconds(1);
                 }
             }
+        }
+
+        [DataTestMethod]
+        public void UpdateRules_RaiseLimitNumber_LoseLimit()
+        {
+            var ruleId = "UpdateRules_RaiseLimitNumber_LoseLimit";
+            var stubTimeProvider = new TestTimeProvider(TimeSpan.FromMilliseconds(1));
+            SlidingWindowRule[] rule = CreateRules(50, ruleId, 1000, 100);
+
+            IAlgorithm algorithm = new InProcessSlidingWindowAlgorithm(rule, stubTimeProvider, updatable: true);
+
+            for (int i = 1; i <= 80; i++)
+            {
+                if (i == 61)
+                {
+                    var newRule = CreateRules(60, ruleId, 1000, 100);
+                    algorithm.UpdateRules(newRule);
+                }
+
+                var result = algorithm.Check(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i <= 50)
+                {
+                    Assert.AreEqual(false, result.IsLimit);
+                }
+
+                if (i > 50 && i <= 60)
+                {
+                    Assert.AreEqual(true, result.IsLimit);
+                }
+
+                // lose limit
+                if (i >= 61 && i <= 70)
+                {
+                    Assert.AreEqual(false, result.IsLimit);
+                }
+
+                if (i > 70)
+                {
+                    Assert.AreEqual(true, result.IsLimit);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public void UpdateRules_ReduceLimitNumber_TriggerLimit()
+        {
+            var ruleId = "UpdateRules_ReduceLimitNumber_TriggerLimit";
+            var stubTimeProvider = new TestTimeProvider(TimeSpan.FromMilliseconds(1));
+            var rule = CreateRules(50, ruleId, 1000, 100);
+
+            IAlgorithm algorithm = new InProcessSlidingWindowAlgorithm(rule, stubTimeProvider, updatable: true);
+
+            for (int i = 1; i <= 80; i++)
+            {
+                if (i == 41)
+                {
+                    var newRule = CreateRules(40, ruleId, 1000, 100);
+                    algorithm.UpdateRules(newRule);
+                }
+
+                var result = algorithm.Check(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i > 40)
+                {
+                    Assert.AreEqual(true, result.IsLimit);
+                }
+
+                if (i <= 40)
+                {
+                    Assert.AreEqual(false, result.IsLimit);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public void UpdateRules_NarrowTimeWindowAndExpired_StartNewTimeWindow()
+        {
+            var ruleId = "UpdateRules_NarrowTimeWindowAndExpired_StartNewTimeWindow";
+            var stubTimeProvider = new TestTimeProvider(TimeSpan.FromMilliseconds(1));
+            var rule = CreateRules(50, ruleId, 1000, 100);
+
+            IAlgorithm algorithm = new InProcessSlidingWindowAlgorithm(rule, stubTimeProvider, updatable: true);
+
+            for (int i = 1; i <= 70; i++)
+            {
+                if (i == 52)
+                {
+                    var newRule = CreateRules(50, ruleId, 500, 100);
+                    algorithm.UpdateRules(newRule);
+                    stubTimeProvider.IncrementMilliseconds(500);
+                }
+
+                var result = algorithm.Check(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i == 51)
+                {
+                    Assert.AreEqual(true, result.IsLimit);
+                }
+
+                // new period
+                if (i == 52)
+                {
+                    Assert.AreEqual(1, result.RuleCheckResults.First().Count);
+                }
+
+                if (i < 51 || i > 51)
+                {
+                    Assert.AreEqual(false, result.IsLimit);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public void UpdateRules_NarrowTimeWindowAndNotExpired_KeepLimit()
+        {
+            var ruleId = "UpdateRules_NarrowTimeWindowAndNotExpired_KeepLimit";
+            var stubTimeProvider = new TestTimeProvider(TimeSpan.FromMilliseconds(1));
+            var rule = CreateRules(50, ruleId, 1000, 100);
+
+            IAlgorithm algorithm = new InProcessSlidingWindowAlgorithm(rule, stubTimeProvider, updatable: true);
+
+            for (int i = 1; i <= 70; i++)
+            {
+                if (i == 52)
+                {
+                    var newRule = CreateRules(50, ruleId, 500, 100);
+                    algorithm.UpdateRules(newRule);
+                    stubTimeProvider.IncrementMilliseconds(100);
+                }
+
+                var result = algorithm.Check(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i >= 51)
+                {
+                    Assert.AreEqual(true, result.IsLimit);
+                }
+
+                if (i < 51)
+                {
+                    Assert.AreEqual(false, result.IsLimit);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public void UpdateRules_NarrowTimeWindowAndPartialExpired_LoseLimit()
+        {
+            var ruleId = "UpdateRules_NarrowTimeWindowAndPartialExpired_LoseLimit";
+            var stubTimeProvider = new TestTimeProvider(TimeSpan.FromMilliseconds(1));
+            var rule = CreateRules(100, ruleId, 1000, 100);
+
+            IAlgorithm algorithm = new InProcessSlidingWindowAlgorithm(rule, stubTimeProvider, updatable: true);
+
+            int[] increamentNumber = new int[] { 11, 21, 31, 41, 51, 61, 71, 81, 91 };
+
+            for (int i = 1; i <= 120; i++)
+            {
+                if (increamentNumber.Contains(i))
+                {
+                    stubTimeProvider.IncrementMilliseconds(100);
+                }
+
+                if (i == 102)
+                {
+                    var newRule = CreateRules(100, ruleId, 500, 100);
+                    algorithm.UpdateRules(newRule);
+                    stubTimeProvider.IncrementMilliseconds(100);
+                }
+
+                var result = algorithm.Check(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i == 101)
+                {
+                    Assert.AreEqual(true, result.IsLimit);
+                }
+
+                if (i == 120)
+                {
+                    Assert.AreEqual(59, result.RuleCheckResults.First().Count);
+                }
+
+                if (i < 101 && i > 101)
+                {
+                    Assert.AreEqual(false, result.IsLimit);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public void UpdateRules_ExpendTimeWindowNotExpired_Keeplimit()
+        {
+            var ruleId = "UpdateRulesAsync_ExpendTimeWindowNotExpired_Keeplimit";
+            var stubTimeProvider = new TestTimeProvider(TimeSpan.FromMilliseconds(1));
+            var rule = CreateRules(50, ruleId, 1000, 100);
+
+            IAlgorithm algorithm = new InProcessSlidingWindowAlgorithm(rule, stubTimeProvider, updatable: true);
+
+            for (int i = 1; i <= 70; i++)
+            {
+                if (i == 52)
+                {
+                    var fixedWindowRules2 = CreateRules(50, ruleId, 2000, 100);
+                    algorithm.UpdateRules(fixedWindowRules2);
+                }
+
+                if (i == 61)
+                {
+                    stubTimeProvider.IncrementMilliseconds(1000);
+                }
+
+                var result = algorithm.Check(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i == 52)
+                {
+                    stubTimeProvider.IncrementMilliseconds(1000);
+                }
+
+                if (i >= 51 && i < 61)
+                {
+                    Assert.AreEqual(true, result.IsLimit);
+                }
+
+                if (i < 51 || i >= 61)
+                {
+                    Assert.AreEqual(false, result.IsLimit);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public void UpdateRules_ExpendTimeWindowNotExpired_Triggerlimit()
+        {
+            var ruleId = "UpdateRules_ExpendTimeWindowNotExpired_Triggerlimit";
+            var stubTimeProvider = new TestTimeProvider(TimeSpan.FromMilliseconds(1));
+            var rule = CreateRules(120, ruleId, 1000, 100);
+
+            IAlgorithm algorithm = new InProcessSlidingWindowAlgorithm(rule, stubTimeProvider, updatable: true);
+
+            int[] increamentNumber = new int[] { 11, 21, 31, 41, 51, 61, 71, 81, 91, 101, 111, 121, 131 };
+
+            for (int i = 1; i <= 140; i++)
+            {
+                if (increamentNumber.Contains(i))
+                {
+                    stubTimeProvider.IncrementMilliseconds(100);
+                }
+
+                if (i == 102)
+                {
+                    var newRule = CreateRules(120, ruleId, 2000, 100);
+                    algorithm.UpdateRules(newRule);
+                    stubTimeProvider.IncrementMilliseconds(100);
+                }
+
+                var result = algorithm.Check(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i == 101)
+                {
+                    Assert.AreEqual(91, result.RuleCheckResults.First().Count);
+                }
+
+                if (i == 111)
+                {
+                    Assert.AreEqual(101, result.RuleCheckResults.First().Count);
+                }
+
+                if (i == 121)
+                {
+                    Assert.AreEqual(111, result.RuleCheckResults.First().Count);
+                }
+
+                if (i >= 131)
+                {
+                    Assert.AreEqual(true, result.IsLimit);
+                }
+                else
+                {
+                    Assert.AreEqual(false, result.IsLimit);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public void UpdateRules_ExpendTimeWindowNotExpired_Nolimit()
+        {
+            var ruleId = "UpdateRules_ExpendTimeWindowNotExpired_Nolimit";
+            var stubTimeProvider = new TestTimeProvider(TimeSpan.FromMilliseconds(1));
+            var rule = CreateRules(90, ruleId, 1000, 100);
+
+            IAlgorithm algorithm = new InProcessSlidingWindowAlgorithm(rule, stubTimeProvider, updatable: true);
+
+            int[] increamentNumber = new int[] { 11, 21, 31, 41, 51, 61, 71, 81, 91, 101, 111 };
+
+            for (int i = 1; i <= 120; i++)
+            {
+                if (increamentNumber.Contains(i))
+                {
+                    stubTimeProvider.IncrementMilliseconds(300);
+                }
+                if (i == 21)
+                {
+                    var newRule = CreateRules(90, ruleId, 2000, 100);
+                    algorithm.UpdateRules(newRule);
+                }
+
+                var result = algorithm.Check(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                Assert.AreEqual(false, result.IsLimit);
+            }
+        }
+
+        [DataTestMethod]
+        public void UpdateRules_ChangeStatPeriod_CreateNewTimeWindow()
+        {
+            var ruleId = "UpdateRules_ChangeStatPeriod_CreateNewTimeWindow";
+            var stubTimeProvider = new TestTimeProvider(TimeSpan.FromMilliseconds(1));
+            var rule = CreateRules(100, ruleId, 1000, 100);
+
+            IAlgorithm algorithm = new InProcessSlidingWindowAlgorithm(rule, stubTimeProvider, updatable: true);
+
+            for (int i = 1; i <= 120; i++)
+            {
+                if (i == 100)
+                {
+                    var newRule = CreateRules(100, ruleId, 1000, 50);
+                    algorithm.UpdateRules(newRule);
+                }
+
+                var result = algorithm.Check(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i == 100)
+                {
+                    Assert.AreEqual(1, result.RuleCheckResults.First().Count);
+                }
+
+                Assert.AreEqual(false, result.IsLimit);
+            }
+        }
+
+        [DataTestMethod]
+        public async Task UpdateRulesAsync_RaiseLimitNumber_LoseLimit()
+        {
+            var ruleId = "UpdateRulesAsync_RaiseLimitNumber_LoseLimit";
+            var stubTimeProvider = new TestTimeProvider(TimeSpan.FromMilliseconds(1));
+            var rule = CreateRules(50, ruleId, 1000, 100);
+
+            IAlgorithm algorithm = new InProcessSlidingWindowAlgorithm(rule, stubTimeProvider, updatable: true);
+
+            for (int i = 1; i <= 80; i++)
+            {
+                if (i == 61)
+                {
+                    var newRule = CreateRules(60, ruleId, 1000, 100);
+                    await algorithm.UpdateRulesAsync(newRule);
+                }
+
+                var result = await algorithm.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i <= 50)
+                {
+                    Assert.AreEqual(false, result.IsLimit);
+                }
+
+                if (i > 50 && i <= 60)
+                {
+                    Assert.AreEqual(true, result.IsLimit);
+                }
+
+                // lose limit
+                if (i >= 61 && i <= 70)
+                {
+                    Assert.AreEqual(false, result.IsLimit);
+                }
+
+                if (i > 70)
+                {
+                    Assert.AreEqual(true, result.IsLimit);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public async Task UpdateRulesAsync_ReduceLimitNumber_TriggerLimit()
+        {
+            var ruleId = "UpdateRulesAsync_ReduceLimitNumber_TriggerLimit";
+            var stubTimeProvider = new TestTimeProvider(TimeSpan.FromMilliseconds(1));
+            var rule = CreateRules(50, ruleId, 1000, 100);
+
+            IAlgorithm algorithm = new InProcessSlidingWindowAlgorithm(rule, stubTimeProvider, updatable: true);
+
+            for (int i = 1; i <= 80; i++)
+            {
+                if (i == 41)
+                {
+                    var newRule = CreateRules(40, ruleId, 1000, 100);
+                    algorithm.UpdateRules(newRule);
+                }
+
+                var result = await algorithm.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i > 40)
+                {
+                    Assert.AreEqual(true, result.IsLimit);
+                }
+
+                if (i <= 40)
+                {
+                    Assert.AreEqual(false, result.IsLimit);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public async Task UpdateRulesAsync_NarrowTimeWindowAndExpired_StartNewTimeWindow()
+        {
+            var ruleId = "UpdateRulesAsync_NarrowTimeWindowAndExpired_StartNewTimeWindow";
+            var stubTimeProvider = new TestTimeProvider(TimeSpan.FromMilliseconds(1));
+            var rule = CreateRules(50, ruleId, 1000, 100);
+
+            IAlgorithm algorithm = new InProcessSlidingWindowAlgorithm(rule, stubTimeProvider, updatable: true);
+
+            for (int i = 1; i <= 70; i++)
+            {
+                if (i == 52)
+                {
+                    var newRule = CreateRules(50, ruleId, 500, 100);
+                    await algorithm.UpdateRulesAsync(newRule);
+                    stubTimeProvider.IncrementMilliseconds(500);
+                }
+
+                var result = await algorithm.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i == 51)
+                {
+                    Assert.AreEqual(true, result.IsLimit);
+                }
+
+                // new period
+                if (i == 52)
+                {
+                    Assert.AreEqual(1, result.RuleCheckResults.First().Count);
+                }
+
+                if (i < 51 || i > 51)
+                {
+                    Assert.AreEqual(false, result.IsLimit);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public async Task UpdateRulesAsync_NarrowTimeWindowAndNotExpired_KeepLimit()
+        {
+            var ruleId = "UpdateRulesAsync_NarrowTimeWindowAndNotExpired_KeepLimit";
+            var stubTimeProvider = new TestTimeProvider(TimeSpan.FromMilliseconds(1));
+            var rule = CreateRules(50, ruleId, 1000, 100);
+
+            IAlgorithm algorithm = new InProcessSlidingWindowAlgorithm(rule, stubTimeProvider, updatable: true);
+
+            for (int i = 1; i <= 70; i++)
+            {
+                if (i == 52)
+                {
+                    var newRule = CreateRules(50, ruleId, 500, 100);
+                    await algorithm.UpdateRulesAsync(newRule);
+                    stubTimeProvider.IncrementMilliseconds(100);
+                }
+
+                var result = await algorithm.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i >= 51)
+                {
+                    Assert.AreEqual(true, result.IsLimit);
+                }
+
+                if (i < 51)
+                {
+                    Assert.AreEqual(false, result.IsLimit);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public async Task UpdateRulesAsync_NarrowTimeWindowAndPartialExpired_LoseLimit()
+        {
+            var ruleId = "UpdateRulesAsync_NarrowTimeWindowAndPartialExpired_LoseLimit";
+            var stubTimeProvider = new TestTimeProvider(TimeSpan.FromMilliseconds(1));
+            var rule = CreateRules(100, ruleId, 1000, 100);
+
+            IAlgorithm algorithm = new InProcessSlidingWindowAlgorithm(rule, stubTimeProvider, updatable: true);
+
+            int[] increamentNumber = new int[] { 11, 21, 31, 41, 51, 61, 71, 81, 91 };
+
+            for (int i = 1; i <= 120; i++)
+            {
+                if (increamentNumber.Contains(i))
+                {
+                    stubTimeProvider.IncrementMilliseconds(100);
+                }
+
+                if (i == 102)
+                {
+                    var newRule = CreateRules(100, ruleId, 500, 100);
+                    await algorithm.UpdateRulesAsync(newRule);
+                    stubTimeProvider.IncrementMilliseconds(100);
+                }
+
+                var result = await algorithm.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i == 101)
+                {
+                    Assert.AreEqual(true, result.IsLimit);
+                }
+
+                if (i == 120)
+                {
+                    Assert.AreEqual(59, result.RuleCheckResults.First().Count);
+                }
+
+                if (i < 101 && i > 101)
+                {
+                    Assert.AreEqual(false, result.IsLimit);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public async Task UpdateRulesAsync_ExpendTimeWindowNotExpired_Keeplimit()
+        {
+            var ruleId = "UpdateRulesAsync_ExpendTimeWindowNotExpired_Keeplimit";
+            var stubTimeProvider = new TestTimeProvider(TimeSpan.FromMilliseconds(1));
+            var rule = CreateRules(50, ruleId, 1000, 100);
+
+            IAlgorithm algorithm = new InProcessSlidingWindowAlgorithm(rule, stubTimeProvider, updatable: true);
+
+            for (int i = 1; i <= 70; i++)
+            {
+                if (i == 52)
+                {
+                    var fixedWindowRules2 = CreateRules(50, ruleId, 2000, 100);
+                    await algorithm.UpdateRulesAsync(fixedWindowRules2);
+                }
+
+                if (i == 61)
+                {
+                    stubTimeProvider.IncrementMilliseconds(1000);
+                }
+
+                var result = await algorithm.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i == 52)
+                {
+                    stubTimeProvider.IncrementMilliseconds(1000);
+                }
+
+                if (i >= 51 && i < 61)
+                {
+                    Assert.AreEqual(true, result.IsLimit);
+                }
+
+                if (i < 51 || i >= 61)
+                {
+                    Assert.AreEqual(false, result.IsLimit);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public async Task UpdateRulesAsync_ExpendTimeWindowNotExpired_Triggerlimit()
+        {
+            var ruleId = "UpdateRulesAsync_ExpendTimeWindowNotExpired_Triggerlimit";
+            var stubTimeProvider = new TestTimeProvider(TimeSpan.FromMilliseconds(1));
+            var rule = CreateRules(120, ruleId, 1000, 100);
+
+            IAlgorithm algorithm = new InProcessSlidingWindowAlgorithm(rule, stubTimeProvider, updatable: true);
+
+            int[] increamentNumber = new int[] { 11, 21, 31, 41, 51, 61, 71, 81, 91, 101, 111, 121, 131 };
+
+            for (int i = 1; i <= 140; i++)
+            {
+                if (increamentNumber.Contains(i))
+                {
+                    stubTimeProvider.IncrementMilliseconds(100);
+                }
+
+                if (i == 102)
+                {
+                    var newRule = CreateRules(120, ruleId, 2000, 100);
+                    await algorithm.UpdateRulesAsync(newRule);
+                    stubTimeProvider.IncrementMilliseconds(100);
+                }
+
+                var result = await algorithm.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i == 101)
+                {
+                    Assert.AreEqual(91, result.RuleCheckResults.First().Count);
+                }
+
+                if (i == 111)
+                {
+                    Assert.AreEqual(101, result.RuleCheckResults.First().Count);
+                }
+
+                if (i == 121)
+                {
+                    Assert.AreEqual(111, result.RuleCheckResults.First().Count);
+                }
+
+                if (i >= 131)
+                {
+                    Assert.AreEqual(true, result.IsLimit);
+                }
+                else
+                {
+                    Assert.AreEqual(false, result.IsLimit);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public async Task UpdateRulesAsync_ExpendTimeWindowNotExpired_Nolimit()
+        {
+            var ruleId = "UpdateRulesAsync_ExpendTimeWindowNotExpired_Nolimit";
+            var stubTimeProvider = new TestTimeProvider(TimeSpan.FromMilliseconds(1));
+            var rule = CreateRules(90, ruleId, 1000, 100);
+
+            IAlgorithm algorithm = new InProcessSlidingWindowAlgorithm(rule, stubTimeProvider, updatable: true);
+
+            int[] increamentNumber = new int[] { 11, 21, 31, 41, 51, 61, 71, 81, 91, 101, 111 };
+
+            for (int i = 1; i <= 120; i++)
+            {
+                if (increamentNumber.Contains(i))
+                {
+                    stubTimeProvider.IncrementMilliseconds(300);
+                }
+                if (i == 21)
+                {
+                    var newRule = CreateRules(90, ruleId, 2000, 100);
+                    await algorithm.UpdateRulesAsync(newRule);
+                }
+
+                var result = await algorithm.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                Assert.AreEqual(false, result.IsLimit);
+            }
+        }
+
+        [DataTestMethod]
+        public async Task UpdateRulesAsync_ChangeStatPeriod_CreateNewTimeWindow()
+        {
+            var ruleId = "UpdateRulesAsync_ChangeStatPeriod_CreateNewTimeWindow";
+            var stubTimeProvider = new TestTimeProvider(TimeSpan.FromMilliseconds(1));
+            var rule = CreateRules(100, ruleId, 1000, 100);
+
+            IAlgorithm algorithm = new InProcessSlidingWindowAlgorithm(rule, stubTimeProvider, updatable: true);
+
+            for (int i = 1; i <= 120; i++)
+            {
+                if (i == 100)
+                {
+                    var newRule = CreateRules(100, ruleId, 1000, 50);
+                    await algorithm.UpdateRulesAsync(newRule);
+                }
+
+                var result = await algorithm.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i == 100)
+                {
+                    Assert.AreEqual(1, result.RuleCheckResults.First().Count);
+                }
+
+                Assert.AreEqual(false, result.IsLimit);
+            }
+        }
+
+        private static SlidingWindowRule[] CreateRules(int limitNumber, string ruleId, long statWindowMilliseconds = 1000, long statPeriodMilliseconds = 100)
+        {
+            return new SlidingWindowRule[]
+                {
+                    new SlidingWindowRule(TimeSpan.FromMilliseconds(statWindowMilliseconds), TimeSpan.FromMilliseconds(statPeriodMilliseconds))
+                    {
+                        Id=ruleId,
+                        LimitNumber=limitNumber,
+                        ExtractTarget = (request) =>
+                        {
+                            return (request as SimulationRequest).RequestResource;
+                        },
+                        CheckRuleMatching = (request) =>
+                        {
+                            return true;
+                        },
+                        ExtractTargetAsync = (request) =>
+                        {
+                            return Task.FromResult((request as SimulationRequest).RequestResource);
+                        },
+                        CheckRuleMatchingAsync = (request) =>
+                        {
+                            return Task.FromResult(true);
+                        },
+                    }
+                };
         }
 
         private IAlgorithm GetAlgorithm(ITimeProvider timeProvider, TimeSpan statWindow, TimeSpan statPeriod, StartTimeType startTimeType = StartTimeType.FromCurrent, int limitNumber = 20, int lockSeconds = 1, string id = "")
