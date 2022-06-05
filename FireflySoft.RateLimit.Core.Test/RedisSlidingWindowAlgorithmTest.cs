@@ -565,7 +565,7 @@ namespace FireflySoft.RateLimit.Core.Test
                 if (i == 42)
                 {
                     var newRule = CreateRules(40, ruleId, 3000, 1000);
-                     algorithm.UpdateRules(newRule);
+                    algorithm.UpdateRules(newRule);
                     Thread.Sleep(100);
                 }
 
@@ -1168,7 +1168,7 @@ namespace FireflySoft.RateLimit.Core.Test
             {
                 if (i == 50)
                 {
-                    var newRule = CreateRules(50, ruleId, 1000, 40);
+                    var newRule = CreateRules(50, ruleId, 900, 30);
                     await algorithm.UpdateRulesAsync(newRule);
                 }
 
@@ -1181,7 +1181,7 @@ namespace FireflySoft.RateLimit.Core.Test
                         }
                 });
 
-                Console.WriteLine($"{DateTimeOffset.Now.ToString("mm:ss.fff")},{i},{result.RuleCheckResults.First().Count}");
+                //Console.WriteLine($"{DateTimeOffset.Now.ToString("mm:ss.fff")},{i},{result.RuleCheckResults.First().Count}");
 
                 if (i == 50)
                 {
@@ -1192,6 +1192,50 @@ namespace FireflySoft.RateLimit.Core.Test
             }
         }
 
+        [DataTestMethod]
+        public async Task UpdateRulesAsync_ChangeStatPeriod_InheritPeriods()
+        {
+            var ruleId = "UpdateRulesAsync_ChangeStatPeriod_InheritPeriods";
+
+            var rule = CreateRules(50, ruleId, 1000, 100);
+            var redisClient = RedisClientHelper.GetClient();
+            IAlgorithm algorithm = new RedisSlidingWindowAlgorithm(rule, redisClient, updatable: true);
+
+            for (int i = 1; i <= 70; i++)
+            {
+                if (i == 11 || i == 21 || i == 31 || i == 41)
+                {
+                    Thread.Sleep(100);
+                }
+
+                if (i == 42)
+                {
+                    var newRule = CreateRules(50, ruleId, 1000, 50);
+                    await algorithm.UpdateRulesAsync(newRule);
+                }
+
+                var result = await algorithm.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                //Console.WriteLine($"{DateTimeOffset.Now.ToString("mm:ss.fff")},{i},{result.RuleCheckResults.First().Count}");
+
+                if (i == 50)
+                {
+                    Assert.AreEqual(50, result.RuleCheckResults.First().Count);
+                }
+
+                if (i > 50)
+                {
+                    Assert.AreEqual(true, result.IsLimit);
+                }
+            }
+        }
 
         private static SlidingWindowRule[] CreateRules(int limitNumber, string ruleId, long statWindowMilliseconds = 1000, long statPeriodMilliseconds = 100)
         {

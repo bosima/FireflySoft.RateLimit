@@ -286,7 +286,7 @@ namespace FireflySoft.RateLimit.Core.Test
         }
 
         [DataTestMethod]
-        public void UpdateRules_RaiseLimitNumber_NoLimit()
+        public void UpdateRules_RaiseLimitNumber_LoseLimit()
         {
             FixedWindowRule[] fixedWindowRules = CreateRules(50);
 
@@ -322,7 +322,7 @@ namespace FireflySoft.RateLimit.Core.Test
         }
 
         [DataTestMethod]
-        public void UpdateRules_ReduceLimitNumber_NoLimit()
+        public void UpdateRules_ReduceLimitNumber_TriggerLimit()
         {
             FixedWindowRule[] fixedWindowRules = CreateRules(50);
 
@@ -358,7 +358,7 @@ namespace FireflySoft.RateLimit.Core.Test
         }
 
         [DataTestMethod]
-        public async Task UpdateRulesAsync_RaiseLimitNumber_NoLimit()
+        public async Task UpdateRulesAsync_RaiseLimitNumber_LoseLimit()
         {
             FixedWindowRule[] fixedWindowRules = CreateRules(50);
 
@@ -394,7 +394,7 @@ namespace FireflySoft.RateLimit.Core.Test
         }
 
         [DataTestMethod]
-        public async Task UpdateRulesAsync_ReduceLimitNumber_NoLimit()
+        public async Task UpdateRulesAsync_ReduceLimitNumber_TriggerLimit()
         {
             FixedWindowRule[] fixedWindowRules = CreateRules(50);
 

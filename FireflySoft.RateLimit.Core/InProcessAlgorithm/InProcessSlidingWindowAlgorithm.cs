@@ -102,6 +102,12 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                     slidingWindow = slidingWindowItem.Counter;
                 }
 
+                // renewal the window
+                if (slidingWindowItem.ExpireTime < currentTime.Add(currentRule.StatWindow))
+                {
+                    slidingWindowItem.ExpireTime = currentTime.AddMilliseconds(currentRule.StatWindow.TotalMilliseconds * 2);
+                }
+
                 // rule changed, reset the counter
                 slidingWindow.ResetIfRuleChanged(currentRule);
 
@@ -122,12 +128,6 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
 
                 // increment the count value
                 slidingWindow.IncreamentPeriod(periodIndex, amount);
-
-                // renewal the window
-                if (slidingWindowItem.ExpireTime < currentTime.Add(currentRule.StatWindow))
-                {
-                    slidingWindowItem.ExpireTime = currentTime.AddMilliseconds(currentRule.StatWindow.TotalMilliseconds * 2);
-                }
 
                 return Tuple.Create(false, totalAmount);
             }

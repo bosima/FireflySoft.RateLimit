@@ -116,7 +116,6 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             var counter = (LeakyBucketCounter)cacheItem.Counter;
             var countValue = counter.Value;
             var lastFlowOutTime = counter.LastFlowOutTime;
-            var lastTimeChanged = false;
             var pastMilliseconds = (currentTime - lastFlowOutTime).TotalMilliseconds;
             var outflowUnitMilliseconds = (int)currentRule.OutflowUnit.TotalMilliseconds;
 
@@ -137,8 +136,10 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                 }
 
                 lastFlowOutTime = lastFlowOutTime.AddMilliseconds(pastOutflowUnitQuantity * outflowUnitMilliseconds);
-                lastTimeChanged = true;
                 pastMilliseconds = (currentTime - lastFlowOutTime).TotalMilliseconds;
+
+                counter.LastFlowOutTime = lastFlowOutTime;
+                cacheItem.ExpireTime = lastFlowOutTime.Add(currentRule.MaxDrainTime);
             }
 
             // If the number of requests in the current time window is less than the outflow rate,
@@ -151,17 +152,14 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             }
 
             // Trigger rate limiting
+            // No need to update counter.Value
             if (countValue > currentRule.LimitNumber)
             {
+                countValue = countValue - amount;
                 return Tuple.Create(true, countValue, -1L);
             }
 
             counter.Value = countValue;
-            if (lastTimeChanged)
-            {
-                counter.LastFlowOutTime = lastFlowOutTime;
-                cacheItem.ExpireTime = lastFlowOutTime.Add(currentRule.MaxDrainTime);
-            }
 
             // The requests in the leaky bucket will be processed after one or more time windows.
             long wait = CalculateWaitTime(currentRule.OutflowQuantityPerUnit, outflowUnitMilliseconds, pastMilliseconds, countValue);
