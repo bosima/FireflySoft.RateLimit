@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using FireflySoft.RateLimit.Core.Rule;
 using FireflySoft.RateLimit.Core.InProcessAlgorithm;
 using FireflySoft.RateLimit.Core.RedisAlgorithm;
+using System.Linq;
 
 namespace FireflySoft.RateLimit.Core.Test
 {
@@ -14,7 +15,7 @@ namespace FireflySoft.RateLimit.Core.Test
     public class RedisTokenBucketAlgorithmTest
     {
         [DataTestMethod]
-        public void Test()
+        public void Common()
         {
             var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 0);
 
@@ -46,7 +47,7 @@ namespace FireflySoft.RateLimit.Core.Test
         }
 
         [DataTestMethod]
-        public void TestLockSeconds()
+        public void Lock_LockThreeSeconds_Common()
         {
             var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 3);
 
@@ -78,7 +79,7 @@ namespace FireflySoft.RateLimit.Core.Test
         }
 
         [DataTestMethod]
-        public void TestFromNaturalPeriodBeign()
+        public void StartTimeType_FromNaturalPeriodBeign_Common()
         {
             var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromNaturalPeriodBeign);
 
@@ -125,7 +126,7 @@ namespace FireflySoft.RateLimit.Core.Test
         }
 
         [DataTestMethod]
-        public void TestFromCurrent()
+        public void StartTimeType_FromCurrent_Common()
         {
             var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromCurrent);
 
@@ -172,169 +173,7 @@ namespace FireflySoft.RateLimit.Core.Test
         }
 
         [DataTestMethod]
-        public async Task TestAsync()
-        {
-            var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 1);
-
-            for (int i = 1; i <= 80; i++)
-            {
-                var checkResult = await processor.CheckAsync(new SimulationRequest()
-                {
-                    RequestId = Guid.NewGuid().ToString(),
-                    RequestResource = "home",
-                    Parameters = new Dictionary<string, string>() {
-                                { "from","sample" },
-                        }
-                });
-
-                if (i == 31 || i == 42 || i >= 53)
-                {
-                    Assert.AreEqual(true, checkResult.IsLimit);
-                }
-                else
-                {
-                    Assert.AreEqual(false, checkResult.IsLimit);
-                }
-
-                if (i == 31 || i == 42)
-                {
-                    await Task.Delay(1000);
-                }
-            }
-        }
-
-        [DataTestMethod]
-        public async Task TestLockSecondsAsync()
-        {
-            var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 3);
-
-            for (int i = 1; i <= 70; i++)
-            {
-                if (i == 61 && i == 62 && i == 63)
-                {
-                    await Task.Delay(1000);
-                }
-                var result = await processor.CheckAsync(new SimulationRequest()
-                {
-                    RequestId = Guid.NewGuid().ToString(),
-                    RequestResource = "home",
-                    Parameters = new Dictionary<string, string>() {
-                                { "from","sample" },
-                        }
-                });
-
-                if (i > 30 && i <= 62)
-                {
-                    Assert.AreEqual(true, result.IsLimit);
-                }
-
-                if (i <= 50 && i > 62)
-                {
-                    Assert.AreEqual(false, result.IsLimit);
-                }
-            }
-        }
-
-        [DataTestMethod]
-
-
-        public async Task TestFromNaturalPeriodBeignAsync()
-        {
-            var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromNaturalPeriodBeign);
-
-            while (true)
-            {
-                if (DateTimeOffset.Now.Millisecond < 800)
-                {
-                    Thread.Sleep(20);
-                    continue;
-                }
-                break;
-            }
-
-            for (int i = 1; i <= 80; i++)
-            {
-                var checkResult = await processor.CheckAsync(new SimulationRequest()
-                {
-                    RequestId = Guid.NewGuid().ToString(),
-                    RequestResource = "home",
-                    Parameters = new Dictionary<string, string>() {
-                                { "from","sample" },
-                        }
-                });
-
-                if (i == 31 || i == 42 || i >= 53)
-                {
-                    Assert.AreEqual(true, checkResult.IsLimit);
-                }
-                else
-                {
-                    Assert.AreEqual(false, checkResult.IsLimit);
-                }
-
-                if (i == 31)
-                {
-                    await Task.Delay(200);
-                }
-
-                if (i == 42)
-                {
-                    await Task.Delay(1000);
-                }
-            }
-        }
-
-        [DataTestMethod]
-
-
-        public async Task TestFromCurrentAsync()
-        {
-            var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromCurrent);
-
-            while (true)
-            {
-                if (DateTimeOffset.Now.Millisecond < 800)
-                {
-                    Thread.Sleep(20);
-                    continue;
-                }
-                break;
-            }
-
-            for (int i = 1; i <= 80; i++)
-            {
-                var checkResult = await processor.CheckAsync(new SimulationRequest()
-                {
-                    RequestId = Guid.NewGuid().ToString(),
-                    RequestResource = "home",
-                    Parameters = new Dictionary<string, string>() {
-                                { "from","sample" },
-                        }
-                });
-
-                if ((i >= 31 && i <= 42) || i >= 53)
-                {
-                    Assert.AreEqual(true, checkResult.IsLimit);
-                }
-                else
-                {
-                    Assert.AreEqual(false, checkResult.IsLimit);
-                }
-
-                if (i == 31)
-                {
-                    await Task.Delay(200);
-                }
-
-                if (i == 42)
-                {
-                    await Task.Delay(1000);
-                }
-            }
-        }
-
-        [DataTestMethod]
-        public void TestRedisKeyExpire()
+        public void StartTime_Expire_NotExist()
         {
             var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 0, id: "1");
 
@@ -367,6 +206,489 @@ namespace FireflySoft.RateLimit.Core.Test
                     Assert.AreEqual(false, exsit);
                 }
             }
+        }
+
+        [DataTestMethod]
+        public async Task CommonAsync()
+        {
+            var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 1);
+
+            for (int i = 1; i <= 80; i++)
+            {
+                var checkResult = await processor.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i == 31 || i == 42 || i >= 53)
+                {
+                    Assert.AreEqual(true, checkResult.IsLimit);
+                }
+                else
+                {
+                    Assert.AreEqual(false, checkResult.IsLimit);
+                }
+
+                if (i == 31 || i == 42)
+                {
+                    await Task.Delay(1000);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public async Task LockAsync_LockThreeSeconds_Common()
+        {
+            var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 3);
+
+            for (int i = 1; i <= 70; i++)
+            {
+                if (i == 61 && i == 62 && i == 63)
+                {
+                    await Task.Delay(1000);
+                }
+                var result = await processor.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i > 30 && i <= 62)
+                {
+                    Assert.AreEqual(true, result.IsLimit);
+                }
+
+                if (i <= 50 && i > 62)
+                {
+                    Assert.AreEqual(false, result.IsLimit);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public async Task StartTimeTypeAsync_FromNaturalPeriodBeign_Common()
+        {
+            var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromNaturalPeriodBeign);
+
+            while (true)
+            {
+                if (DateTimeOffset.Now.Millisecond < 800)
+                {
+                    Thread.Sleep(20);
+                    continue;
+                }
+                break;
+            }
+
+            for (int i = 1; i <= 80; i++)
+            {
+                var checkResult = await processor.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i == 31 || i == 42 || i >= 53)
+                {
+                    Assert.AreEqual(true, checkResult.IsLimit);
+                }
+                else
+                {
+                    Assert.AreEqual(false, checkResult.IsLimit);
+                }
+
+                if (i == 31)
+                {
+                    await Task.Delay(200);
+                }
+
+                if (i == 42)
+                {
+                    await Task.Delay(1000);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public async Task StartTimeTypeAsync_FromCurrent_Common()
+        {
+            var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromCurrent);
+
+            while (true)
+            {
+                if (DateTimeOffset.Now.Millisecond < 800)
+                {
+                    Thread.Sleep(20);
+                    continue;
+                }
+                break;
+            }
+
+            for (int i = 1; i <= 80; i++)
+            {
+                var checkResult = await processor.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if ((i >= 31 && i <= 42) || i >= 53)
+                {
+                    Assert.AreEqual(true, checkResult.IsLimit);
+                }
+                else
+                {
+                    Assert.AreEqual(false, checkResult.IsLimit);
+                }
+
+                if (i == 31)
+                {
+                    await Task.Delay(200);
+                }
+
+                if (i == 42)
+                {
+                    await Task.Delay(1000);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public async Task UpdateRulesAsync_RaiseCapacity_KeepLimit()
+        {
+            var ruleId = "UpdateRulesAsync_RaiseCapacity_KeepLimit";
+            var rule = CreateRules(ruleId, 50, 10, 200);
+            IAlgorithm algorithm = new InProcessTokenBucketAlgorithm(rule, updatable: true);
+
+            for (int i = 1; i <= 80; i++)
+            {
+                if (i == 71)
+                {
+                    var newRule = CreateRules(ruleId, 100, 10, 200);
+                    await algorithm.UpdateRulesAsync(newRule);
+                }
+
+                var result = await algorithm.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i < 51)
+                {
+                    Assert.AreEqual(false, result.IsLimit);
+                }
+
+                if (i >= 51)
+                {
+                    Assert.AreEqual(true, result.IsLimit);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public async Task UpdateRulesAsync_ReduceCapacity_TriggerLimit()
+        {
+            var ruleId = "UpdateRules_ReduceCapacity_TriggerLimit";
+            var rule = CreateRules(ruleId, 100, 10, 200);
+            IAlgorithm algorithm = new InProcessTokenBucketAlgorithm(rule, updatable: true);
+
+            for (int i = 1; i <= 80; i++)
+            {
+                if (i == 21)
+                {
+                    var newRule = CreateRules(ruleId, 30, 10, 200);
+                    await algorithm.UpdateRulesAsync(newRule);
+                }
+
+                var result = await algorithm.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i < 51)
+                {
+                    Assert.AreEqual(false, result.IsLimit);
+                }
+
+                if (i >= 51)
+                {
+                    Assert.AreEqual(true, result.IsLimit);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public async Task UpdateRulesAsync_NarrowInflowUnit_LoseLimit()
+        {
+            var ruleId = "UpdateRulesAsync_NarrowInflowUnit_LoseLimit";
+            var rule = CreateRules(ruleId, 10, 10, 600);
+            IAlgorithm algorithm = new InProcessTokenBucketAlgorithm(rule, updatable: true);
+
+            for (int i = 1; i <= 50; i++)
+            {
+                if (i == 41)
+                {
+                    var newRule = CreateRules(ruleId, 10, 10, 400);
+                    await algorithm.UpdateRulesAsync(newRule);
+                }
+
+                var result = await algorithm.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i < 11)
+                {
+                    Assert.AreEqual(false, result.IsLimit);
+                }
+
+                if (i >= 11 && i <= 40)
+                {
+                    Assert.AreEqual(true, result.IsLimit);
+                }
+                if (i == 40)
+                {
+                    SpinWait.SpinUntil(() => { return false; }, 400);
+                }
+
+                // lose limit
+                if (i >= 41)
+                {
+                    Assert.AreEqual(false, result.IsLimit);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public async Task UpdateRulesAsync_ExpendInflowUnit_TriggerLimit()
+        {
+            var ruleId = "UpdateRulesAsync_ExpendInflowUnit_TriggerLimit";
+            var rule = CreateRules(ruleId, 20, 10, 200);
+            IAlgorithm algorithm = new InProcessTokenBucketAlgorithm(rule, updatable: true);
+
+            for (int i = 1; i <= 50; i++)
+            {
+                // expend inflow unit
+                if (i == 21)
+                {
+                    var newRule = CreateRules(ruleId, 20, 10, 400);
+                    await algorithm.UpdateRulesAsync(newRule);
+                }
+
+                var result = await algorithm.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i < 21)
+                {
+                    Assert.AreEqual(false, result.IsLimit);
+                }
+                if (i == 20)
+                {
+                    SpinWait.SpinUntil(() => { return false; }, 200);
+                }
+
+                // trigger limit
+                if (i >= 21 && i <= 40)
+                {
+                    Assert.AreEqual(true, result.IsLimit);
+                }
+                if (i == 40)
+                {
+                    SpinWait.SpinUntil(() => { return false; }, 200);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public async Task UpdateRulesAsync_NarrowInflowQunatity_TriggerLimit()
+        {
+            var redisClient = RedisClientHelper.GetClient();
+            var ruleId = "UpdateRulesAsync_NarrowInflowQunatity_TriggerLimit";
+            var rule = CreateRules(ruleId, 10, 10, 300);
+            IAlgorithm algorithm = new RedisTokenBucketAlgorithm(rule, redisClient,updatable: true);
+
+            for (int i = 1; i <= 50; i++)
+            {
+                if (i == 11)
+                {
+                    var newRule = CreateRules(ruleId, 10, 5, 300);
+                    await algorithm.UpdateRulesAsync(newRule);
+                }
+
+                var result = await algorithm.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                //Console.WriteLine($"{i},{result.RuleCheckResults.First().Count},{result.IsLimit}");
+
+                if (i == 10)
+                {
+                    Assert.AreEqual(0, result.RuleCheckResults.First().Count);
+                }
+
+                if (i == 10)
+                {
+                    SpinWait.SpinUntil(() => { return false; }, 300);
+                }
+                if (i == 11)
+                {
+                    Assert.AreEqual(4, result.RuleCheckResults.First().Count);
+                }
+
+                // trigger limit
+                if (i == 16)
+                {
+                    Assert.AreEqual(true, result.IsLimit);
+                }
+
+                if (i == 20)
+                {
+                    SpinWait.SpinUntil(() => { return false; }, 300);
+                }
+                if (i == 21)
+                {
+                    Assert.AreEqual(4, result.RuleCheckResults.First().Count);
+                }
+
+                if (i == 30)
+                {
+                    SpinWait.SpinUntil(() => { return false; }, 300);
+                }
+                if (i == 31)
+                {
+                    Assert.AreEqual(4, result.RuleCheckResults.First().Count);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public async Task UpdateRulesAsync_ExpendInflowQunatity_LoseLimit()
+        {
+            var redisClient = RedisClientHelper.GetClient();
+            var ruleId = "UpdateRulesAsync_ExpendInflowQunatity_LoseLimit";
+            var rule = CreateRules(ruleId, 10, 5, 300);
+            IAlgorithm algorithm = new RedisTokenBucketAlgorithm(rule,redisClient, updatable: true);
+
+            for (int i = 1; i <= 50; i++)
+            {
+                if (i == 31)
+                {
+                    var newRule = CreateRules(ruleId, 10, 10, 300);
+                    await algorithm.UpdateRulesAsync(newRule);
+                }
+
+                var result = await algorithm.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                //Console.WriteLine($"{i},{result.RuleCheckResults.First().Count},{result.IsLimit}");
+
+                if (i == 10)
+                {
+                    SpinWait.SpinUntil(() => { return false; }, 300);
+                }
+                if (i == 11)
+                {
+                    Assert.AreEqual(4, result.RuleCheckResults.First().Count);
+                }
+
+                if (i == 16)
+                {
+                    Assert.AreEqual(true, result.IsLimit);
+                }
+
+                if (i == 20)
+                {
+                    SpinWait.SpinUntil(() => { return false; }, 300);
+                }
+                if (i == 21)
+                {
+                    Assert.AreEqual(4, result.RuleCheckResults.First().Count);
+                }
+
+                if (i == 26)
+                {
+                    Assert.AreEqual(true, result.IsLimit);
+                }
+
+                // lose limting
+                if (i == 30)
+                {
+                    SpinWait.SpinUntil(() => { return false; }, 300);
+                }
+                if (i >= 31 && i <= 40)
+                {
+                    Assert.AreEqual(false, result.IsLimit);
+                }
+            }
+        }
+
+        private static TokenBucketRule[] CreateRules(string ruleId, int capacity, int inflowQuantity, int inflowUnitMilliseconds)
+        {
+            return new TokenBucketRule[]
+                {
+                    new TokenBucketRule(capacity,inflowQuantity,TimeSpan.FromMilliseconds(inflowUnitMilliseconds))
+                    {
+                        Id=ruleId,
+                        ExtractTarget = (request) =>
+                        {
+                            return (request as SimulationRequest).RequestResource;
+                        },
+                        CheckRuleMatching = (request) =>
+                        {
+                            return true;
+                        },
+                        ExtractTargetAsync = (request) =>
+                        {
+                            return Task.FromResult((request as SimulationRequest).RequestResource);
+                        },
+                        CheckRuleMatchingAsync = (request) =>
+                        {
+                            return Task.FromResult(true);
+                        },
+                    }
+                };
         }
 
         private IAlgorithm GetAlgorithm(int capacity, int inflowQuantity, TimeSpan inflowUnit, int lockSeconds, StartTimeType startTimeType = StartTimeType.FromCurrent, string id = "")

@@ -47,15 +47,15 @@ namespace FireflySoft.RateLimit.Core.Test
         }
 
         [DataTestMethod]
-        public void TestFromNaturalPeriodBeign()
+        public void StartTimeType_FromNaturalPeriodBeign_Common()
         {
             var processor = GetAlgorithm(TimeSpan.FromSeconds(1), StartTimeType.FromNaturalPeriodBeign, 50, 0);
 
             while (true)
             {
-                if (DateTimeOffset.Now.Millisecond < 800)
+                if (DateTimeOffset.Now.Millisecond < 700)
                 {
-                    Thread.Sleep(50);
+                    SpinWait.SpinUntil(() => { return false; }, 10);
                     continue;
                 }
                 break;
@@ -65,8 +65,9 @@ namespace FireflySoft.RateLimit.Core.Test
             {
                 if (i == 56)
                 {
-                    Thread.Sleep(200);
+                    Thread.Sleep(300);
                 }
+
                 var result = processor.Check(new SimulationRequest()
                 {
                     RequestId = Guid.NewGuid().ToString(),

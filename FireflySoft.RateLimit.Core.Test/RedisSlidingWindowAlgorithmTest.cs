@@ -126,17 +126,12 @@ namespace FireflySoft.RateLimit.Core.Test
         }
 
         [DataTestMethod]
-        public async Task TestLockSecondsAsync()
+        public async Task LockAsync_LockThreeSeconds_Common()
         {
             var processor = GetAlgorithm(TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(100), StartTimeType.FromCurrent, 20, 3);
 
             for (int i = 1; i <= 40; i++)
             {
-                if (i >= 22 && i <= 24)
-                {
-                    await Task.Delay(1000);
-                }
-
                 var result = await processor.CheckAsync(new SimulationRequest()
                 {
                     RequestId = Guid.NewGuid().ToString(),
@@ -149,6 +144,7 @@ namespace FireflySoft.RateLimit.Core.Test
                 if (i >= 21 && i <= 23)
                 {
                     Assert.AreEqual(true, result.IsLimit);
+                    await Task.Delay(1000);
                 }
                 else
                 {
@@ -1197,7 +1193,7 @@ namespace FireflySoft.RateLimit.Core.Test
         {
             var ruleId = "UpdateRulesAsync_ChangeStatPeriod_InheritPeriods";
 
-            var rule = CreateRules(50, ruleId, 1000, 100);
+            var rule = CreateRules(50, ruleId, 1000, 200);
             var redisClient = RedisClientHelper.GetClient();
             IAlgorithm algorithm = new RedisSlidingWindowAlgorithm(rule, redisClient, updatable: true);
 
@@ -1205,12 +1201,12 @@ namespace FireflySoft.RateLimit.Core.Test
             {
                 if (i == 11 || i == 21 || i == 31 || i == 41)
                 {
-                    Thread.Sleep(100);
+                    Thread.Sleep(200);
                 }
 
                 if (i == 42)
                 {
-                    var newRule = CreateRules(50, ruleId, 1000, 50);
+                    var newRule = CreateRules(50, ruleId, 1000, 100);
                     await algorithm.UpdateRulesAsync(newRule);
                 }
 

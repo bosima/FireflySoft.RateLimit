@@ -94,7 +94,7 @@ namespace FireflySoft.RateLimit.Core.Test
         }
 
         [DataTestMethod]
-        public void Lock_LockOneSeconds_Common()
+        public void Lock_LockThreeSeconds_Common()
         {
             var stubTimeProvider = new TestTimeProvider(TimeSpan.FromMilliseconds(1));
             var processor = GetAlgorithm(stubTimeProvider, 30, 10, TimeSpan.FromSeconds(1), 3);
@@ -573,7 +573,7 @@ namespace FireflySoft.RateLimit.Core.Test
         }
 
         [DataTestMethod]
-        public async Task LockAsync_LockOneSeconds_Common()
+        public async Task LockAsync_LockThreeSeconds_Common()
         {
             var stubTimeProvider = new TestTimeProvider(TimeSpan.FromMilliseconds(1));
             var processor = GetAlgorithm(stubTimeProvider, 30, 10, TimeSpan.FromSeconds(1), 3);

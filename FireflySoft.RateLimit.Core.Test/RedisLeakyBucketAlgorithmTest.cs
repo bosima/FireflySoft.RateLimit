@@ -17,7 +17,7 @@ namespace FireflySoft.RateLimit.Core.Test
         [DataTestMethod]
         public void Common()
         {
-            var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 1);
+            var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 0);
 
             for (int i = 1; i <= 80; i++)
             {
@@ -145,7 +145,7 @@ namespace FireflySoft.RateLimit.Core.Test
         }
 
         [DataTestMethod]
-        public void Lock_LockOneSeconds_Common()
+        public void Lock_LockThreeSeconds_Common()
         {
             var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 3);
 
@@ -720,7 +720,7 @@ namespace FireflySoft.RateLimit.Core.Test
         }
 
         [DataTestMethod]
-        public async Task LockAsync_LockOneSeconds_Common()
+        public async Task LockAsync_LockThreeSeconds_Common()
         {
             var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 3);
 
@@ -761,7 +761,7 @@ namespace FireflySoft.RateLimit.Core.Test
             {
                 if (DateTimeOffset.Now.Millisecond < 800)
                 {
-                    Thread.Sleep(20);
+                    SpinWait.SpinUntil(() => { return false; }, 20);
                     continue;
                 }
                 break;
