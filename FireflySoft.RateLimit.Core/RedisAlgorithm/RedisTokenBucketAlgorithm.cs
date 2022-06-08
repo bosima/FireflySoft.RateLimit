@@ -43,20 +43,24 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 local current_time=tonumber(ARGV[5])
                 local start_time=tonumber(ARGV[6])
                 local lock_seconds=tonumber(ARGV[7])
-                local key_expire_time=math.ceil((capacity/inflow_quantity_per_unit)*inflow_unit)+10
+                local st_expire_ms=math.ceil((capacity/inflow_quantity_per_unit)*inflow_unit)*2
+                local val_expire_ms=st_expire_ms+10
                 local bucket_amount=0
                 local last_time=redis.call('get',st_key)
                 if(last_time==false)
                 then
                     bucket_amount = capacity - amount;
-                    redis.call('set',KEYS[1],bucket_amount,'PX',key_expire_time)
-                    redis.call('set',st_key,start_time,'PX',key_expire_time)
+                    redis.call('set',KEYS[1],bucket_amount,'PX',val_expire_ms)
+                    redis.call('set',st_key,start_time,'PX',st_expire_ms)
                     ret[2]=bucket_amount
                     return ret
                 end
                 
                 local current_value = redis.call('get',KEYS[1])
                 current_value = tonumber(current_value)
+                if (capacity < current_value) then
+                    current_value = capacity
+                end
                 last_time=tonumber(last_time)
                 local last_time_changed=0
                 local past_time=current_time-last_time
@@ -88,10 +92,10 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 end
 
                 if last_time_changed==1 then
-                    redis.call('set',KEYS[1],bucket_amount,'PX',key_expire_time)
-                    redis.call('set',st_key,last_time,'PX',key_expire_time)
+                    redis.call('set',KEYS[1],bucket_amount,'PX',val_expire_ms)
+                    redis.call('set',st_key,last_time,'PX',st_expire_ms)
                 else
-                    redis.call('set',KEYS[1],bucket_amount,'PX',key_expire_time)
+                    redis.call('set',KEYS[1],bucket_amount,'PX',val_expire_ms)
                 end
                 return ret");
         }

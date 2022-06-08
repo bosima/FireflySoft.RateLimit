@@ -118,10 +118,14 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
 
             var counter = (TokenBucketCounter)cacheItem.Counter;
 
-            // If the rule is changed, the token bucket will not be updated directly.
-            // For example:
-            // After the capacity increases, the number of tokens in the bucket will not increase directly,
+            // If the capacity is reduced to less than the number of remaining tokens,
+            // the tokens that cannot be placed in the bucket are removed.
+            // But after the capacity increases, the number of tokens in the bucket will not increase directly,
             // which will gradually increase with the inflow.
+            if (currentRule.Capacity < counter.Value)
+            {
+                counter.Value = currentRule.Capacity;
+            }
 
             var inflowUnitMilliseconds = currentRule.InflowUnit.TotalMilliseconds;
             var lastInflowTime = counter.LastInflowTime;
