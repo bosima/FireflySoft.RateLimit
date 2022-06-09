@@ -1,20 +1,21 @@
 # FireflySoft.RateLimit　　　　　　　　　　　[English](https://github.com/bosima/FireflySoft.RateLimit)
 
-- [介绍](#介绍)
-- [功能](#功能)
-- [项目说明](#项目说明)
-- [使用说明](#使用说明)
-  - [ASP.NET Core 应用](#aspnet-core-应用)
-  - [ASP.NET 应用](#aspnet-应用)
-  - [其它类型应用](#其它类型应用)
-  - [待办](#待办)
+- [FireflySoft.RateLimit　　　　　　　　　　　English](#fireflysoftratelimitenglish)
+  - [介绍](#介绍)
+  - [功能](#功能)
+  - [项目说明](#项目说明)
+  - [使用说明](#使用说明)
+    - [ASP.NET Core 应用](#aspnet-core-应用)
+    - [ASP.NET 应用](#aspnet-应用)
+    - [其它类型应用](#其它类型应用)
+    - [待办](#待办)
 
 ## 介绍
 FireflySoft.RateLimit 是一个基于 .NET Standard 的限流类库，其内核简单轻巧，能够灵活应对各种需求的限流场景。
 
 ## 功能
 * 多种限流算法：内置固定窗口、滑动窗口、漏桶、令牌桶四种算法，还可自定义扩展。
-* 多种计数存储：目前支持内存、Redis两种存储方式。
+* 多种计数存储：目前支持内存、Redis（含集群）两种存储方式。
 * 分布式友好：通过Redis存储支持分布式程序统一计数。
 * 限流目标灵活：可以从请求中提取各种数据用于设置限流目标。
 * 支持限流惩罚：可以在客户端触发限流后锁定一段时间不允许其访问。
@@ -206,7 +207,5 @@ var result = algorithm.Check(new SimulationRequest()
 SimulationRequest是一个自定义请求，你可以把它修改为任何适合自己的请求类型。
 
 ### 待办
-* 同一个请求中的不同限流规则检查使用同一个当前时间，包括Redis算法中的键值过期处理。 
-* 为进程内各种算法的限流规则变更处理逻辑增加单元测试。
-* 为Redis各种算法增加更多限流规则的属性变更的处理逻辑。
+* 同一个请求中的不同限流规则检查使用同一个当前时间。 
 * 让ASP.NET Core限流中间件返回当前计数信息。

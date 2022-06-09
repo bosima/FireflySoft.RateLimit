@@ -1,20 +1,21 @@
 # FireflySoft.RateLimit　　　　　　　　　　　[中文](https://github.com/bosima/FireflySoft.RateLimit/blob/master/README.zh-CN.md)
 
-- [Introduction](#introduction)
-- [Features](#features)
-- [Projects](#projects)
-- [Usage](#usage)
-  - [ASP.NET Core](#aspnet-core)
-  - [ASP.NET](#aspnet)
-  - [Others](#others)
-  - [Todo List](#todo-list)
+- [FireflySoft.RateLimit　　　　　　　　　　　中文](#fireflysoftratelimit中文)
+  - [Introduction](#introduction)
+  - [Features](#features)
+  - [Projects](#projects)
+  - [Usage](#usage)
+    - [ASP.NET Core](#aspnet-core)
+    - [ASP.NET](#aspnet)
+    - [Others](#others)
+    - [Todo List](#todo-list)
 
 ## Introduction
 Fireflysoft.RateLimit is a rate limiting library based on .Net standard. Its core is simple and lightweight, and can flexibly meet the rate limiting needs of many scenarios.
 
 ## Features
 * Multiple rate limiting algorithms: built-in fixed window, sliding window, leaky bucket, token bucket, and can be extended.
-* Multiple counting storage: memory and Redis.
+* Multiple counting storage: memory and Redis (including cluster).
 * Distributed friendly: Supports unified counting of distributed programs with Redis storage.
 * Flexible rate limiting targets: Each data can be extracted from the request to set rate limiting targets.
 * Support current limit penalty: the client can be locked for a period of time after the rate limit is triggered.
@@ -201,7 +202,5 @@ var result = algorithm.Check(new SimulationRequest()
 SimulationRequest is a custom request that you can modify to any type.
 
 ### Todo List
-* Use the same current time for different rules in the same request, including kv expiration processing in redis algorithm.
-* Add more Unit tests for the rule change processing logic of various algorithms in the process.
-* Add more processing logic for attribute changes of rules for redis algorithms.
+* Use the same current time for different rules in the same request.
 * Let ASP.Net Core rate limiting middleware returns the current count information.
