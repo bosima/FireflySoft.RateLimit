@@ -94,7 +94,7 @@ namespace FireflySoft.RateLimit.Core
         {
             if (_updatable)
             {
-                using (var l = await _mutex.WriterLockAsync())
+                using (var l = await _mutex.WriterLockAsync().ConfigureAwait(false))
                 {
                     if (!_rules.Equals(rules))
                     {
@@ -149,13 +149,13 @@ namespace FireflySoft.RateLimit.Core
         {
             if (_updatable)
             {
-                using (var l = await _mutex.ReaderLockAsync())
+                using (var l = await _mutex.ReaderLockAsync().ConfigureAwait(false))
                 {
-                    return await InnerCheckAsync(request);
+                    return await InnerCheckAsync(request).ConfigureAwait(false);
                 }
             }
 
-            return await InnerCheckAsync(request);
+            return await InnerCheckAsync(request).ConfigureAwait(false);
         }
 
         private void CheckRules(IEnumerable<RateLimitRule> rules)
@@ -199,7 +199,7 @@ namespace FireflySoft.RateLimit.Core
         {
             var originalRuleChecks = CheckAllRulesAsync(request);
             var ruleCheckResults = new List<RuleCheckResult>();
-            await foreach (var result in originalRuleChecks)
+            await foreach (var result in originalRuleChecks.ConfigureAwait(false))
             {
                 ruleCheckResults.Add(result);
             }
@@ -250,7 +250,7 @@ namespace FireflySoft.RateLimit.Core
                 var match = false;
                 if (rule.CheckRuleMatchingAsync != null)
                 {
-                    match = await rule.CheckRuleMatchingAsync(request);
+                    match = await rule.CheckRuleMatchingAsync(request).ConfigureAwait(false);
                 }
                 else
                 {
@@ -262,7 +262,7 @@ namespace FireflySoft.RateLimit.Core
                     string target = string.Empty;
                     if (rule.ExtractTargetAsync != null)
                     {
-                        target = await rule.ExtractTargetAsync(request);
+                        target = await rule.ExtractTargetAsync(request).ConfigureAwait(false);
                     }
                     else
                     {
@@ -276,7 +276,7 @@ namespace FireflySoft.RateLimit.Core
 
                     target = string.Concat(rule.Id, "-", target);
                     target = string.Intern(target);
-                    yield return await CheckSingleRuleAsync(target, rule);
+                    yield return await CheckSingleRuleAsync(target, rule).ConfigureAwait(false);
                 }
             }
         }

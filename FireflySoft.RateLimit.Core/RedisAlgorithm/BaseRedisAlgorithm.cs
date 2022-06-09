@@ -52,9 +52,9 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
             {
                 try
                 {
-                    byte[] sha1 = await luaScript.LoadAsync();
+                    byte[] sha1 = await luaScript.LoadAsync().ConfigureAwait(false);
                     IDatabase dataBase = _redisClient.GetDatabase();
-                    return await dataBase.ScriptEvaluateAsync(sha1, keys, values);
+                    return await dataBase.ScriptEvaluateAsync(sha1, keys, values).ConfigureAwait(false);
                 }
                 catch (RedisServerException exception)
                 {
@@ -152,7 +152,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
             {
                 if (_sha1 == null)
                 {
-                    await _loadLock.WaitAsync();
+                    await _loadLock.WaitAsync().ConfigureAwait(false);
 
                     try
                     {
@@ -166,10 +166,10 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                                 var server = _redisClient.GetServer(endpoint);
                                 if (server.IsConnected)
                                 {
-                                    bool exists = await server.ScriptExistsAsync(tmpSHA1);
+                                    bool exists = await server.ScriptExistsAsync(tmpSHA1).ConfigureAwait(false);
                                     if (!exists)
                                     {
-                                        await server.ScriptLoadAsync(Script);
+                                        await server.ScriptLoadAsync(Script).ConfigureAwait(false);
                                     }
                                 }
                             }

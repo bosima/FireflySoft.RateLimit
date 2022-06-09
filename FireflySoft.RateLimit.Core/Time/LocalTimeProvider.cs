@@ -41,7 +41,7 @@ namespace FireflySoft.RateLimit.Core.Time
         /// <returns></returns>
         public async Task<DateTimeOffset> GetCurrentUtcTimeAsync()
         {
-            return await Task.FromResult(GetCurrentUtcTime());
+            return await Task.FromResult(GetCurrentUtcTime()).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -50,7 +50,7 @@ namespace FireflySoft.RateLimit.Core.Time
         /// <returns></returns>
         public async Task<long> GetCurrentUtcMillisecondsAsync()
         {
-            return await Task.FromResult(GetCurrentUtcMilliseconds());
+            return await Task.FromResult(GetCurrentUtcMilliseconds()).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -59,7 +59,7 @@ namespace FireflySoft.RateLimit.Core.Time
         /// <returns></returns>
         public async Task<DateTimeOffset> GetCurrentLocalTimeAsync()
         {
-            return await Task.FromResult(GetCurrentLocalTime());
+            return await Task.FromResult(GetCurrentLocalTime()).ConfigureAwait(false);
         }
     }
 }

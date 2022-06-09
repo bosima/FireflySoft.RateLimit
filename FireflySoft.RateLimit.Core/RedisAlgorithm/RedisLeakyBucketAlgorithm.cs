@@ -180,11 +180,12 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
 
             // can not call redis TIME command in script
             var outflowUnit = currentRule.OutflowUnit.TotalMilliseconds;
-            var currentTime = await _timeProvider.GetCurrentUtcMillisecondsAsync();
+            var currentTime = await _timeProvider.GetCurrentUtcMillisecondsAsync().ConfigureAwait(false);
             var startTime = AlgorithmStartTime.ToSpecifiedTypeTime(currentTime, TimeSpan.FromMilliseconds(outflowUnit), currentRule.StartTimeType);
 
             var ret = (long[])await EvaluateScriptAsync(_leakyBucketIncrementLuaScript, new RedisKey[] { target },
-                new RedisValue[] { amount, currentRule.Capacity, outflowUnit, currentRule.OutflowQuantityPerUnit, currentTime, startTime, currentRule.LockSeconds });
+                new RedisValue[] { amount, currentRule.Capacity, outflowUnit, currentRule.OutflowQuantityPerUnit, currentTime, startTime, currentRule.LockSeconds })
+                .ConfigureAwait(false);
             return new RuleCheckResult()
             {
                 IsLimit = ret[0] == 0 ? false : true,

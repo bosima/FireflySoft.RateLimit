@@ -149,11 +149,12 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
             var amount = 1;
 
             var inflowUnit = currentRule.InflowUnit.TotalMilliseconds;
-            var currentTime = await _timeProvider.GetCurrentUtcMillisecondsAsync();
+            var currentTime = await _timeProvider.GetCurrentUtcMillisecondsAsync().ConfigureAwait(false);
             var startTime = AlgorithmStartTime.ToSpecifiedTypeTime(currentTime, TimeSpan.FromMilliseconds(inflowUnit), currentRule.StartTimeType);
 
             var ret = (long[])await EvaluateScriptAsync(_tokenBucketDecrementLuaScript, new RedisKey[] { target },
-                new RedisValue[] { amount, currentRule.Capacity, inflowUnit, currentRule.InflowQuantityPerUnit, currentTime, startTime, currentRule.LockSeconds });
+                new RedisValue[] { amount, currentRule.Capacity, inflowUnit, currentRule.InflowQuantityPerUnit, currentTime, startTime, currentRule.LockSeconds })
+                .ConfigureAwait(false);
             var result = new Tuple<bool, long>(ret[0] == 0 ? false : true, ret[1]);
             return new RuleCheckResult()
             {

@@ -167,14 +167,15 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
             var currentRule = rule as SlidingWindowRule;
             var amount = 1;
 
-            var currentTime = await _timeProvider.GetCurrentUtcMillisecondsAsync();
+            var currentTime = await _timeProvider.GetCurrentUtcMillisecondsAsync().ConfigureAwait(false);
             var startTime = AlgorithmStartTime.ToSpecifiedTypeTime(currentTime, currentRule.StatWindow, currentRule.StartTimeType);
             long expireMilliseconds = ((long)currentRule.StatWindow.TotalMilliseconds) * 2;
             long periodMilliseconds = (long)currentRule.StatPeriod.TotalMilliseconds;
 
             var ret = (long[])await EvaluateScriptAsync(_slidingWindowIncrementLuaScript,
                  new RedisKey[] { target },
-                 new RedisValue[] { amount, expireMilliseconds, periodMilliseconds, currentRule.PeriodNumber, currentTime, startTime, currentRule.LimitNumber, currentRule.LockSeconds });
+                 new RedisValue[] { amount, expireMilliseconds, periodMilliseconds, currentRule.PeriodNumber, currentTime, startTime, currentRule.LimitNumber, currentRule.LockSeconds })
+                 .ConfigureAwait(false);
             return new RuleCheckResult()
             {
                 IsLimit = ret[0] == 0 ? false : true,

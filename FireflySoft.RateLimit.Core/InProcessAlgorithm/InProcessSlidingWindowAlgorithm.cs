@@ -65,7 +65,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         /// <returns></returns>
         protected override async Task<RuleCheckResult> CheckSingleRuleAsync(string target, RateLimitRule rule)
         {
-            return await Task.FromResult(CheckSingleRule(target, rule));
+            return await Task.FromResult(CheckSingleRule(target, rule)).ConfigureAwait(false);
         }
 
         private Tuple<bool, long> InnerCheckSingleRule(string target, int amount, SlidingWindowRule currentRule)
