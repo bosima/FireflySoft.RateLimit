@@ -46,7 +46,7 @@ namespace FireflySoft.RateLimit.AspNetCore
         public async Task Invoke(HttpContext context)
         {
             await DoOnBeforeCheck(context, _algorithm).ConfigureAwait(false);
-            var checkResult = await _algorithm.CheckAsync(context);
+            var checkResult = await _algorithm.CheckAsync(context).ConfigureAwait(false);
             SetRateLimitResultHeader(context, checkResult);
             await DoOnAfterCheck(context, checkResult).ConfigureAwait(false);
 
@@ -85,7 +85,7 @@ namespace FireflySoft.RateLimit.AspNetCore
                     await DoLeakyBucketWait(checkResult).ConfigureAwait(false);
                 }
 
-                await _next(context);
+                await _next(context).ConfigureAwait(false);
 
                 await DoOnAfterUntriggeredDoNext(context, checkResult).ConfigureAwait(false);
             }
@@ -187,7 +187,17 @@ namespace FireflySoft.RateLimit.AspNetCore
 
                 if (checkResult.IsLimit)
                 {
-                    context.Response.Headers.AppendCommaSeparatedValues("Retry-After", result.ResetTime.Subtract(DateTimeOffset.Now).TotalSeconds.ToString());
+                    var retryAfter = result.ResetTime.Subtract(DateTimeOffset.Now).TotalSeconds;
+                    if (retryAfter < 1)
+                    {
+                        retryAfter = 1;
+                    }
+                    else
+                    {
+                        retryAfter = Math.Ceiling(retryAfter);
+                    }
+
+                    context.Response.Headers.AppendCommaSeparatedValues("Retry-After", retryAfter.ToString());
                 }
             }
         }

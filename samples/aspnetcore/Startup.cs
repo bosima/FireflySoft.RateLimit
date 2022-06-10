@@ -29,9 +29,9 @@ namespace FireflySoft.RateLimit.AspNetCore.Sample
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            //AddLimitForPerSecond(services);
+            AddLimitForPerSecond(services);
             //AddLimitForTokenBucketPerSecond(services);
-            AddLimitForLeakyBucketPerSecond(services);
+            //AddLimitForLeakyBucketPerSecond(services);
 
             services.AddControllers();
         }
@@ -44,9 +44,9 @@ namespace FireflySoft.RateLimit.AspNetCore.Sample
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseRateLimit();
-
             app.UseRouting();
+
+            app.UseRateLimit();
 
             app.UseAuthorization();
 
@@ -72,8 +72,8 @@ namespace FireflySoft.RateLimit.AspNetCore.Sample
                             return true;
                         },
                         Name="default limit rule",
-                        LimitNumber=30,
-                        StatWindow=TimeSpan.FromSeconds(1)
+                        LimitNumber=10,
+                        StatWindow=TimeSpan.FromSeconds(3)
                     }
                 })
             );
