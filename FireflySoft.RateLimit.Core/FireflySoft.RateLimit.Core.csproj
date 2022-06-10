@@ -7,7 +7,13 @@
     <Version>2.1.0</Version>
     <Authors>bossma</Authors>
     <PackageProjectUrl>https://github.com/bosima/FireflySoft.RateLimit</PackageProjectUrl>
-    <PackageReleaseNotes>Solve the problem of lua script loss after redis restart.</PackageReleaseNotes>
+    <PackageReleaseNotes>
+    Add ConfigureAwait(false) for async method;
+    Improve the processing logic when updating the limit rules;
+    Unified Count value returned by the leaky bucket;
+    Add peek method to view the current count value;
+    Fix some bugs.
+    </PackageReleaseNotes>
     <PackageTags>Rate Limit;Fixed Window;Sliding Window;Leaky Bucket;Token Bucket</PackageTags>
     <Description>
       It is a rate limiting library based on .Net standard.

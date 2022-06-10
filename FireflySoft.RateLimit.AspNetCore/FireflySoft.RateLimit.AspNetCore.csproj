@@ -1,13 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFrameworks>netcoreapp3.1;net5;net6</TargetFrameworks>
     <OutputType>Library</OutputType>
     <PackageId>FireflySoft.RateLimit.AspNetCore</PackageId>
-    <Version>2.0.2-rc1</Version>
+    <Version>2.1.0</Version>
     <Authors>bossma</Authors>
     <PackageProjectUrl>https://github.com/bosima/FireflySoft.RateLimit</PackageProjectUrl>
-    <PackageReleaseNotes>Add an overload to the 'AddRateLimit' method to allow the service instance to be obtained through 'IServiceLocator'.</PackageReleaseNotes>
+    <PackageReleaseNotes>Add an overload to the 'AddRateLimit' method to allow the service instance to be obtained through 'IServiceLocator';
+    Add ConfigureAwait(false) for async method;
+    Upgrade the underlying SDK.
+    </PackageReleaseNotes>
     <PackageTags>ASP.NET Core;Rate Limit;Fixed Window;Sliding Window;Leaky Bucket;Token Bucket</PackageTags>
     <Description>
       A rate limit library for ASP.NET Core.
@@ -16,13 +19,23 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <IsPackable>true</IsPackable>
-    <AssemblyVersion>2.0.2.1</AssemblyVersion>
-    <FileVersion>2.0.2.1</FileVersion>
+    <AssemblyVersion>2.1.0.0</AssemblyVersion>
+    <FileVersion>2.1.0.0</FileVersion>
   </PropertyGroup>
   
   <ItemGroup>
+    <PackageReference Include="ConfigureAwaitChecker.Analyzer" Version="5.0.0.1">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <ProjectReference Include="..\FireflySoft.RateLimit.Core\FireflySoft.RateLimit.Core.csproj">
       <GlobalPropertiesToRemove></GlobalPropertiesToRemove>
     </ProjectReference>
+  </ItemGroup>
+  <PropertyGroup>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include=".\README.md" Pack="true" PackagePath="\"/>
   </ItemGroup>
 </Project>
