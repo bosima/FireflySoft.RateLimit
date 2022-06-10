@@ -45,7 +45,7 @@ namespace FireflySoft.RateLimit.AspNetCore
         public async Task Invoke(HttpContext context)
         {
             await DoOnBeforeCheck(context, _algorithm).ConfigureAwait(false);
-            var checkResult = await _algorithm.CheckAsync(context);
+            var checkResult = await _algorithm.CheckAsync(context).ConfigureAwait(false);
             await DoOnAfterCheck(context, checkResult).ConfigureAwait(false);
 
             if (checkResult.IsLimit)
@@ -83,7 +83,7 @@ namespace FireflySoft.RateLimit.AspNetCore
                     await DoLeakyBucketWait(checkResult).ConfigureAwait(false);
                 }
 
-                await _next(context);
+                await _next(context).ConfigureAwait(false);
 
                 await DoOnAfterUntriggeredDoNext(context, checkResult).ConfigureAwait(false);
             }
