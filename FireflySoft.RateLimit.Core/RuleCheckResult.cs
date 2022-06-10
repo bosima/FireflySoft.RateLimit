@@ -15,10 +15,10 @@ namespace FireflySoft.RateLimit.Core
         public bool IsLimit { get; set; }
 
         /// <summary>
-        /// The current rate limit target
+        /// The time to open the next time window.
         /// </summary>
         /// <value></value>
-        public string Target { get; set; }
+        public DateTimeOffset ResetTime { get; set; }
 
         /// <summary>
         /// The current count
@@ -32,6 +32,12 @@ namespace FireflySoft.RateLimit.Core
         /// </summary>
         /// <value></value>
         public long Wait { get; set; } = -1;
+
+        /// <summary>
+        /// The current rate limit target
+        /// </summary>
+        /// <value></value>
+        public string Target { get; set; }
 
         /// <summary>
         /// The current rule

@@ -19,5 +19,14 @@ namespace FireflySoft.RateLimit.Core.Rule
         /// If less than 0, it means no limit.
         /// </summary>
         public int LimitNumber { get; set; }
+
+        /// <summary>
+        /// Get the rate limit threshold.
+        /// </summary>
+        /// <returns></returns>
+        public override long GetLimitThreshold()
+        {
+            return LimitNumber;
+        }
     }
 }

@@ -41,9 +41,9 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         {
             var expireTime = currentTime.Add(expireTimeSpan);
             var key = $"{target}-lock";
-             _lockDictionary.Set($"{target}-lock", new CounterDictionaryItem<bool>(key, true)
+            _lockDictionary.Set($"{target}-lock", new CounterDictionaryItem<bool>(key, true)
             {
-                ExpireTime= expireTime
+                ExpireTime = expireTime
             });
 
             return true;
@@ -53,12 +53,15 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         /// Check whether the rate limit target is locked
         /// </summary>
         /// <param name="target"></param>
+        /// <param name="expireTime"></param>
         /// <returns></returns>
-        protected bool CheckLocked(string target)
+        protected bool CheckLocked(string target, out DateTimeOffset? expireTime)
         {
+            expireTime = null;
             var key = $"{target}-lock";
-            if (_lockDictionary.TryGet(key,out var item))
+            if (_lockDictionary.TryGet(key, out var item))
             {
+                expireTime = item.ExpireTime;
                 return item.Counter;
             }
 

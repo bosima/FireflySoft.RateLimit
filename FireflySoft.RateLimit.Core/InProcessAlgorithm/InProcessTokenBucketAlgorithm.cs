@@ -75,12 +75,12 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         /// <param name="amount">The amount of decrease</param>
         /// <param name="currentRule">The rate limit rule</param>
         /// <returns>Amount of token in the bucket</returns>
-        public Tuple<bool, long> InnerCheckSingleRule(string target, long amount, TokenBucketRule currentRule)
+        public Tuple<bool, long, DateTimeOffset> InnerCheckSingleRule(string target, long amount, TokenBucketRule currentRule)
         {
-            bool locked = CheckLocked(target);
+            bool locked = CheckLocked(target, out DateTimeOffset? expireTime);
             if (locked)
             {
-                return new Tuple<bool, long>(true, -1);
+                return new Tuple<bool, long, DateTimeOffset>(true, -1, expireTime.Value);
             }
 
             var currentTime = _timeProvider.GetCurrentLocalTime();
@@ -101,7 +101,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                 }
             }
 
-            return Tuple.Create(checkResult, countResult.Item2);
+            return Tuple.Create(checkResult, countResult.Item2, default(DateTimeOffset));
         }
 
         private Tuple<bool, long> Count(string target, long amount, TokenBucketRule currentRule, DateTimeOffset currentTime)

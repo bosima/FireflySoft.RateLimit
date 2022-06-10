@@ -64,5 +64,14 @@ namespace FireflySoft.RateLimit.Core.Rule
             LimitNumber = capacity + outflowQuantityPerUnit;
             MaxDrainTime = TimeSpan.FromMilliseconds(((int)Math.Ceiling(capacity / (double)outflowQuantityPerUnit) + 1) * outflowUnit.TotalMilliseconds);
         }
+
+        /// <summary>
+        /// Get the rate limit threshold.
+        /// </summary>
+        /// <returns></returns>
+        public override long GetLimitThreshold()
+        {
+            return LimitNumber;
+        }
     }
 }

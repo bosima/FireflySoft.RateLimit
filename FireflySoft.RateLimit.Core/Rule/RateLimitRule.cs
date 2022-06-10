@@ -48,5 +48,11 @@ namespace FireflySoft.RateLimit.Core.Rule
         /// Check whether the instance of T matches the rules. For example, you can check the path and HTTP Header in HttpContext.
         /// </summary>
         public Func<object, Task<bool>> CheckRuleMatchingAsync { get; set; }
+
+        /// <summary>
+        /// Get the rate limit threshold.
+        /// </summary>
+        /// <returns></returns>
+        public abstract long GetLimitThreshold();
     }
 }

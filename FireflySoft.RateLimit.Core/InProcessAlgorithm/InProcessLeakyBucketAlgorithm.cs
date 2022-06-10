@@ -76,12 +76,12 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         /// <param name="amount">amount of increase</param>
         /// <param name="currentRule">The current rule</param>
         /// <returns>Amount of request in the bucket</returns>
-        public Tuple<bool, long, long> InnerCheckSingleRule(string target, long amount, LeakyBucketRule currentRule)
+        public Tuple<bool, long, long, DateTimeOffset> InnerCheckSingleRule(string target, long amount, LeakyBucketRule currentRule)
         {
-            bool locked = CheckLocked(target);
+            bool locked = CheckLocked(target, out DateTimeOffset? expireTime);
             if (locked)
             {
-                return Tuple.Create(true, -1L, -1L);
+                return Tuple.Create(true, -1L, -1L, expireTime.Value);
             }
 
             var currentTime = _timeProvider.GetCurrentLocalTime();
@@ -102,7 +102,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                 }
             }
 
-            return Tuple.Create(checkResult, countResult.Item2, countResult.Item3);
+            return Tuple.Create(checkResult, countResult.Item2, countResult.Item3, default(DateTimeOffset));
         }
 
         private Tuple<bool, long, long> Count(string target, long amount, LeakyBucketRule currentRule, DateTimeOffset currentTime)

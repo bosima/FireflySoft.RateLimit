@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
+using FireflySoft.RateLimit.Core.Rule;
 
 namespace FireflySoft.RateLimit.AspNetCore
 {
@@ -46,6 +47,7 @@ namespace FireflySoft.RateLimit.AspNetCore
         {
             await DoOnBeforeCheck(context, _algorithm).ConfigureAwait(false);
             var checkResult = await _algorithm.CheckAsync(context);
+            SetRateLimitResultHeader(context, checkResult);
             await DoOnAfterCheck(context, checkResult).ConfigureAwait(false);
 
             if (checkResult.IsLimit)
@@ -170,6 +172,22 @@ namespace FireflySoft.RateLimit.AspNetCore
                 else if (_interceptor.OnAfterCheck != null)
                 {
                     _interceptor.OnAfterCheck(context, checkResult);
+                }
+            }
+        }
+
+        private void SetRateLimitResultHeader(HttpContext context, AlgorithmCheckResult checkResult)
+        {
+            foreach (var result in checkResult.RuleCheckResults)
+            {
+                var threshold = result.Rule.GetLimitThreshold();
+                context.Response.Headers.AppendCommaSeparatedValues("X-RateLimit-Limit", threshold.ToString());
+                context.Response.Headers.AppendCommaSeparatedValues("X-RateLimit-Remaining", (threshold - result.Count).ToString());
+                context.Response.Headers.AppendCommaSeparatedValues("X-RateLimit-Reset", result.ResetTime.ToUnixTimeSeconds().ToString());
+
+                if (checkResult.IsLimit)
+                {
+                    context.Response.Headers.AppendCommaSeparatedValues("Retry-After", result.ResetTime.Subtract(DateTimeOffset.Now).TotalSeconds.ToString());
                 }
             }
         }

@@ -68,12 +68,12 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             return await Task.FromResult(CheckSingleRule(target, rule)).ConfigureAwait(false);
         }
 
-        private Tuple<bool, long> InnerCheckSingleRule(string target, int amount, SlidingWindowRule currentRule)
+        private Tuple<bool, long, DateTimeOffset> InnerCheckSingleRule(string target, int amount, SlidingWindowRule currentRule)
         {
-            bool locked = CheckLocked(target);
+            bool locked = CheckLocked(target, out DateTimeOffset? expireTime);
             if (locked)
             {
-                return Tuple.Create(true, -1L);
+                return Tuple.Create(true, -1L, expireTime.Value);
             }
 
             // get current time
@@ -123,13 +123,13 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                     {
                         TryLock(target, currentTime, TimeSpan.FromSeconds(currentRule.LockSeconds));
                     }
-                    return Tuple.Create(true, currentTotalAmount);
+                    return Tuple.Create(true, currentTotalAmount, slidingWindowItem.ExpireTime);
                 }
 
                 // increment the count value
                 slidingWindow.IncreamentPeriod(periodIndex, amount);
 
-                return Tuple.Create(false, totalAmount);
+                return Tuple.Create(false, totalAmount, slidingWindowItem.ExpireTime);
             }
         }
     }

@@ -57,5 +57,14 @@ namespace FireflySoft.RateLimit.Core.Rule
             InflowUnit = inflowUnit;
             MinFillTime = TimeSpan.FromMilliseconds(((int)Math.Ceiling(capacity / (double)inflowQuantityPerUnit) + 1) * inflowUnit.TotalMilliseconds);
         }
+
+        /// <summary>
+        /// Get the rate limit threshold.
+        /// </summary>
+        /// <returns></returns>
+        public override long GetLimitThreshold()
+        {
+            return Capacity;
+        }
     }
 }

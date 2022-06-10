@@ -65,5 +65,14 @@ namespace FireflySoft.RateLimit.Core.Rule
 
             _periodNumber = (int)(StatWindow.TotalMilliseconds / StatPeriod.TotalMilliseconds);
         }
+
+        /// <summary>
+        /// Get the rate limit threshold.
+        /// </summary>
+        /// <returns></returns>
+        public override long GetLimitThreshold()
+        {
+            return LimitNumber;
+        }
     }
 }

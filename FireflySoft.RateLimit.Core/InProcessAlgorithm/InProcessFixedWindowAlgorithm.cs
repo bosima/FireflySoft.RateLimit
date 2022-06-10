@@ -60,9 +60,10 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             return new RuleCheckResult()
             {
                 IsLimit = result.Item1,
-                Target = target,
                 Count = result.Item2,
-                Rule = rule
+                ResetTime = result.Item3,
+                Target = target,
+                Rule = rule,
             };
         }
 
@@ -77,16 +78,16 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             return await Task.FromResult(CheckSingleRule(target, rule)).ConfigureAwait(false);
         }
 
-        private Tuple<bool, long> InnerCheckSingleRule(string target, int amount, FixedWindowRule currentRule)
+        private Tuple<bool, long, DateTimeOffset> InnerCheckSingleRule(string target, int amount, FixedWindowRule currentRule)
         {
-            bool locked = CheckLocked(target);
+            bool locked = CheckLocked(target, out DateTimeOffset? expireTime);
             if (locked)
             {
-                return Tuple.Create(true, -1L);
+                return Tuple.Create(true, -1L, expireTime.Value);
             }
 
             var currentTime = _timeProvider.GetCurrentLocalTime();
-            Tuple<bool, long> countResult;
+            Tuple<bool, long, DateTimeOffset> countResult;
             lock (target)
             {
                 countResult = Count(target, amount, currentTime, currentRule);
@@ -102,12 +103,12 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                 }
             }
 
-            return Tuple.Create(checkResult, countResult.Item2);
+            return Tuple.Create(checkResult, countResult.Item2, countResult.Item3);
         }
 
         private Tuple<bool, long> InnerPeekSingleRule(string target, FixedWindowRule currentRule)
         {
-            bool locked = CheckLocked(target);
+            bool locked = CheckLocked(target, out DateTimeOffset? expireTime);
             if (locked)
             {
                 return Tuple.Create(true, -1L);
@@ -137,7 +138,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         /// <param name="currentTime"></param>
         /// <param name="currentRule"></param>
         /// <returns></returns>
-        private Tuple<bool, long> Count(string target, long amount, DateTimeOffset currentTime, FixedWindowRule currentRule)
+        private Tuple<bool, long, DateTimeOffset> Count(string target, long amount, DateTimeOffset currentTime, FixedWindowRule currentRule)
         {
             FixedWindowCounter counter;
 
@@ -174,13 +175,13 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             // check rate limiting threshold
             if (currentRule.LimitNumber >= 0 && counter.Value >= currentRule.LimitNumber)
             {
-                return Tuple.Create(true, counter.Value);
+                return Tuple.Create(true, counter.Value, cacheItem.ExpireTime);
             }
 
             // just increment the counter
             counter.Value += amount;
 
-            return Tuple.Create(false, counter.Value);
+            return Tuple.Create(false, counter.Value, cacheItem.ExpireTime);
         }
 
         private CounterDictionaryItem<FixedWindowCounter> CreateWindow(string target, DateTimeOffset currentTime, FixedWindowRule currentRule)
