@@ -119,7 +119,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         /// Gets the period index of the current time in the sliding window
         /// </summary>
         /// <returns></returns>
-        public int LoadPeriod(long currentMilliseconds)
+        public (int periodIndex, long periodId) LoadPeriod(long currentMilliseconds)
         {
             var currentPeriodResult = GetCurrentPeriod(currentMilliseconds);
             var currentPeriod = currentPeriodResult.Item1;
@@ -136,13 +136,13 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                     CountValue = 0
                 };
                 _queue[_tail] = firstPeriod;
-                return _tail;
+                return (_tail, firstPeriod.Key);
             }
 
             // The current period is exactly corresponding to the tail of the queue
             if (currentPeriod == tailPeriod.Key)
             {
-                return _tail;
+                return (_tail, tailPeriod.Key);
             }
 
             // In the case of high concurrency, the previous period may be obtained
@@ -152,12 +152,12 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                 int index = _tail;
                 index--;
                 if (index < 0) index += _length;
-                return index;
+                return (index, _queue[index].Key);
             }
 
             // if 'currentPeriod' greater than the last period, we need create new period
             CreatePastPeriod(pastPeriods, tailPeriod);
-            return _tail;
+            return (_tail, _queue[_tail].Key);
         }
 
         private void CreatePastPeriod(int pastPeriods, SlidingWindowPeriod lastPeriod)

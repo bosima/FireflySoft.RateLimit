@@ -54,7 +54,8 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                 Target = target,
                 Count = result.Item2,
                 Rule = rule,
-                Wait = result.Item3
+                Wait = result.Item3,
+                ResetTime = result.Item4,
             };
         }
 
@@ -85,7 +86,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             }
 
             var currentTime = _timeProvider.GetCurrentLocalTime();
-            Tuple<bool, long, long> countResult;
+            Tuple<bool, long, long, DateTimeOffset> countResult;
 
             lock (target)
             {
@@ -102,15 +103,15 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                 }
             }
 
-            return Tuple.Create(checkResult, countResult.Item2, countResult.Item3, default(DateTimeOffset));
+            return Tuple.Create(checkResult, countResult.Item2, countResult.Item3, countResult.Item4);
         }
 
-        private Tuple<bool, long, long> Count(string target, long amount, LeakyBucketRule currentRule, DateTimeOffset currentTime)
+        private Tuple<bool, long, long, DateTimeOffset> Count(string target, long amount, LeakyBucketRule currentRule, DateTimeOffset currentTime)
         {
             if (!_leakyBuckets.TryGet(target, out var cacheItem))
             {
-                AddNewCounter(target, amount, currentRule, currentTime);
-                return Tuple.Create(false, amount, 0L);
+                cacheItem = AddNewBucket(target, amount, currentRule, currentTime);
+                return Tuple.Create(false, amount, 0L, cacheItem.Counter.LastFlowOutTime.Add(currentRule.OutflowUnit));
             }
 
             var counter = (LeakyBucketCounter)cacheItem.Counter;
@@ -148,7 +149,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             if (countValue <= currentRule.OutflowQuantityPerUnit)
             {
                 counter.Value = countValue;
-                return Tuple.Create(false, countValue, 0L);
+                return Tuple.Create(false, countValue, 0L, counter.LastFlowOutTime.Add(currentRule.OutflowUnit));
             }
 
             // Trigger rate limiting
@@ -156,17 +157,17 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             if (countValue > currentRule.LimitNumber)
             {
                 countValue = countValue - amount;
-                return Tuple.Create(true, countValue, -1L);
+                return Tuple.Create(true, countValue, -1L, counter.LastFlowOutTime.Add(currentRule.OutflowUnit));
             }
 
             counter.Value = countValue;
 
             // The requests in the leaky bucket will be processed after one or more time windows.
             long wait = CalculateWaitTime(currentRule.OutflowQuantityPerUnit, outflowUnitMilliseconds, pastMilliseconds, countValue);
-            return Tuple.Create(false, countValue, wait);
+            return Tuple.Create(false, countValue, wait, counter.LastFlowOutTime.Add(currentRule.OutflowUnit));
         }
 
-        private LeakyBucketCounter AddNewCounter(string target, long amount, LeakyBucketRule currentRule, DateTimeOffset currentTime)
+        private CounterDictionaryItem<LeakyBucketCounter> AddNewBucket(string target, long amount, LeakyBucketRule currentRule, DateTimeOffset currentTime)
         {
             var startTime = AlgorithmStartTime.ToSpecifiedTypeTime(currentTime, currentRule.OutflowUnit, currentRule.StartTimeType);
             var counter = new LeakyBucketCounter()
@@ -175,12 +176,12 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                 LastFlowOutTime = startTime,
             };
             DateTimeOffset expireTime = startTime.Add(currentRule.MaxDrainTime);
-            _leakyBuckets.Set(target, new CounterDictionaryItem<LeakyBucketCounter>(target, counter)
+            var cacheItem = new CounterDictionaryItem<LeakyBucketCounter>(target, counter)
             {
                 ExpireTime = expireTime
-            });
-
-            return counter;
+            };
+            _leakyBuckets.Set(target, cacheItem);
+            return cacheItem;
         }
 
         private static long CalculateWaitTime(long outflowQuantityPerUnit, long outflowUnit, double pastTimeMilliseconds, long countValue)

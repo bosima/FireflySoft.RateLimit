@@ -53,7 +53,8 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                 IsLimit = result.Item1,
                 Target = target,
                 Count = result.Item2,
-                Rule = rule
+                Rule = rule,
+                ResetTime = result.Item3,
             };
         }
 
@@ -112,7 +113,9 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                 slidingWindow.ResetIfRuleChanged(currentRule);
 
                 // maybe replace a period, so call it first
-                var periodIndex = slidingWindow.LoadPeriod(currentMilliseconds);
+                var period = slidingWindow.LoadPeriod(currentMilliseconds);
+                var periodIndex = period.periodIndex;
+                var periodId = period.periodId;
 
                 // compare the count and the threshold
                 var currentTotalAmount = slidingWindow.GetCount();
@@ -123,13 +126,13 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                     {
                         TryLock(target, currentTime, TimeSpan.FromSeconds(currentRule.LockSeconds));
                     }
-                    return Tuple.Create(true, currentTotalAmount, slidingWindowItem.ExpireTime);
+                    return Tuple.Create(true, currentTotalAmount, DateTimeOffset.FromUnixTimeMilliseconds(periodId + 1));
                 }
 
                 // increment the count value
                 slidingWindow.IncreamentPeriod(periodIndex, amount);
 
-                return Tuple.Create(false, totalAmount, slidingWindowItem.ExpireTime);
+                return Tuple.Create(false, totalAmount, DateTimeOffset.FromUnixTimeMilliseconds(periodId + 1));
             }
         }
     }

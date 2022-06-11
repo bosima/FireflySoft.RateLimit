@@ -182,11 +182,21 @@ namespace FireflySoft.RateLimit.AspNetCore
             {
                 var threshold = result.Rule.GetLimitThreshold();
                 context.Response.Headers.AppendCommaSeparatedValues("X-RateLimit-Limit", threshold.ToString());
-                context.Response.Headers.AppendCommaSeparatedValues("X-RateLimit-Remaining", (threshold - result.Count).ToString());
+
+                if (result.Rule is TokenBucketRule)
+                {
+                    context.Response.Headers.AppendCommaSeparatedValues("X-RateLimit-Remaining", (result.Count < 0 ? 0 : result.Count).ToString());
+                }
+                else
+                {
+                    context.Response.Headers.AppendCommaSeparatedValues("X-RateLimit-Remaining", (threshold - result.Count).ToString());
+                }
+
                 context.Response.Headers.AppendCommaSeparatedValues("X-RateLimit-Reset", result.ResetTime.ToUnixTimeSeconds().ToString());
 
                 if (checkResult.IsLimit)
                 {
+                    // todo: use lock seconds
                     var retryAfter = result.ResetTime.Subtract(DateTimeOffset.Now).TotalSeconds;
                     if (retryAfter < 1)
                     {

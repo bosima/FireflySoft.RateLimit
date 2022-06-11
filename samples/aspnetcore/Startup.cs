@@ -29,7 +29,8 @@ namespace FireflySoft.RateLimit.AspNetCore.Sample
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            AddLimitForPerSecond(services);
+            //AddLimitForFixedWindowPerSecond(services);
+            AddLimitForSlidingWindowPerSecond(services);
             //AddLimitForTokenBucketPerSecond(services);
             //AddLimitForLeakyBucketPerSecond(services);
 
@@ -44,9 +45,9 @@ namespace FireflySoft.RateLimit.AspNetCore.Sample
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseRouting();
-
             app.UseRateLimit();
+
+            app.UseRouting();
 
             app.UseAuthorization();
 
@@ -56,7 +57,7 @@ namespace FireflySoft.RateLimit.AspNetCore.Sample
             });
         }
 
-        private void AddLimitForPerSecond(IServiceCollection app)
+        private void AddLimitForFixedWindowPerSecond(IServiceCollection app)
         {
             app.AddRateLimit(new InProcessFixedWindowAlgorithm(
                 new[] {
@@ -79,11 +80,32 @@ namespace FireflySoft.RateLimit.AspNetCore.Sample
             );
         }
 
+        private void AddLimitForSlidingWindowPerSecond(IServiceCollection app)
+        {
+            app.AddRateLimit(new InProcessSlidingWindowAlgorithm(
+                new[] {
+                    new SlidingWindowRule(TimeSpan.FromMilliseconds(3000),TimeSpan.FromMilliseconds(1000))
+                    {
+                        LimitNumber=40,
+                        ExtractTarget = context =>
+                        {
+                            return (context as HttpContext).Request.Path.Value;
+                        },
+                        CheckRuleMatching = context =>
+                        {
+                            return true;
+                        },
+                        Name="default limit rule",
+                    }
+                })
+            );
+        }
+
         private void AddLimitForTokenBucketPerSecond(IServiceCollection app)
         {
             app.AddRateLimit(new InProcessTokenBucketAlgorithm(
                 new[] {
-                    new TokenBucketRule(20,10,TimeSpan.FromSeconds(1))
+                    new TokenBucketRule(10,10,TimeSpan.FromSeconds(3))
                     {
                         ExtractTarget = context =>
                         {
@@ -103,7 +125,7 @@ namespace FireflySoft.RateLimit.AspNetCore.Sample
         {
             app.AddRateLimit(new InProcessLeakyBucketAlgorithm(
                 new[] {
-                    new LeakyBucketRule(20,10,TimeSpan.FromSeconds(1))
+                    new LeakyBucketRule(10,10,TimeSpan.FromSeconds(3))
                     {
                         ExtractTarget = context =>
                         {
