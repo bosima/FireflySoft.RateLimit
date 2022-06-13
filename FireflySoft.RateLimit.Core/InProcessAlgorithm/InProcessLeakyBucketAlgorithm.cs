@@ -50,12 +50,12 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             var result = InnerCheckSingleRule(target, amount, currentRule);
             return new RuleCheckResult()
             {
-                IsLimit = result.Item1,
+                IsLimit = result.IsLimit,
                 Target = target,
-                Count = result.Item2,
+                Count = result.Count,
                 Rule = rule,
-                Wait = result.Item3,
-                ResetTime = result.Item4,
+                Wait = result.Wait,
+                ResetTime = result.ResetTime,
             };
         }
 
@@ -77,16 +77,16 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         /// <param name="amount">amount of increase</param>
         /// <param name="currentRule">The current rule</param>
         /// <returns>Amount of request in the bucket</returns>
-        public Tuple<bool, long, long, DateTimeOffset> InnerCheckSingleRule(string target, long amount, LeakyBucketRule currentRule)
+        public (bool IsLimit, long Count, long Wait, DateTimeOffset ResetTime) InnerCheckSingleRule(string target, long amount, LeakyBucketRule currentRule)
         {
             bool locked = CheckLocked(target, out DateTimeOffset? expireTime);
             if (locked)
             {
-                return Tuple.Create(true, -1L, -1L, expireTime.Value);
+                return (true, -1L, -1L, expireTime.Value);
             }
 
             var currentTime = _timeProvider.GetCurrentLocalTime();
-            Tuple<bool, long, long, DateTimeOffset> countResult;
+            (bool IsLimit, long Count, long Wait, DateTimeOffset ResetTime) countResult;
 
             lock (target)
             {
@@ -94,24 +94,26 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             }
 
             // do free lock
-            var checkResult = countResult.Item1;
+            var checkResult = countResult.IsLimit;
             if (checkResult)
             {
                 if (currentRule.LockSeconds > 0)
                 {
-                    TryLock(target, currentTime, TimeSpan.FromSeconds(currentRule.LockSeconds));
+                    expireTime = currentTime.AddSeconds(currentRule.LockSeconds);
+                    TryLock(target, expireTime.Value);
+                    return (true, countResult.Count, -1L, expireTime.Value);
                 }
             }
 
-            return Tuple.Create(checkResult, countResult.Item2, countResult.Item3, countResult.Item4);
+            return countResult;
         }
 
-        private Tuple<bool, long, long, DateTimeOffset> Count(string target, long amount, LeakyBucketRule currentRule, DateTimeOffset currentTime)
+        private (bool IsLimit, long Count, long Wait, DateTimeOffset ResetTime) Count(string target, long amount, LeakyBucketRule currentRule, DateTimeOffset currentTime)
         {
             if (!_leakyBuckets.TryGet(target, out var cacheItem))
             {
                 cacheItem = AddNewBucket(target, amount, currentRule, currentTime);
-                return Tuple.Create(false, amount, 0L, cacheItem.Counter.LastFlowOutTime.Add(currentRule.OutflowUnit));
+                return (false, amount, 0L, cacheItem.Counter.LastFlowOutTime.Add(currentRule.OutflowUnit));
             }
 
             var counter = (LeakyBucketCounter)cacheItem.Counter;
@@ -149,7 +151,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             if (countValue <= currentRule.OutflowQuantityPerUnit)
             {
                 counter.Value = countValue;
-                return Tuple.Create(false, countValue, 0L, counter.LastFlowOutTime.Add(currentRule.OutflowUnit));
+                return (false, countValue, 0L, counter.LastFlowOutTime.Add(currentRule.OutflowUnit));
             }
 
             // Trigger rate limiting
@@ -157,14 +159,14 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             if (countValue > currentRule.LimitNumber)
             {
                 countValue = countValue - amount;
-                return Tuple.Create(true, countValue, -1L, counter.LastFlowOutTime.Add(currentRule.OutflowUnit));
+                return (true, countValue, -1L, counter.LastFlowOutTime.Add(currentRule.OutflowUnit));
             }
 
             counter.Value = countValue;
 
             // The requests in the leaky bucket will be processed after one or more time windows.
             long wait = CalculateWaitTime(currentRule.OutflowQuantityPerUnit, outflowUnitMilliseconds, pastMilliseconds, countValue);
-            return Tuple.Create(false, countValue, wait, counter.LastFlowOutTime.Add(currentRule.OutflowUnit));
+            return (false, countValue, wait, counter.LastFlowOutTime.Add(currentRule.OutflowUnit));
         }
 
         private CounterDictionaryItem<LeakyBucketCounter> AddNewBucket(string target, long amount, LeakyBucketRule currentRule, DateTimeOffset currentTime)

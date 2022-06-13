@@ -17,7 +17,7 @@ namespace FireflySoft.RateLimit.Core.Test
         [DataTestMethod]
         public void Common()
         {
-            var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 0);
+            var processor = GetAlgorithm(20, 10, TimeSpan.FromSeconds(1), 0);
 
             for (int i = 1; i <= 80; i++)
             {
@@ -30,7 +30,7 @@ namespace FireflySoft.RateLimit.Core.Test
                         }
                 });
 
-                if (i == 31 || i == 42 || i >= 53)
+                if (i == 21 || i == 32 || i >= 43)
                 {
                     Assert.AreEqual(true, checkResult.IsLimit);
                 }
@@ -39,7 +39,7 @@ namespace FireflySoft.RateLimit.Core.Test
                     Assert.AreEqual(false, checkResult.IsLimit);
                 }
 
-                if (i == 31 || i == 42)
+                if (i == 21 || i == 32)
                 {
                     Thread.Sleep(1000);
                 }
@@ -211,7 +211,7 @@ namespace FireflySoft.RateLimit.Core.Test
         [DataTestMethod]
         public async Task CommonAsync()
         {
-            var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 1);
+            var processor = GetAlgorithm(20, 10, TimeSpan.FromSeconds(1), 0);
 
             for (int i = 1; i <= 80; i++)
             {
@@ -224,7 +224,7 @@ namespace FireflySoft.RateLimit.Core.Test
                         }
                 });
 
-                if (i == 31 || i == 42 || i >= 53)
+                if (i == 21 || i == 32 || i >= 43)
                 {
                     Assert.AreEqual(true, checkResult.IsLimit);
                 }
@@ -233,7 +233,7 @@ namespace FireflySoft.RateLimit.Core.Test
                     Assert.AreEqual(false, checkResult.IsLimit);
                 }
 
-                if (i == 31 || i == 42)
+                if (i == 21 || i == 32)
                 {
                     await Task.Delay(1000);
                 }

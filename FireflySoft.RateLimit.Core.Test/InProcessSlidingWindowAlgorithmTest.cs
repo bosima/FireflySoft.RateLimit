@@ -20,8 +20,6 @@ namespace FireflySoft.RateLimit.Core.Test
 
             for (int i = 1; i <= 15; i++)
             {
-                stubTimeProvider.Increment();
-
                 int j = 3;
                 if (i == 7 || i == 10)
                 {
@@ -40,6 +38,8 @@ namespace FireflySoft.RateLimit.Core.Test
                         }
                     });
                 }
+
+                Console.WriteLine($"{checkResult.IsLimit},{checkResult.RuleCheckResults.First().Count}");
 
                 if (i == 7 || i == 10)
                 {

@@ -180,13 +180,13 @@ namespace FireflySoft.RateLimit.Core.Test
         [DataTestMethod]
         public void StartTimeType_FromNaturalPeriodBeign_Common()
         {
-            var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromNaturalPeriodBeign);
+            var processor = GetAlgorithm(20, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromNaturalPeriodBeign);
 
             while (true)
             {
-                if (DateTimeOffset.Now.Millisecond < 800)
+                if (DateTimeOffset.Now.Millisecond < 600)
                 {
-                    Thread.Sleep(20);
+                   Thread.Sleep(15);
                     continue;
                 }
                 break;
@@ -203,7 +203,7 @@ namespace FireflySoft.RateLimit.Core.Test
                         }
                 });
 
-                if (i == 41 || i == 52 || i >= 63)
+                if (i == 31 || i == 42 || i >= 53)
                 {
                     Assert.AreEqual(true, checkResult.IsLimit);
                 }
@@ -212,12 +212,12 @@ namespace FireflySoft.RateLimit.Core.Test
                     Assert.AreEqual(false, checkResult.IsLimit);
                 }
 
-                if (i == 41)
+                if (i == 31)
                 {
-                    Thread.Sleep(200);
+                    Thread.Sleep(400);
                 }
 
-                if (i == 52)
+                if (i == 42)
                 {
                     Thread.Sleep(1000);
                 }
@@ -755,13 +755,13 @@ namespace FireflySoft.RateLimit.Core.Test
         [DataTestMethod]
         public async Task StartTimeTypeAsync_FromNaturalPeriodBeign_Common()
         {
-            var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromNaturalPeriodBeign);
+            var processor = GetAlgorithm(20, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromNaturalPeriodBeign);
 
             while (true)
             {
-                if (DateTimeOffset.Now.Millisecond < 800)
+                if (DateTimeOffset.Now.Millisecond < 600)
                 {
-                    SpinWait.SpinUntil(() => { return false; }, 20);
+                    Thread.Sleep(15);
                     continue;
                 }
                 break;
@@ -778,7 +778,7 @@ namespace FireflySoft.RateLimit.Core.Test
                         }
                 });
 
-                if (i == 41 || i == 52 || i >= 63)
+                if (i == 31 || i == 42 || i >= 53)
                 {
                     Assert.AreEqual(true, checkResult.IsLimit);
                 }
@@ -787,12 +787,12 @@ namespace FireflySoft.RateLimit.Core.Test
                     Assert.AreEqual(false, checkResult.IsLimit);
                 }
 
-                if (i == 41)
+                if (i == 31)
                 {
-                    Thread.Sleep(200);
+                    Thread.Sleep(400);
                 }
 
-                if (i == 52)
+                if (i == 42)
                 {
                     Thread.Sleep(1000);
                 }

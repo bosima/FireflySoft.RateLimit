@@ -50,6 +50,22 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         }
 
         /// <summary>
+        /// Lock the rate limit target until the expiration time, when triggering the rate limit rule.
+        /// </summary>
+        /// <param name="target"></param>
+        /// <param name="expireTime"></param>
+        protected bool TryLock(string target, DateTimeOffset expireTime)
+        {
+            var key = $"{target}-lock";
+            _lockDictionary.Set(key, new CounterDictionaryItem<bool>(key, true)
+            {
+                ExpireTime = expireTime
+            });
+
+            return true;
+        }
+
+        /// <summary>
         /// Check whether the rate limit target is locked
         /// </summary>
         /// <param name="target"></param>

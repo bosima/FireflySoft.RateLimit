@@ -50,11 +50,11 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             var result = InnerCheckSingleRule(target, amount, currentRule);
             return new RuleCheckResult()
             {
-                IsLimit = result.Item1,
+                IsLimit = result.IsLimit,
                 Target = target,
-                Count = result.Item2,
+                Count = result.Count,
                 Rule = rule,
-                ResetTime = result.Item3,
+                ResetTime = result.ResetTime,
             };
         }
 
@@ -69,12 +69,12 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             return await Task.FromResult(CheckSingleRule(target, rule)).ConfigureAwait(false);
         }
 
-        private Tuple<bool, long, DateTimeOffset> InnerCheckSingleRule(string target, int amount, SlidingWindowRule currentRule)
+        private (bool IsLimit, long Count, DateTimeOffset ResetTime) InnerCheckSingleRule(string target, int amount, SlidingWindowRule currentRule)
         {
             bool locked = CheckLocked(target, out DateTimeOffset? expireTime);
             if (locked)
             {
-                return Tuple.Create(true, -1L, expireTime.Value);
+                return (true, -1L, expireTime.Value);
             }
 
             // get current time
@@ -124,15 +124,20 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                 {
                     if (currentRule.LockSeconds > 0)
                     {
-                        TryLock(target, currentTime, TimeSpan.FromSeconds(currentRule.LockSeconds));
+                        expireTime = currentTime.AddSeconds(currentRule.LockSeconds);
+                        TryLock(target, expireTime.Value);
+                        return (true, currentTotalAmount, expireTime.Value);
                     }
-                    return Tuple.Create(true, currentTotalAmount, DateTimeOffset.FromUnixTimeMilliseconds(periodId + 1));
+                    else
+                    {
+                        return (true, currentTotalAmount, DateTimeOffset.FromUnixTimeMilliseconds(periodId + 1));
+                    }
                 }
 
                 // increment the count value
                 slidingWindow.IncreamentPeriod(periodIndex, amount);
 
-                return Tuple.Create(false, totalAmount, DateTimeOffset.FromUnixTimeMilliseconds(periodId + 1));
+                return (false, totalAmount, DateTimeOffset.FromUnixTimeMilliseconds(periodId + 1));
             }
         }
     }

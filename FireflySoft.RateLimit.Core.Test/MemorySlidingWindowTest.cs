@@ -15,7 +15,7 @@ namespace FireflySoft.RateLimit.Core.Test
             MemorySlidingWindow slidingWindow = new MemorySlidingWindow(rule);
             for (int i = 1; i <= 1000; i++)
             {
-                var periodIndex = slidingWindow.LoadPeriod(1637459743000);
+                var (periodIndex,periodId) = slidingWindow.LoadPeriod(1637459743000);
                 Assert.AreEqual(0, periodIndex);
             }
         }
@@ -31,7 +31,7 @@ namespace FireflySoft.RateLimit.Core.Test
             {
                 for (int i = 1; i <= 1000; i++)
                 {
-                    var periodIndex = slidingWindow.LoadPeriod(startTime);
+                    var (periodIndex,periodId) = slidingWindow.LoadPeriod(startTime);
                     Assert.AreEqual(j - 1, periodIndex);
                 }
 
@@ -46,7 +46,7 @@ namespace FireflySoft.RateLimit.Core.Test
             MemorySlidingWindow slidingWindow = new MemorySlidingWindow(rule);
             for (int i = 1; i <= 1000; i++)
             {
-                var periodIndex = slidingWindow.LoadPeriod(1637459743000);
+                var (periodIndex,periodId) = slidingWindow.LoadPeriod(1637459743000);
                 var countValue = slidingWindow.IncreamentPeriod(periodIndex, 1);
                 Assert.AreEqual(i, countValue);
             }
@@ -59,7 +59,7 @@ namespace FireflySoft.RateLimit.Core.Test
             MemorySlidingWindow slidingWindow = new MemorySlidingWindow(rule);
             for (int i = 1; i <= 1000; i++)
             {
-                var periodIndex = slidingWindow.LoadPeriod(1637459743000);
+                var (periodIndex,periodId) = slidingWindow.LoadPeriod(1637459743000);
                 slidingWindow.IncreamentPeriod(periodIndex, 1);
             }
 
@@ -78,7 +78,7 @@ namespace FireflySoft.RateLimit.Core.Test
             {
                 for (int i = 1; i <= 1000; i++)
                 {
-                    var periodIndex = slidingWindow.LoadPeriod(startTime);
+                    var (periodIndex,periodId) = slidingWindow.LoadPeriod(startTime);
                     var countValue = slidingWindow.IncreamentPeriod(periodIndex, 1);
                     Assert.AreEqual(i, countValue);
                 }
@@ -98,7 +98,7 @@ namespace FireflySoft.RateLimit.Core.Test
             {
                 for (int i = 1; i <= 1000; i++)
                 {
-                    var periodIndex = slidingWindow.LoadPeriod(startTime);
+                    var (periodIndex,periodId) = slidingWindow.LoadPeriod(startTime);
                     slidingWindow.IncreamentPeriod(periodIndex, 1);
                 }
 
@@ -122,7 +122,7 @@ namespace FireflySoft.RateLimit.Core.Test
                 {
                     for (int i = 1; i <= 1000; i++)
                     {
-                        var periodIndex = slidingWindow.LoadPeriod(startTime);
+                        var (periodIndex,periodId) = slidingWindow.LoadPeriod(startTime);
                         slidingWindow.IncreamentPeriod(periodIndex, 1);
                     }
                 }
@@ -130,7 +130,7 @@ namespace FireflySoft.RateLimit.Core.Test
                 {
                     for (int i = 1; i <= 500; i++)
                     {
-                        var periodIndex = slidingWindow.LoadPeriod(startTime);
+                        var (periodIndex,periodId) = slidingWindow.LoadPeriod(startTime);
                         slidingWindow.IncreamentPeriod(periodIndex, 1);
                     }
                 }

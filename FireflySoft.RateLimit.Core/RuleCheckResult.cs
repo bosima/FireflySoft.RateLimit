@@ -15,13 +15,16 @@ namespace FireflySoft.RateLimit.Core
         public bool IsLimit { get; set; }
 
         /// <summary>
-        /// The time to open the next time window.
+        /// The time to open the next time window,
+        /// or the time when the rate limiting lock ends.
         /// </summary>
         /// <value></value>
         public DateTimeOffset ResetTime { get; set; }
 
         /// <summary>
-        /// The current count
+        /// The number of requests passed in the current time window.
+        /// But when token bucket algorithm, it is the number of tokens remaining in the token bucket.
+        /// It needs to be changed in the future. Two new fields may be added.
         /// </summary>
         /// <value></value>
         public long Count { get; set; }

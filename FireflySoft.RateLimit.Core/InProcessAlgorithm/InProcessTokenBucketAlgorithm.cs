@@ -50,11 +50,11 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             var result = InnerCheckSingleRule(target, amount, currentRule);
             return new RuleCheckResult()
             {
-                IsLimit = result.Item1,
+                IsLimit = result.IsLimit,
                 Target = target,
-                Count = result.Item2,
+                Count = result.Remaining,
                 Rule = rule,
-                ResetTime = result.Item3,
+                ResetTime = result.ResetTime,
             };
         }
 
@@ -76,16 +76,16 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         /// <param name="amount">The amount of decrease</param>
         /// <param name="currentRule">The rate limit rule</param>
         /// <returns>Amount of token in the bucket</returns>
-        public Tuple<bool, long, DateTimeOffset> InnerCheckSingleRule(string target, long amount, TokenBucketRule currentRule)
+        public (bool IsLimit, long Remaining, DateTimeOffset ResetTime) InnerCheckSingleRule(string target, long amount, TokenBucketRule currentRule)
         {
             bool locked = CheckLocked(target, out DateTimeOffset? expireTime);
             if (locked)
             {
-                return new Tuple<bool, long, DateTimeOffset>(true, -1, expireTime.Value);
+                return (true, -1, expireTime.Value);
             }
 
             var currentTime = _timeProvider.GetCurrentLocalTime();
-            Tuple<bool, long, DateTimeOffset> countResult;
+            (bool IsLimit, long Remaining, DateTimeOffset ExpireTime) countResult;
 
             lock (target)
             {
@@ -98,14 +98,16 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             {
                 if (currentRule.LockSeconds > 0)
                 {
-                    TryLock(target, currentTime, TimeSpan.FromSeconds(currentRule.LockSeconds));
+                    expireTime = currentTime.AddSeconds(currentRule.LockSeconds);
+                    TryLock(target, expireTime.Value);
+                    return (true, countResult.Remaining, expireTime.Value);
                 }
             }
 
-            return Tuple.Create(checkResult, countResult.Item2, countResult.Item3);
+            return countResult;
         }
 
-        private Tuple<bool, long, DateTimeOffset> Count(string target, long amount, TokenBucketRule currentRule, DateTimeOffset currentTime)
+        private (bool IsLimit, long Remaining, DateTimeOffset ExpireTime) Count(string target, long amount, TokenBucketRule currentRule, DateTimeOffset currentTime)
         {
             long bucketAmount = 0;
 
@@ -114,7 +116,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                 // In the initial state, the bucket is full
                 bucketAmount = currentRule.Capacity - amount;
                 cacheItem = AddNewBucket(target, bucketAmount, currentRule, currentTime);
-                return Tuple.Create(false, bucketAmount, cacheItem.Counter.LastInflowTime.Add(currentRule.InflowUnit));
+                return (false, bucketAmount, cacheItem.Counter.LastInflowTime.Add(currentRule.InflowUnit));
             }
 
             var counter = (TokenBucketCounter)cacheItem.Counter;
@@ -152,7 +154,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             // Trigger rate limiting
             if (bucketAmount < 0)
             {
-                return Tuple.Create(true, bucketAmount, cacheItem.Counter.LastInflowTime.Add(currentRule.InflowUnit));
+                return (true, bucketAmount, cacheItem.Counter.LastInflowTime.Add(currentRule.InflowUnit));
             }
 
             // Token bucket full
@@ -162,7 +164,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             }
             counter.Value = bucketAmount;
 
-            return Tuple.Create(false, counter.Value, cacheItem.Counter.LastInflowTime.Add(currentRule.InflowUnit));
+            return (false, counter.Value, cacheItem.Counter.LastInflowTime.Add(currentRule.InflowUnit));
         }
 
         private CounterDictionaryItem<TokenBucketCounter> AddNewBucket(string target, long amount, TokenBucketRule currentRule, DateTimeOffset currentTime)

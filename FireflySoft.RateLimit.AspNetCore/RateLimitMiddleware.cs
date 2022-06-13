@@ -196,7 +196,6 @@ namespace FireflySoft.RateLimit.AspNetCore
 
                 if (checkResult.IsLimit)
                 {
-                    // todo: use lock seconds
                     var retryAfter = result.ResetTime.Subtract(DateTimeOffset.Now).TotalSeconds;
                     if (retryAfter < 1)
                     {
@@ -207,6 +206,9 @@ namespace FireflySoft.RateLimit.AspNetCore
                         retryAfter = Math.Ceiling(retryAfter);
                     }
 
+                    // Requests after this time may also encounter limiting, 
+                    // because the lock release time will be returned when the limiting lock is locked,
+                    // which is not necessarily later than the start time of the next limiting time window.
                     context.Response.Headers.AppendCommaSeparatedValues("Retry-After", retryAfter.ToString());
                 }
             }
