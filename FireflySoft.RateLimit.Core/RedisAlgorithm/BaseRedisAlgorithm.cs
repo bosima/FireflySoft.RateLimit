@@ -148,7 +148,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
             /// Async load script in the redis server
             /// </summary>
             /// <returns></returns>
-            public async Task<byte[]> LoadAsync()
+            public async ValueTask<byte[]> LoadAsync()
             {
                 if (_sha1 == null)
                 {

@@ -250,11 +250,11 @@ namespace FireflySoft.RateLimit.Core.Test
         [DataTestMethod]
         public void TestLockSeconds()
         {
-            var processor = GetAlgorithm(TimeSpan.FromSeconds(1), StartTimeType.FromCurrent, 50, 3);
+            var processor = GetAlgorithm(TimeSpan.FromSeconds(1), StartTimeType.FromCurrent, 20, 3);
 
-            for (int i = 1; i <= 70; i++)
+            for (int i = 1; i <= 40; i++)
             {
-                if (i == 61 || i == 62 || i == 63)
+                 if (i == 31 || i == 32 || i == 33)
                 {
                     Thread.Sleep(1000);
                 }
@@ -270,12 +270,12 @@ namespace FireflySoft.RateLimit.Core.Test
 
                 Console.WriteLine(i + ":" + result.IsLimit);
 
-                if (i > 50 && i <= 62)
+                 if (i > 20 && i <= 32)
                 {
                     Assert.AreEqual(true, result.IsLimit);
                 }
 
-                if (i <= 50 || i > 62)
+                if (i <= 20 || i > 32)
                 {
                     Assert.AreEqual(false, result.IsLimit);
                 }
@@ -285,11 +285,11 @@ namespace FireflySoft.RateLimit.Core.Test
         [DataTestMethod]
         public async Task TestLockSecondsAsync()
         {
-            var processor = GetAlgorithm(TimeSpan.FromSeconds(1), StartTimeType.FromCurrent, 50, 3);
+            var processor = GetAlgorithm(TimeSpan.FromSeconds(1), StartTimeType.FromCurrent, 20, 3);
 
-            for (int i = 1; i <= 70; i++)
+            for (int i = 1; i <= 40; i++)
             {
-                if (i == 61 || i == 62 || i == 63)
+                if (i == 31 || i == 32 || i == 33)
                 {
                     Thread.Sleep(1000);
                 }
@@ -305,12 +305,12 @@ namespace FireflySoft.RateLimit.Core.Test
 
                 Console.WriteLine(i + ":" + result.IsLimit);
 
-                if (i > 50 && i <= 62)
+                if (i > 20 && i <= 32)
                 {
                     Assert.AreEqual(true, result.IsLimit);
                 }
 
-                if (i <= 50 || i > 62)
+                if (i <= 20 || i > 32)
                 {
                     Assert.AreEqual(false, result.IsLimit);
                 }
