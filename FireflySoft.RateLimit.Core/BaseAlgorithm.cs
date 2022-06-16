@@ -18,7 +18,6 @@ namespace FireflySoft.RateLimit.Core
         /// The current time provider
         /// </summary>
         protected ITimeProvider _timeProvider;
-
         private IEnumerable<RateLimitRule> _rules;
         private bool _updatable = false;
         private readonly AsyncReaderWriterLock _mutex = new AsyncReaderWriterLock();
@@ -129,7 +128,7 @@ namespace FireflySoft.RateLimit.Core
         /// <returns>the stream of check result</returns>
         public AlgorithmCheckResult Check(object request)
         {
-           if (_updatable)
+            if (_updatable)
             {
                 using (var l = _mutex.ReaderLock())
                 {
@@ -197,11 +196,19 @@ namespace FireflySoft.RateLimit.Core
 
         private async Task<AlgorithmCheckResult> InnerCheckAsync(object request)
         {
-            var originalRuleChecks = CheckAllRulesAsync(request);
             var ruleCheckResults = new List<RuleCheckResult>();
-            await foreach (var result in originalRuleChecks.ConfigureAwait(false))
+            var originalRuleChecks = new AsyncRuleCheckEnumerator(this, _rules, request);
+            var enumerator = originalRuleChecks.GetAsyncEnumerator();
+            try
             {
-                ruleCheckResults.Add(result);
+                while (await enumerator.MoveNextAsync())
+                {
+                    ruleCheckResults.Add(enumerator.Current);
+                }
+            }
+            finally
+            {
+                await enumerator.DisposeAsync();
             }
 
             return new AlgorithmCheckResult(ruleCheckResults);
@@ -242,42 +249,96 @@ namespace FireflySoft.RateLimit.Core
             }
         }
 
-        private async IAsyncEnumerable<RuleCheckResult> CheckAllRulesAsync(object request)
+        private async Task<(bool IsMatched, RuleCheckResult Result)> TryCheckSingleRuleAsync(RateLimitRule rule, object request)
         {
-            // the control of traversal rules is given to the external access program
-            foreach (var rule in _rules)
+            var match = false;
+            if (rule.CheckRuleMatchingAsync != null)
             {
-                var match = false;
-                if (rule.CheckRuleMatchingAsync != null)
+                match = await rule.CheckRuleMatchingAsync(request).ConfigureAwait(false);
+            }
+            else
+            {
+                match = rule.CheckRuleMatching(request);
+            }
+
+            if (match)
+            {
+                string target = string.Empty;
+                if (rule.ExtractTargetAsync != null)
                 {
-                    match = await rule.CheckRuleMatchingAsync(request).ConfigureAwait(false);
+                    target = await rule.ExtractTargetAsync(request).ConfigureAwait(false);
                 }
                 else
                 {
-                    match = rule.CheckRuleMatching(request);
+                    target = rule.ExtractTarget(request);
                 }
 
-                if (match)
+                if (string.IsNullOrWhiteSpace(target))
                 {
-                    string target = string.Empty;
-                    if (rule.ExtractTargetAsync != null)
-                    {
-                        target = await rule.ExtractTargetAsync(request).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        target = rule.ExtractTarget(request);
-                    }
-
-                    if (string.IsNullOrWhiteSpace(target))
-                    {
-                        throw new NotSupportedException("Null target is not supported");
-                    }
-
-                    target = string.Concat(rule.Id, "-", target);
-                    target = string.Intern(target);
-                    yield return await CheckSingleRuleAsync(target, rule).ConfigureAwait(false);
+                    throw new NotSupportedException("Null target is not supported");
                 }
+
+                target = string.Concat(rule.Id, "-", target);
+                target = string.Intern(target);
+                var result = await CheckSingleRuleAsync(target, rule).ConfigureAwait(false);
+                return (true, result);
+            }
+
+            return (false, null);
+        }
+
+        private class AsyncRuleCheckEnumerator : IAsyncEnumerable<RuleCheckResult>, IAsyncEnumerator<RuleCheckResult>
+        {
+            IEnumerator<RateLimitRule> _rules;
+            object _request;
+            RuleCheckResult _current;
+            BaseAlgorithm _baseAlgorithm;
+
+            public AsyncRuleCheckEnumerator(BaseAlgorithm baseAlgorithm, IEnumerable<RateLimitRule> rules, object request)
+            {
+                _baseAlgorithm = baseAlgorithm;
+                _rules = rules.GetEnumerator();
+                _request = request;
+            }
+
+            public IAsyncEnumerator<RuleCheckResult> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+            {
+                return (IAsyncEnumerator<RuleCheckResult>)this;
+            }
+
+            public async ValueTask<bool> MoveNextAsync()
+            {
+                while (true)
+                {
+                    var haveNext = _rules.MoveNext();
+                    if (haveNext)
+                    {
+                        var rule = _rules.Current;
+                        var result = await _baseAlgorithm.TryCheckSingleRuleAsync(rule, _request);
+                        if (!result.IsMatched)
+                        {
+                            continue;
+                        }
+                        _current = result.Result;
+                        return true;
+                    }
+
+                    return false;
+                }
+            }
+
+            public RuleCheckResult Current
+            {
+                get
+                {
+                    return _current;
+                }
+            }
+
+            public ValueTask DisposeAsync()
+            {
+                _rules.Dispose();
+                return default(ValueTask);
             }
         }
     }

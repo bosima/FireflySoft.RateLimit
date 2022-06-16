@@ -10,7 +10,7 @@ using FireflySoft.RateLimit.Core.Time;
 namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
 {
     /// <summary>
-    /// Define a dictionary for rate limiting counter
+    /// Define a dictionary for rate limiting counter.
     /// </summary>
     /// <typeparam name="T"></typeparam>
     public class CounterDictionary<T>
@@ -66,19 +66,8 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                 throw new InvalidDataException("ExpireTime must great than current time.");
             }
 
-            if (_items.TryAdd(key, item))
-            {
-                StartScanForExpiredItemsIfNeeded(now);
-                return;
-            }
-
             if (_items.TryGetValue(key, out var oldItem))
             {
-                if (item.IsExpired)
-                {
-                    item.IsExpired = false;
-                }
-
                 var updateResult = _items.TryUpdate(key, item, oldItem);
 
                 // maybe removed by scan for expired items, so try add it
@@ -86,9 +75,16 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                 {
                     _items.TryAdd(key, item);
                 }
+
+                StartScanForExpiredItemsIfNeeded(now);
+                return;
             }
 
-            StartScanForExpiredItemsIfNeeded(now);
+            // For each target, only one thread is accessing, so TryAdd should succeed
+            if (_items.TryAdd(key, item))
+            {
+                StartScanForExpiredItemsIfNeeded(now);
+            }
         }
 
         /// <summary>
@@ -133,11 +129,16 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                 ScheduleTask(now);
             }
 
-            void ScheduleTask(DateTimeOffset now)
+            void ScheduleTask(DateTimeOffset dt)
             {
-                _lastExpirationScan = now;
-                Task.Factory.StartNew(state => ((CounterDictionary<T>)state!).ScanForExpiredItems(), this,
-                    CancellationToken.None, TaskCreationOptions.DenyChildAttach, TaskScheduler.Default);
+                _lastExpirationScan = dt;
+                Task.Factory.StartNew(state =>
+                {
+                    if (state != null)
+                    {
+                        ((CounterDictionary<T>)state).ScanForExpiredItems();
+                    }
+                }, this, CancellationToken.None, TaskCreationOptions.DenyChildAttach, TaskScheduler.Default);
             }
         }
 
