@@ -197,18 +197,18 @@ namespace FireflySoft.RateLimit.Core
         private async Task<AlgorithmCheckResult> InnerCheckAsync(object request)
         {
             var ruleCheckResults = new List<RuleCheckResult>();
-            var originalRuleChecks = new AsyncRuleCheckEnumerator(this, _rules, request);
+            var originalRuleChecks = new AsyncRuleCheckEnumerable(this, _rules, request);
             var enumerator = originalRuleChecks.GetAsyncEnumerator();
             try
             {
-                while (await enumerator.MoveNextAsync())
+                while (await enumerator.MoveNextAsync().ConfigureAwait(false))
                 {
                     ruleCheckResults.Add(enumerator.Current);
                 }
             }
             finally
             {
-                await enumerator.DisposeAsync();
+                await enumerator.DisposeAsync().ConfigureAwait(false);
             }
 
             return new AlgorithmCheckResult(ruleCheckResults);
@@ -242,7 +242,7 @@ namespace FireflySoft.RateLimit.Core
                         throw new NotSupportedException("Null target is not supported");
                     }
 
-                    target = string.Concat(rule.Id, "-", target);
+                    target = $"{rule.Id}-{target}";
                     target = string.Intern(target);
                     yield return CheckSingleRule(target, rule);
                 }
@@ -278,23 +278,23 @@ namespace FireflySoft.RateLimit.Core
                     throw new NotSupportedException("Null target is not supported");
                 }
 
-                target = string.Concat(rule.Id, "-", target);
+                target = $"{rule.Id}-{target}";
                 target = string.Intern(target);
                 var result = await CheckSingleRuleAsync(target, rule).ConfigureAwait(false);
                 return (true, result);
             }
 
-            return (false, null);
+            return (false, default(RuleCheckResult));
         }
 
-        private class AsyncRuleCheckEnumerator : IAsyncEnumerable<RuleCheckResult>, IAsyncEnumerator<RuleCheckResult>
+        private class AsyncRuleCheckEnumerable : IAsyncEnumerable<RuleCheckResult>, IAsyncEnumerator<RuleCheckResult>
         {
             IEnumerator<RateLimitRule> _rules;
             object _request;
             RuleCheckResult _current;
             BaseAlgorithm _baseAlgorithm;
 
-            public AsyncRuleCheckEnumerator(BaseAlgorithm baseAlgorithm, IEnumerable<RateLimitRule> rules, object request)
+            public AsyncRuleCheckEnumerable(BaseAlgorithm baseAlgorithm, IEnumerable<RateLimitRule> rules, object request)
             {
                 _baseAlgorithm = baseAlgorithm;
                 _rules = rules.GetEnumerator();
@@ -303,7 +303,7 @@ namespace FireflySoft.RateLimit.Core
 
             public IAsyncEnumerator<RuleCheckResult> GetAsyncEnumerator(CancellationToken cancellationToken = default)
             {
-                return (IAsyncEnumerator<RuleCheckResult>)this;
+                return this;
             }
 
             public async ValueTask<bool> MoveNextAsync()
@@ -314,7 +314,7 @@ namespace FireflySoft.RateLimit.Core
                     if (haveNext)
                     {
                         var rule = _rules.Current;
-                        var result = await _baseAlgorithm.TryCheckSingleRuleAsync(rule, _request);
+                        var result = await _baseAlgorithm.TryCheckSingleRuleAsync(rule, _request).ConfigureAwait(false);
                         if (!result.IsMatched)
                         {
                             continue;
