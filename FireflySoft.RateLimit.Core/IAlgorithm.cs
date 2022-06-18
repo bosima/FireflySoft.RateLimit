@@ -29,10 +29,24 @@ namespace FireflySoft.RateLimit.Core
         /// <param name="rules"></param>
         void UpdateRules(IEnumerable<RateLimitRule> rules);
 
-         /// <summary>
+        /// <summary>
         /// Update the rate limit rules
         /// </summary>
         /// <param name="rules"></param>
         Task UpdateRulesAsync(IEnumerable<RateLimitRule> rules);
+
+        /// <summary>
+        /// Peek at the rate limit check results at the current time.
+        /// </summary>
+        /// <param name="target"></param>
+        /// <returns></returns>
+        AlgorithmCheckResult Peek(string target);
+
+        /// <summary>
+        /// Peek at the rate limit check results at the current time.
+        /// </summary>
+        /// <param name="target"></param>
+        /// <returns></returns>
+        Task<AlgorithmCheckResult> PeekAsync(string target);
     }
 }

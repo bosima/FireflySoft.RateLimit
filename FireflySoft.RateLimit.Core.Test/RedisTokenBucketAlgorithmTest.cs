@@ -442,14 +442,14 @@ namespace FireflySoft.RateLimit.Core.Test
         public async Task UpdateRulesAsync_NarrowInflowUnit_LoseLimit()
         {
             var ruleId = "UpdateRulesAsync_NarrowInflowUnit_LoseLimit";
-            var rule = CreateRules(ruleId, 10, 10, 600);
+            var rule = CreateRules(ruleId, 10, 10, 1000);
             IAlgorithm algorithm = new InProcessTokenBucketAlgorithm(rule, updatable: true);
 
             for (int i = 1; i <= 50; i++)
             {
                 if (i == 41)
                 {
-                    var newRule = CreateRules(ruleId, 10, 10, 400);
+                    var newRule = CreateRules(ruleId, 10, 10, 600);
                     await algorithm.UpdateRulesAsync(newRule);
                 }
 
@@ -473,7 +473,7 @@ namespace FireflySoft.RateLimit.Core.Test
                 }
                 if (i == 40)
                 {
-                    SpinWait.SpinUntil(() => { return false; }, 400);
+                    SpinWait.SpinUntil(() => { return false; }, 600);
                 }
 
                 // lose limit

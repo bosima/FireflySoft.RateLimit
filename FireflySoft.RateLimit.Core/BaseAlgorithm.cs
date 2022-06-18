@@ -55,7 +55,10 @@ namespace FireflySoft.RateLimit.Core
         /// <param name="target"></param>
         /// <param name="rule"></param>
         /// <returns></returns>
-        protected abstract RuleCheckResult PeekSingleRule(string target, RateLimitRule rule);
+        protected virtual RuleCheckResult PeekSingleRule(string target, RateLimitRule rule)
+        {
+            throw new NotSupportedException();
+        }
 
         /// <summary>
         /// Check single rule for target
@@ -64,6 +67,17 @@ namespace FireflySoft.RateLimit.Core
         /// <param name="rule"></param>
         /// <returns></returns>
         protected abstract Task<RuleCheckResult> CheckSingleRuleAsync(string target, RateLimitRule rule);
+
+        /// <summary>
+        /// Take a peek at the result of the last processing of the specified target in the specified rule
+        /// </summary>
+        /// <param name="target"></param>
+        /// <param name="rule"></param>
+        /// <returns></returns>
+        protected virtual Task<RuleCheckResult> PeekSingleRuleAsync(string target, RateLimitRule rule)
+        {
+            throw new NotSupportedException();
+        }
 
         /// <summary>
         /// Update the current rules
@@ -119,6 +133,24 @@ namespace FireflySoft.RateLimit.Core
             }
 
             return InnerPeek(target);
+        }
+
+        /// <summary>
+        /// Take a peek at the result of the last rate limiting processing
+        /// </summary>
+        /// <param name="target">A specified target</param>
+        /// <returns>The last check result</returns>
+        public async Task<AlgorithmCheckResult> PeekAsync(string target)
+        {
+            if (_updatable)
+            {
+                using (var l = _mutex.ReaderLock())
+                {
+                    return await InnerPeekAsync(target).ConfigureAwait(false);
+                }
+            }
+
+            return await InnerPeekAsync(target).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -182,6 +214,26 @@ namespace FireflySoft.RateLimit.Core
             return new AlgorithmCheckResult(ruleCheckResults);
         }
 
+        private async Task<AlgorithmCheckResult> InnerPeekAsync(string target)
+        {
+            var ruleCheckResults = new List<RuleCheckResult>();
+            var originalRuleChecks = new AsyncRulePeekEnumerable(this, _rules, target);
+            var enumerator = originalRuleChecks.GetAsyncEnumerator();
+            try
+            {
+                while (await enumerator.MoveNextAsync().ConfigureAwait(false))
+                {
+                    ruleCheckResults.Add(enumerator.Current);
+                }
+            }
+            finally
+            {
+                await enumerator.DisposeAsync().ConfigureAwait(false);
+            }
+
+            return new AlgorithmCheckResult(ruleCheckResults);
+        }
+
         private AlgorithmCheckResult InnerCheck(object request)
         {
             var originalRuleChecks = CheckAllRules(request);
@@ -223,8 +275,7 @@ namespace FireflySoft.RateLimit.Core
                     throw new NotSupportedException("Null target is not supported");
                 }
 
-                target = string.Concat(rule.Id, "-", target);
-                target = string.Intern(target);
+                target = string.Intern($"{rule.Id}-{target}");
                 yield return PeekSingleRule(target, rule);
             }
         }
@@ -341,5 +392,57 @@ namespace FireflySoft.RateLimit.Core
                 return default(ValueTask);
             }
         }
+
+        private class AsyncRulePeekEnumerable : IAsyncEnumerable<RuleCheckResult>, IAsyncEnumerator<RuleCheckResult>
+        {
+            IEnumerator<RateLimitRule> _rules;
+            string _target;
+            RuleCheckResult _current;
+            BaseAlgorithm _baseAlgorithm;
+
+            public AsyncRulePeekEnumerable(BaseAlgorithm baseAlgorithm, IEnumerable<RateLimitRule> rules, string target)
+            {
+                _baseAlgorithm = baseAlgorithm;
+                _rules = rules.GetEnumerator();
+                _target = target;
+            }
+
+            public IAsyncEnumerator<RuleCheckResult> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+            {
+                return this;
+            }
+
+            public async ValueTask<bool> MoveNextAsync()
+            {
+                while (true)
+                {
+                    var haveNext = _rules.MoveNext();
+                    if (haveNext)
+                    {
+                        var rule = _rules.Current;
+                        var target = string.Intern($"{rule.Id}-{_target}");
+                        _current = await _baseAlgorithm.PeekSingleRuleAsync(target, rule).ConfigureAwait(false);
+                        return true;
+                    }
+
+                    return false;
+                }
+            }
+
+            public RuleCheckResult Current
+            {
+                get
+                {
+                    return _current;
+                }
+            }
+
+            public ValueTask DisposeAsync()
+            {
+                _rules.Dispose();
+                return default(ValueTask);
+            }
+        }
+
     }
 }

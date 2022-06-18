@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using FireflySoft.RateLimit.Core.Rule;
 using FireflySoft.RateLimit.Core.Time;
@@ -41,8 +42,20 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                 IsLimit = result.IsLimit,
                 Target = target,
                 Count = result.Count,
-                Rule = rule
+                Rule = rule,
+                ResetTime = result.ResetTime,
             };
+        }
+
+        /// <summary>
+        /// Take a peek at the result of the last processing of the specified target in the specified rule
+        /// </summary>
+        /// <param name="target"></param>
+        /// <param name="rule"></param>
+        /// <returns></returns>
+        protected override async Task<RuleCheckResult> PeekSingleRuleAsync(string target, RateLimitRule rule)
+        {
+            return await Task.FromResult(PeekSingleRule(target, rule)).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -108,12 +121,12 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             return (checkResult, countResult.Count, countResult.ExpireTime);
         }
 
-        private (bool IsLimit, long Count) InnerPeekSingleRule(string target, FixedWindowRule currentRule)
+        private (bool IsLimit, long Count, DateTimeOffset ResetTime) InnerPeekSingleRule(string target, FixedWindowRule currentRule)
         {
             bool locked = CheckLocked(target, out DateTimeOffset? expireTime);
             if (locked)
             {
-                return (true, -1L);
+                return (true, -1L, expireTime.Value);
             }
 
             if (_fixedWindows.TryGet(target, out var cacheItem))
@@ -121,15 +134,15 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                 var countValue = cacheItem.Counter.Value;
 
                 // This result is inaccurate because it may not actually exceed this threshold
-                if (currentRule.LimitNumber >= 0 && countValue >= currentRule.LimitNumber)
+                if (currentRule.LimitNumber >= 0 && countValue > currentRule.LimitNumber)
                 {
-                    return (true, countValue);
+                    return (true, countValue, cacheItem.ExpireTime);
                 }
 
-                return (false, countValue);
+                return (false, countValue, cacheItem.ExpireTime);
             }
 
-            return (false, 0L);
+            return (false, 0L, DateTimeOffset.MinValue);
         }
 
         private (bool IsLimit, long Count, DateTimeOffset ExpireTime) Count(string target, long amount, DateTimeOffset currentTime, FixedWindowRule currentRule)
@@ -177,6 +190,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             return (false, counter.Value, cacheItem.ExpireTime);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private CounterDictionaryItem<FixedWindowCounter> CreateWindow(string target, DateTimeOffset currentTime, FixedWindowRule currentRule)
         {
             var counter = CreateNewCounter(currentTime, currentRule);
@@ -187,6 +201,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             return cacheItem;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private FixedWindowCounter ResetWindow(FixedWindowRule currentRule, CounterDictionaryItem<FixedWindowCounter> cacheItem, DateTimeOffset currentTime)
         {
             FixedWindowCounter counter = CreateNewCounter(currentTime, currentRule);
@@ -195,6 +210,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             return counter;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private FixedWindowCounter ResizeWindow(FixedWindowRule currentRule, CounterDictionaryItem<FixedWindowCounter> cacheItem, FixedWindowCounter counter)
         {
             counter = CreateCounter(counter.Value, counter.StartTime, currentRule);
@@ -203,12 +219,14 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             return counter;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private FixedWindowCounter CreateNewCounter(DateTimeOffset currentTime, FixedWindowRule currentRule)
         {
             DateTimeOffset startTime = AlgorithmStartTime.ToSpecifiedTypeTime(currentTime, currentRule.StatWindow, currentRule.StartTimeType);
             return CreateCounter(0, startTime, currentRule);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private FixedWindowCounter CreateCounter(long amount, DateTimeOffset startTime, FixedWindowRule currentRule)
         {
             return new FixedWindowCounter()

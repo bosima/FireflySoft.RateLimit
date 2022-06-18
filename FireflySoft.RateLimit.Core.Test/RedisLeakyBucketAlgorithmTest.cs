@@ -186,7 +186,7 @@ namespace FireflySoft.RateLimit.Core.Test
             {
                 if (DateTimeOffset.Now.Millisecond < 600)
                 {
-                   Thread.Sleep(15);
+                    Thread.Sleep(15);
                     continue;
                 }
                 break;
@@ -759,9 +759,9 @@ namespace FireflySoft.RateLimit.Core.Test
 
             while (true)
             {
-                if (DateTimeOffset.Now.Millisecond < 600)
+                if (DateTimeOffset.Now.Millisecond < 400 && DateTimeOffset.Now.Millisecond > 500)
                 {
-                    Thread.Sleep(15);
+                    SpinWait.SpinUntil(() => false, 10);
                     continue;
                 }
                 break;
@@ -789,7 +789,7 @@ namespace FireflySoft.RateLimit.Core.Test
 
                 if (i == 31)
                 {
-                    Thread.Sleep(400);
+                    Thread.Sleep(600);
                 }
 
                 if (i == 42)
