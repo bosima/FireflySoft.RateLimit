@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -38,6 +39,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 if lock_val == '1' then
                     ret[1]=1
                     ret[2]=-1
+                    ret[3]=redis.call('PTTL',lock_key)
                     return ret;
                 end
                 ret[1]=0
@@ -62,6 +64,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                     redis.call('set',st_key,start_time,'PX',st_expire_ms)
                     redis.call('set',cur_period_key,amount,'PX',period_expire_ms)
                     ret[2]=amount
+                    ret[3]=cur_period+1
                     return ret
                 end
 
@@ -97,12 +100,14 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 end
 
                 ret[2]=amount+periods_amount
+                
                 if (limit_number>=0 and ret[2]>limit_number) then
                     if lock_seconds>0 then 
                         redis.call('set',lock_key,'1','EX',lock_seconds,'NX')
                     end
                     ret[1]=1
                     ret[2]=periods_amount
+                    ret[3]=lock_seconds*1000
                     return ret
                 end
 
@@ -113,7 +118,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                     redis.call('PEXPIRE',cur_period_key,period_expire_ms)
                     redis.call('PEXPIRE',st_key,st_expire_ms)
                 end
-
+                ret[3]=cur_period+1
                 return ret");
         }
 
@@ -136,12 +141,14 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
             var ret = (long[])EvaluateScript(_slidingWindowIncrementLuaScript,
                  new RedisKey[] { target },
                  new RedisValue[] { amount, expireMilliseconds, periodMilliseconds, currentRule.PeriodNumber, currentTime, startTime, currentRule.LimitNumber, currentRule.LockSeconds });
+            
             return new RuleCheckResult()
             {
                 IsLimit = ret[0] == 0 ? false : true,
                 Target = target,
                 Count = ret[1],
-                Rule = rule
+                Rule = rule,
+                ResetTime = DateTimeOffset.FromUnixTimeMilliseconds(ret[2]).ToLocalTime(),
             };
         }
 
@@ -170,7 +177,8 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 IsLimit = ret[0] == 0 ? false : true,
                 Target = target,
                 Count = ret[1],
-                Rule = rule
+                Rule = rule,
+                ResetTime = DateTimeOffset.FromUnixTimeMilliseconds(ret[2]),
             };
         }
     }

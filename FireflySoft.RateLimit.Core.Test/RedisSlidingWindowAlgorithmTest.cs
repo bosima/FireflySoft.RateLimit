@@ -15,7 +15,7 @@ namespace FireflySoft.RateLimit.Core.Test
     public class RedisSlidingWindowAlgorithmTest
     {
         [DataTestMethod]
-        public void Test()
+        public void Common()
         {
             var processor = GetAlgorithm(TimeSpan.FromSeconds(6), TimeSpan.FromSeconds(1), lockSeconds: 0);
 
@@ -54,47 +54,116 @@ namespace FireflySoft.RateLimit.Core.Test
         }
 
         [DataTestMethod]
-        public async Task TestAsync()
+        public void ResetTime_NotExistKey_ReturnTimeWindowAsExpireTime()
         {
-            var processor = GetAlgorithm(TimeSpan.FromSeconds(6), TimeSpan.FromSeconds(1), lockSeconds: 0);
+            var statWindow = TimeSpan.FromSeconds(3);
+            var statPeriod = TimeSpan.FromSeconds(1);
+            var processor = GetAlgorithm(statWindow, statPeriod, StartTimeType.FromCurrent, 10, 0);
 
-            for (int i = 1; i <= 15; i++)
+            var expected = DateTimeOffset.Now.Add(statPeriod);
+            var result = processor.Check(new SimulationRequest()
             {
-                int j = 3;
-                if (i == 7 || i == 10)
-                {
-                    j = 6;
-                }
+                RequestId = Guid.NewGuid().ToString(),
+                RequestResource = "home",
+                Parameters = new Dictionary<string, string>() { { "from", "sample" } }
+            });
 
-                AlgorithmCheckResult checkResult = null;
-                for (int k = 0; k < j; k++)
-                {
-                    checkResult = await processor.CheckAsync(new SimulationRequest()
-                    {
-                        RequestId = Guid.NewGuid().ToString(),
-                        RequestResource = "home",
-                        Parameters = new Dictionary<string, string>() {
-                                { "from","sample" },
-                        }
-                    });
-                }
+            //Console.WriteLine($"{expected.ToString("MM-dd HH:mm:ss.fff")},{result.RuleCheckResults.First().ResetTime.ToString("MM-dd HH:mm:ss.fff")}");
+            Assert.IsTrue(expected.AddMilliseconds(10) >= result.RuleCheckResults.First().ResetTime);
+            Assert.IsTrue(expected.AddMilliseconds(-10) <= result.RuleCheckResults.First().ResetTime);
+        }
 
-                // Requests that are limited are not counted
-                if (i == 7 || i == 10)
-                {
-                    Assert.AreEqual(true, checkResult.IsLimit);
-                }
-                else
-                {
-                    Assert.AreEqual(false, checkResult.IsLimit);
-                }
+        [DataTestMethod]
+        public void ResetTime_ExistKey_ReturnFirstPeriodExpireTime()
+        {
+            var statWindow = TimeSpan.FromSeconds(3);
+            var statPeriod = TimeSpan.FromSeconds(1);
+            var processor = GetAlgorithm(statWindow, statPeriod, StartTimeType.FromCurrent, 10, 0);
 
-                await Task.Delay(1000);
+            var expected = DateTimeOffset.Now.Add(statPeriod);
+            for (int i = 0; i < 3; i++)
+            {
+                var result = processor.Check(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() { { "from", "sample" } }
+                });
+
+                Assert.IsTrue(expected.AddMilliseconds(10) >= result.RuleCheckResults.First().ResetTime);
+                Assert.IsTrue(expected.AddMilliseconds(-10) <= result.RuleCheckResults.First().ResetTime);
             }
         }
 
         [DataTestMethod]
-        public void TestLockSeconds()
+        public void ResetTime_ExistKey_ReturnNextPeriodExpireTime()
+        {
+            var statWindow = TimeSpan.FromSeconds(3);
+            var statPeriod = TimeSpan.FromSeconds(1);
+            var processor = GetAlgorithm(statWindow, statPeriod, StartTimeType.FromCurrent, 10, 0);
+            DateTimeOffset expected = DateTimeOffset.MinValue;
+
+            for (int i = 0; i < 3; i++)
+            {
+                if (i == 0)
+                {
+                    expected = DateTimeOffset.Now.Add(statPeriod);
+                }
+                if (i == 2)
+                {
+                    expected = expected.Add(statPeriod);
+                }
+
+                var result = processor.Check(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() { { "from", "sample" } }
+                });
+
+                if (i == 2)
+                {
+                    Console.WriteLine($"{expected.ToString("HH:mm:ss.fff")},{result.RuleCheckResults.First().ResetTime.ToString("HH:mm:ss.fff")}");
+                    Assert.IsTrue(expected.AddMilliseconds(10) >= result.RuleCheckResults.First().ResetTime);
+                    Assert.IsTrue(expected.AddMilliseconds(-10) <= result.RuleCheckResults.First().ResetTime);
+                }
+
+                Thread.Sleep(500);
+            }
+        }
+
+        [DataTestMethod]
+        public void ResetTime_TriggerLimit_ReturnLockExpireTime()
+        {
+            var statWindow = TimeSpan.FromMilliseconds(600);
+            var statPeriod = TimeSpan.FromMilliseconds(200);
+            var processor = GetAlgorithm(statWindow, statPeriod, StartTimeType.FromCurrent, 10, 3);
+            DateTimeOffset expected = DateTimeOffset.MinValue;
+
+            for (int i = 0; i < 10; i++)
+            {
+                if (i == 11)
+                {
+                    expected = DateTimeOffset.Now.Add(TimeSpan.FromSeconds(3));
+                }
+
+                var result = processor.Check(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() { { "from", "sample" } }
+                });
+
+                if (i >= 11)
+                {
+                    Assert.IsTrue(expected.AddMilliseconds(10) >= result.RuleCheckResults.First().ResetTime);
+                    Assert.IsTrue(expected.AddMilliseconds(-10) <= result.RuleCheckResults.First().ResetTime);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public void Lock_LockThreeSeconds_Common()
         {
             var processor = GetAlgorithm(TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(100), StartTimeType.FromCurrent, 20, 3);
 
@@ -126,35 +195,7 @@ namespace FireflySoft.RateLimit.Core.Test
         }
 
         [DataTestMethod]
-        public async Task LockAsync_LockThreeSeconds_Common()
-        {
-            var processor = GetAlgorithm(TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(100), StartTimeType.FromCurrent, 20, 3);
-
-            for (int i = 1; i <= 40; i++)
-            {
-                var result = await processor.CheckAsync(new SimulationRequest()
-                {
-                    RequestId = Guid.NewGuid().ToString(),
-                    RequestResource = "home",
-                    Parameters = new Dictionary<string, string>() {
-                                { "from","sample" },
-                        }
-                });
-
-                if (i >= 21 && i <= 23)
-                {
-                    Assert.AreEqual(true, result.IsLimit);
-                    await Task.Delay(1000);
-                }
-                else
-                {
-                    Assert.AreEqual(false, result.IsLimit);
-                }
-            }
-        }
-
-        [DataTestMethod]
-        public void TestFromNaturalPeriodBeign()
+        public void StartTimeType_FromNaturalPeriodBeign_Common()
         {
             var processor = GetAlgorithm(TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(100), StartTimeType.FromNaturalPeriodBeign, 20, 0);
 
@@ -197,7 +238,7 @@ namespace FireflySoft.RateLimit.Core.Test
         }
 
         [DataTestMethod]
-        public void TestFromCurrent()
+        public void StartTimeType_FromCurrent_Common()
         {
             var processor = GetAlgorithm(TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(100), StartTimeType.FromNaturalPeriodBeign, 20, 0);
 
@@ -235,92 +276,6 @@ namespace FireflySoft.RateLimit.Core.Test
                 if (i == 25)
                 {
                     Thread.Sleep(1000);
-                }
-            }
-        }
-
-        [DataTestMethod]
-        public async Task TestFromNaturalPeriodBeignAsync()
-        {
-            var processor = GetAlgorithm(TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(100), StartTimeType.FromNaturalPeriodBeign, 20, 0);
-
-            while (true)
-            {
-                if (DateTimeOffset.Now.Millisecond < 800)
-                {
-                    Thread.Sleep(100);
-                    continue;
-                }
-                break;
-            }
-
-            for (int i = 1; i <= 30; i++)
-            {
-                var checkResult = await processor.CheckAsync(new SimulationRequest()
-                {
-                    RequestId = Guid.NewGuid().ToString(),
-                    RequestResource = "home",
-                    Parameters = new Dictionary<string, string>() {
-                                { "from","sample" },
-                        }
-                });
-
-                if (i > 20 && i <= 25)
-                {
-                    Assert.AreEqual(true, checkResult.IsLimit);
-                }
-
-                if (i <= 20 || i > 25)
-                {
-                    Assert.AreEqual(false, checkResult.IsLimit);
-                }
-
-                if (i == 25)
-                {
-                    await Task.Delay(1000);
-                }
-            }
-        }
-
-        [DataTestMethod]
-        public async Task TestFromCurrentAsync()
-        {
-            var processor = GetAlgorithm(TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(100), StartTimeType.FromNaturalPeriodBeign, 20, 0);
-
-            while (true)
-            {
-                if (DateTimeOffset.Now.Millisecond < 800)
-                {
-                    Thread.Sleep(100);
-                    continue;
-                }
-                break;
-            }
-
-            for (int i = 1; i <= 30; i++)
-            {
-                var checkResult = await processor.CheckAsync(new SimulationRequest()
-                {
-                    RequestId = Guid.NewGuid().ToString(),
-                    RequestResource = "home",
-                    Parameters = new Dictionary<string, string>() {
-                                { "from","sample" },
-                        }
-                });
-
-                if (i > 20 && i <= 25)
-                {
-                    Assert.AreEqual(true, checkResult.IsLimit);
-                }
-
-                if (i <= 20 || i > 25)
-                {
-                    Assert.AreEqual(false, checkResult.IsLimit);
-                }
-
-                if (i == 25)
-                {
-                    await Task.Delay(1000);
                 }
             }
         }
@@ -760,6 +715,269 @@ namespace FireflySoft.RateLimit.Core.Test
                 }
 
                 Assert.AreEqual(false, result.IsLimit);
+            }
+        }
+
+        [DataTestMethod]
+        public async Task CommonAsync()
+        {
+            var processor = GetAlgorithm(TimeSpan.FromSeconds(6), TimeSpan.FromSeconds(1), lockSeconds: 0);
+
+            for (int i = 1; i <= 15; i++)
+            {
+                int j = 3;
+                if (i == 7 || i == 10)
+                {
+                    j = 6;
+                }
+
+                AlgorithmCheckResult checkResult = null;
+                for (int k = 0; k < j; k++)
+                {
+                    checkResult = await processor.CheckAsync(new SimulationRequest()
+                    {
+                        RequestId = Guid.NewGuid().ToString(),
+                        RequestResource = "home",
+                        Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                    });
+                }
+
+                // Requests that are limited are not counted
+                if (i == 7 || i == 10)
+                {
+                    Assert.AreEqual(true, checkResult.IsLimit);
+                }
+                else
+                {
+                    Assert.AreEqual(false, checkResult.IsLimit);
+                }
+
+                await Task.Delay(1000);
+            }
+        }
+
+        [DataTestMethod]
+        public async Task ResetTimeAsync_NotExistKey_ReturnTimeWindowAsExpireTime()
+        {
+            var statWindow = TimeSpan.FromSeconds(3);
+            var statPeriod = TimeSpan.FromSeconds(1);
+            var processor = GetAlgorithm(statWindow, statPeriod, StartTimeType.FromCurrent, 10, 0);
+
+            var expected = DateTimeOffset.Now.Add(statPeriod);
+            var result = await processor.CheckAsync(new SimulationRequest()
+            {
+                RequestId = Guid.NewGuid().ToString(),
+                RequestResource = "home",
+                Parameters = new Dictionary<string, string>() { { "from", "sample" } }
+            });
+
+            //Console.WriteLine($"{expected.ToString("MM-dd HH:mm:ss.fff")},{result.RuleCheckResults.First().ResetTime.ToString("MM-dd HH:mm:ss.fff")}");
+            Assert.IsTrue(expected.AddMilliseconds(10) >= result.RuleCheckResults.First().ResetTime);
+            Assert.IsTrue(expected.AddMilliseconds(-10) <= result.RuleCheckResults.First().ResetTime);
+        }
+
+        [DataTestMethod]
+        public async Task ResetTimeAsync_ExistKey_ReturnFirstPeriodExpireTime()
+        {
+            var statWindow = TimeSpan.FromSeconds(3);
+            var statPeriod = TimeSpan.FromSeconds(1);
+            var processor = GetAlgorithm(statWindow, statPeriod, StartTimeType.FromCurrent, 10, 0);
+
+            var expected = DateTimeOffset.Now.Add(statPeriod);
+            for (int i = 0; i < 3; i++)
+            {
+                var result = await processor.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() { { "from", "sample" } }
+                });
+
+                Assert.IsTrue(expected.AddMilliseconds(10) >= result.RuleCheckResults.First().ResetTime);
+                Assert.IsTrue(expected.AddMilliseconds(-10) <= result.RuleCheckResults.First().ResetTime);
+            }
+        }
+
+        [DataTestMethod]
+        public async Task ResetTimeAsync_ExistKey_ReturnNextPeriodExpireTime()
+        {
+            var statWindow = TimeSpan.FromSeconds(3);
+            var statPeriod = TimeSpan.FromSeconds(1);
+            var processor = GetAlgorithm(statWindow, statPeriod, StartTimeType.FromCurrent, 10, 0);
+            DateTimeOffset expected = DateTimeOffset.MinValue;
+
+            for (int i = 0; i < 3; i++)
+            {
+                if (i == 0)
+                {
+                    expected = DateTimeOffset.Now.Add(statPeriod);
+                }
+                if (i == 2)
+                {
+                    expected = expected.Add(statPeriod);
+                }
+
+                var result = await processor.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() { { "from", "sample" } }
+                });
+
+                if (i == 2)
+                {
+                    Console.WriteLine($"{expected.ToString("HH:mm:ss.fff")},{result.RuleCheckResults.First().ResetTime.ToString("HH:mm:ss.fff")}");
+                    Assert.IsTrue(expected.AddMilliseconds(10) >= result.RuleCheckResults.First().ResetTime);
+                    Assert.IsTrue(expected.AddMilliseconds(-10) <= result.RuleCheckResults.First().ResetTime);
+                }
+
+                Thread.Sleep(500);
+            }
+        }
+
+        [DataTestMethod]
+        public async Task ResetTimeAsync_TriggerLimit_ReturnLockExpireTime()
+        {
+            var statWindow = TimeSpan.FromMilliseconds(600);
+            var statPeriod = TimeSpan.FromMilliseconds(200);
+            var processor = GetAlgorithm(statWindow, statPeriod, StartTimeType.FromCurrent, 10, 3);
+            DateTimeOffset expected = DateTimeOffset.MinValue;
+
+            for (int i = 0; i < 10; i++)
+            {
+                if (i == 11)
+                {
+                    expected = DateTimeOffset.Now.Add(TimeSpan.FromSeconds(3));
+                }
+
+                var result = await processor.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() { { "from", "sample" } }
+                });
+
+                if (i >= 11)
+                {
+                    Assert.IsTrue(expected.AddMilliseconds(10) >= result.RuleCheckResults.First().ResetTime);
+                    Assert.IsTrue(expected.AddMilliseconds(-10) <= result.RuleCheckResults.First().ResetTime);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public async Task LockAsync_LockThreeSeconds_Common()
+        {
+            var processor = GetAlgorithm(TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(100), StartTimeType.FromCurrent, 20, 3);
+
+            for (int i = 1; i <= 40; i++)
+            {
+                var result = await processor.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i >= 21 && i <= 23)
+                {
+                    Assert.AreEqual(true, result.IsLimit);
+                    await Task.Delay(1000);
+                }
+                else
+                {
+                    Assert.AreEqual(false, result.IsLimit);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public async Task StartTimeTypeAsync_FromNaturalPeriodBeign_Common()
+        {
+            var processor = GetAlgorithm(TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(100), StartTimeType.FromNaturalPeriodBeign, 20, 0);
+
+            while (true)
+            {
+                if (DateTimeOffset.Now.Millisecond < 800)
+                {
+                    Thread.Sleep(100);
+                    continue;
+                }
+                break;
+            }
+
+            for (int i = 1; i <= 30; i++)
+            {
+                var checkResult = await processor.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i > 20 && i <= 25)
+                {
+                    Assert.AreEqual(true, checkResult.IsLimit);
+                }
+
+                if (i <= 20 || i > 25)
+                {
+                    Assert.AreEqual(false, checkResult.IsLimit);
+                }
+
+                if (i == 25)
+                {
+                    await Task.Delay(1000);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public async Task StartTimeTypeAsync_FromCurrent_Common()
+        {
+            var processor = GetAlgorithm(TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(100), StartTimeType.FromNaturalPeriodBeign, 20, 0);
+
+            while (true)
+            {
+                if (DateTimeOffset.Now.Millisecond < 800)
+                {
+                    Thread.Sleep(100);
+                    continue;
+                }
+                break;
+            }
+
+            for (int i = 1; i <= 30; i++)
+            {
+                var checkResult = await processor.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() {
+                                { "from","sample" },
+                        }
+                });
+
+                if (i > 20 && i <= 25)
+                {
+                    Assert.AreEqual(true, checkResult.IsLimit);
+                }
+
+                if (i <= 20 || i > 25)
+                {
+                    Assert.AreEqual(false, checkResult.IsLimit);
+                }
+
+                if (i == 25)
+                {
+                    await Task.Delay(1000);
+                }
             }
         }
 

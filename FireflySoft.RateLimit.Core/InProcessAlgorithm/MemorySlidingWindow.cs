@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using FireflySoft.RateLimit.Core.Rule;
 using FireflySoft.RateLimit.Core.Time;
 
@@ -100,6 +101,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         /// <param name="periodIndex">The index of specified period in time window</param>
         /// <param name="amount"></param>
         /// <returns>The count value of the current period after increment</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public long IncreamentPeriod(int periodIndex, int amount)
         {
             _queue[periodIndex].CountValue += amount;
@@ -110,6 +112,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
         /// Gets the count value of the sliding window
         /// </summary>
         /// <returns></returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public long GetCount()
         {
             return _queue.Sum(d => d.CountValue);
