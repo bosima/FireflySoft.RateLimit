@@ -90,15 +90,15 @@ namespace FireflySoft.RateLimit.Core.Test
         public void ResetTime_ExistKey_ReturnNextWindowExpireTime()
         {
             var now = DateTimeOffset.Now;
-            var statWondow = TimeSpan.FromMilliseconds(60);
+            var statWindow = TimeSpan.FromMilliseconds(60);
             var stubTimeProvider = new TestTimeProvider(now, TimeSpan.FromMilliseconds(1));
-            var processor = GetAlgorithm(stubTimeProvider, statWondow, StartTimeType.FromCurrent, 50, 0);
+            var processor = GetAlgorithm(stubTimeProvider, statWindow, StartTimeType.FromCurrent, 50, 0);
 
             for (int i = 0; i < 3; i++)
             {
-                if (i == 3)
+                if (i == 2)
                 {
-                    now = DateTimeOffset.Now;
+                    now = stubTimeProvider.GetCurrentLocalTime();
                 }
 
                 var result = processor.Check(new SimulationRequest()
@@ -108,9 +108,9 @@ namespace FireflySoft.RateLimit.Core.Test
                     Parameters = new Dictionary<string, string>() { { "from", "sample" } }
                 });
 
-                if (i == 3)
+                if (i == 2)
                 {
-                    var expected = now.Add(statWondow);
+                    var expected = now.Add(statWindow);
                     Assert.AreEqual(expected, result.RuleCheckResults.First().ResetTime);
                 }
 

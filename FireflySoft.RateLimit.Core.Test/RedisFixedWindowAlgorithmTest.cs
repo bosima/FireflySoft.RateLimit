@@ -49,8 +49,8 @@ namespace FireflySoft.RateLimit.Core.Test
         [DataTestMethod]
         public void ResetTime_NotExistKey_ReturnTimeWindowAsExpireTime()
         {
-            var statWondow = TimeSpan.FromSeconds(1);
-            var processor = GetAlgorithm(statWondow, StartTimeType.FromCurrent, 50, 0);
+            var statWindow = TimeSpan.FromSeconds(1);
+            var processor = GetAlgorithm(statWindow, StartTimeType.FromCurrent, 50, 0);
 
             var result = processor.Check(new SimulationRequest()
             {
@@ -59,7 +59,7 @@ namespace FireflySoft.RateLimit.Core.Test
                 Parameters = new Dictionary<string, string>() { { "from", "sample" } }
             });
 
-            var expected = DateTimeOffset.Now.Add(statWondow);
+            var expected = DateTimeOffset.Now.Add(statWindow);
             Assert.IsTrue(expected.AddMilliseconds(10) >= result.RuleCheckResults.First().ResetTime);
             Assert.IsTrue(expected.AddMilliseconds(-10) <= result.RuleCheckResults.First().ResetTime);
         }
