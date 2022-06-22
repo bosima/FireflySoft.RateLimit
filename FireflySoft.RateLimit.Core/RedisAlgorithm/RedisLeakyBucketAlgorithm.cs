@@ -33,6 +33,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                     ret[1]=1
                     ret[2]=-1
                     ret[3]=-1
+                    ret[4]=redis.call('PTTL',lock_key)
                     return ret;
                 end
                 ret[1]=0
@@ -52,6 +53,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                     redis.call('set',st_key,start_time,'PX',key_expire_time)
                     ret[2]=amount
                     ret[3]=0
+                    ret[4]=start_time+outflow_unit
                     return ret
                 end
                 local current_value = redis.call('get',KEYS[1])
@@ -83,6 +85,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                         ret[1]=1
                         ret[2]=current_value-amount
                         ret[3]=-1
+                        ret[4]=lock_seconds*1000
                         return ret
                     end
                 else
@@ -126,6 +129,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
 
                 ret[2]=current_value
                 ret[3]=wait
+                ret[4]=last_time+outflow_unit
                 return ret");
         }
 
@@ -153,6 +157,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 Count = ret[1],
                 Rule = rule,
                 Wait = ret[2],
+                ResetTime = DateTimeOffset.FromUnixTimeMilliseconds(ret[3]).ToLocalTime(),
             };
         }
 
@@ -182,6 +187,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 Count = ret[1],
                 Rule = rule,
                 Wait = ret[2],
+                ResetTime = DateTimeOffset.FromUnixTimeMilliseconds(ret[3]).ToLocalTime(),
             };
         }
     }

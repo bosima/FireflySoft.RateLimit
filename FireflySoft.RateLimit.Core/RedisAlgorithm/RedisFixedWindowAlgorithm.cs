@@ -244,7 +244,6 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
             if (ttl >= 0)
             {
                 resetTime = DateTimeOffset.Now.AddMilliseconds(ttl);
-                //Console.WriteLine($"{ttl},{now.ToString("ss.fff")},{resetTime.ToString("ss.fff")}");
             }
             else if (ttl < -1)
             {

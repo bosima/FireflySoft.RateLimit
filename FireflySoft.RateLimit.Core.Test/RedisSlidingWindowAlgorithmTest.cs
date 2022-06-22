@@ -92,6 +92,8 @@ namespace FireflySoft.RateLimit.Core.Test
 
                 Assert.IsTrue(expected.AddMilliseconds(10) >= result.RuleCheckResults.First().ResetTime);
                 Assert.IsTrue(expected.AddMilliseconds(-10) <= result.RuleCheckResults.First().ResetTime);
+
+                Thread.Sleep(10);
             }
         }
 
@@ -123,7 +125,7 @@ namespace FireflySoft.RateLimit.Core.Test
 
                 if (i == 2)
                 {
-                    Console.WriteLine($"{expected.ToString("HH:mm:ss.fff")},{result.RuleCheckResults.First().ResetTime.ToString("HH:mm:ss.fff")}");
+                    //Console.WriteLine($"{expected.ToString("HH:mm:ss.fff")},{result.RuleCheckResults.First().ResetTime.ToString("HH:mm:ss.fff")}");
                     Assert.IsTrue(expected.AddMilliseconds(10) >= result.RuleCheckResults.First().ResetTime);
                     Assert.IsTrue(expected.AddMilliseconds(-10) <= result.RuleCheckResults.First().ResetTime);
                 }
@@ -797,6 +799,8 @@ namespace FireflySoft.RateLimit.Core.Test
 
                 Assert.IsTrue(expected.AddMilliseconds(10) >= result.RuleCheckResults.First().ResetTime);
                 Assert.IsTrue(expected.AddMilliseconds(-10) <= result.RuleCheckResults.First().ResetTime);
+
+                await Task.Delay(10);
             }
         }
 
