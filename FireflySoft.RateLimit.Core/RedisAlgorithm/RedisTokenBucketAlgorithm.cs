@@ -26,12 +26,15 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
         {
             _tokenBucketDecrementLuaScript = new RedisLuaScript(_redisClient, "Src-DecrWithTokenBucket",
                 @"local ret={}
+                local current_time=tonumber(ARGV[5])
                 local cl_key = '{' .. KEYS[1] .. '}'
                 local lock_key = cl_key .. '-lock'
                 local lock_val = redis.call('get',lock_key)
                 if lock_val == '1' then
                     ret[1]=1
                     ret[2]=-1
+                    local lock_ttl=redis.call('PTTL',lock_key)
+                    ret[3]=tonumber(lock_ttl)+current_time
                     return ret;
                 end
                 ret[1]=0
@@ -40,7 +43,6 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 local capacity=tonumber(ARGV[2])
                 local inflow_unit=tonumber(ARGV[3])
                 local inflow_quantity_per_unit=tonumber(ARGV[4])
-                local current_time=tonumber(ARGV[5])
                 local start_time=tonumber(ARGV[6])
                 local lock_seconds=tonumber(ARGV[7])
                 local st_expire_ms=math.ceil((capacity/inflow_quantity_per_unit)*inflow_unit)*2
@@ -53,6 +55,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                     redis.call('set',KEYS[1],bucket_amount,'PX',val_expire_ms)
                     redis.call('set',st_key,start_time,'PX',st_expire_ms)
                     ret[2]=bucket_amount
+                    ret[3]=start_time+inflow_unit
                     return ret
                 end
                 
@@ -88,6 +91,8 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                         redis.call('set',lock_key,'1','EX',lock_seconds,'NX')
                     end
                     ret[1]=1
+                    ret[2]=0
+                    ret[3]=current_time+lock_seconds*1000
                     return ret
                 end
 
@@ -97,6 +102,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 else
                     redis.call('set',KEYS[1],bucket_amount,'PX',val_expire_ms)
                 end
+                ret[3]=last_time+inflow_unit
                 return ret");
         }
 
@@ -122,7 +128,8 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 IsLimit = ret[0] == 0 ? false : true,
                 Target = target,
                 Count = ret[1],
-                Rule = rule
+                Rule = rule,
+                ResetTime = DateTimeOffset.FromUnixTimeMilliseconds(ret[2]).ToLocalTime(),
             };
         }
 
@@ -150,7 +157,8 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 IsLimit = ret[0] == 0 ? false : true,
                 Target = target,
                 Count = ret[1],
-                Rule = rule
+                Rule = rule,
+                ResetTime = DateTimeOffset.FromUnixTimeMilliseconds(ret[2]).ToLocalTime(),
             };
         }
     }

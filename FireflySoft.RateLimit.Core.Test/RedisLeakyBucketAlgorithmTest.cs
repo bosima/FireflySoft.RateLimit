@@ -125,13 +125,13 @@ namespace FireflySoft.RateLimit.Core.Test
         [DataTestMethod]
         public void ResetTime_TriggerLimit_ReturnLockExpireTime()
         {
-            var outflowUnit = TimeSpan.FromMilliseconds(100);
+            var outflowUnit = TimeSpan.FromMilliseconds(1000);
             var processor = GetAlgorithm(10, 5, outflowUnit, 3);
             DateTimeOffset expected = DateTimeOffset.MinValue;
 
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 20; i++)
             {
-                if (i == 11)
+                if (i == 16)
                 {
                     expected = DateTimeOffset.Now.Add(TimeSpan.FromSeconds(3));
                 }
@@ -143,7 +143,7 @@ namespace FireflySoft.RateLimit.Core.Test
                     Parameters = new Dictionary<string, string>() { { "from", "sample" } }
                 });
 
-                if (i >= 11)
+                if (i >= 16)
                 {
                     Assert.IsTrue(expected.AddMilliseconds(10) >= result.RuleCheckResults.First().ResetTime);
                     Assert.IsTrue(expected.AddMilliseconds(-10) <= result.RuleCheckResults.First().ResetTime);
@@ -805,13 +805,13 @@ namespace FireflySoft.RateLimit.Core.Test
         [DataTestMethod]
         public async Task ResetTimeAsync_TriggerLimit_ReturnLockExpireTime()
         {
-            var outflowUnit = TimeSpan.FromMilliseconds(100);
+            var outflowUnit = TimeSpan.FromMilliseconds(1000);
             var processor = GetAlgorithm(10, 5, outflowUnit, 3);
             DateTimeOffset expected = DateTimeOffset.MinValue;
 
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 20; i++)
             {
-                if (i == 11)
+                if (i >= 16)
                 {
                     expected = DateTimeOffset.Now.Add(TimeSpan.FromSeconds(3));
                 }
@@ -823,7 +823,7 @@ namespace FireflySoft.RateLimit.Core.Test
                     Parameters = new Dictionary<string, string>() { { "from", "sample" } }
                 });
 
-                if (i >= 11)
+                if (i >= 16)
                 {
                     Assert.IsTrue(expected.AddMilliseconds(10) >= result.RuleCheckResults.First().ResetTime);
                     Assert.IsTrue(expected.AddMilliseconds(-10) <= result.RuleCheckResults.First().ResetTime);

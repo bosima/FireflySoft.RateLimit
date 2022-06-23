@@ -143,7 +143,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             // Trigger rate limiting
             if (bucketAmount < 0)
             {
-                return (true, bucketAmount, cacheItem.Counter.LastInflowTime.Add(currentRule.InflowUnit));
+                return (true, 0, cacheItem.Counter.LastInflowTime.Add(currentRule.InflowUnit));
             }
 
             // Token bucket full

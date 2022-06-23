@@ -26,6 +26,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
         {
             _leakyBucketIncrementLuaScript = new RedisLuaScript(_redisClient, "Src-IncrWithLeakyBucket",
                 @"local ret={}
+                local current_time=tonumber(ARGV[5])
                 local cl_key='{' .. KEYS[1] .. '}'
                 local lock_key=cl_key .. '-lock'
                 local lock_val=redis.call('get',lock_key)
@@ -33,7 +34,8 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                     ret[1]=1
                     ret[2]=-1
                     ret[3]=-1
-                    ret[4]=redis.call('PTTL',lock_key)
+                    local lock_ttl=redis.call('PTTL',lock_key)
+                    ret[4]=tonumber(lock_ttl)+current_time
                     return ret;
                 end
                 ret[1]=0
@@ -43,7 +45,6 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 local outflow_unit=tonumber(ARGV[3])
                 local outflow_quantity_per_unit=tonumber(ARGV[4])
                 local key_expire_time=(math.ceil(capacity/outflow_quantity_per_unit)+1)*outflow_unit
-                local current_time=tonumber(ARGV[5])
                 local start_time=tonumber(ARGV[6])
                 local lock_seconds=tonumber(ARGV[7])
                 local last_time=redis.call('get',st_key)

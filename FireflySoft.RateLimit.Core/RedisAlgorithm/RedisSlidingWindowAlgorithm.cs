@@ -33,13 +33,15 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
             // otherwise the sliding window is restarted.
             _slidingWindowIncrementLuaScript = new RedisLuaScript(_redisClient, "Src-IncrWithExpireSec",
                 @"local ret={}
+                local current_time=tonumber(ARGV[5])
                 local cl_key='{' .. KEYS[1] .. '}'
                 local lock_key=cl_key .. '-lock'
                 local lock_val=redis.call('get',lock_key)
                 if lock_val == '1' then
                     ret[1]=1
                     ret[2]=-1
-                    ret[3]=redis.call('PTTL',lock_key)
+                    local lock_ttl=redis.call('PTTL',lock_key)
+                    ret[3]=tonumber(lock_ttl)+current_time
                     return ret;
                 end
                 ret[1]=0
@@ -48,7 +50,6 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 local st_expire_ms=tonumber(ARGV[2])
                 local period_ms=tonumber(ARGV[3])
                 local period_number=tonumber(ARGV[4])
-                local current_time=tonumber(ARGV[5])
                 local cal_start_time=tonumber(ARGV[6])
                 local limit_number=tonumber(ARGV[7])
                 local lock_seconds=tonumber(ARGV[8])

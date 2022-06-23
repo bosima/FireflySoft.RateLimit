@@ -844,14 +844,14 @@ namespace FireflySoft.RateLimit.Core.Test
         [DataTestMethod]
         public async Task ResetTimeAsync_TriggerLimit_ReturnLockExpireTime()
         {
-            var statWindow = TimeSpan.FromMilliseconds(600);
+            var statWindow = TimeSpan.FromMilliseconds(1000);
             var statPeriod = TimeSpan.FromMilliseconds(200);
             var processor = GetAlgorithm(statWindow, statPeriod, StartTimeType.FromCurrent, 10, 3);
             DateTimeOffset expected = DateTimeOffset.MinValue;
 
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 15; i++)
             {
-                if (i == 11)
+                if (i >= 11)
                 {
                     expected = DateTimeOffset.Now.Add(TimeSpan.FromSeconds(3));
                 }

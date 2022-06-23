@@ -132,7 +132,7 @@ namespace FireflySoft.RateLimit.Core.Test
             var stubTimeProvider = new TestTimeProvider(now, TimeSpan.FromMilliseconds(1));
             var processor = GetAlgorithm(stubTimeProvider, 10, 5, outflowUnit, 3);
 
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 20; i++)
             {
                 var result = processor.Check(new SimulationRequest()
                 {
@@ -141,7 +141,7 @@ namespace FireflySoft.RateLimit.Core.Test
                     Parameters = new Dictionary<string, string>() { { "from", "sample" } }
                 });
 
-                if (i >= 11)
+                if (i >= 16)
                 {
                     var expected = now.Add(TimeSpan.FromSeconds(3));
                     Assert.AreEqual(expected, result.RuleCheckResults.First().ResetTime);
@@ -710,7 +710,7 @@ namespace FireflySoft.RateLimit.Core.Test
             var stubTimeProvider = new TestTimeProvider(now, TimeSpan.FromMilliseconds(1));
             var processor = GetAlgorithm(stubTimeProvider, 10, 5, outflowUnit, 3);
 
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 20; i++)
             {
                 var result = await processor.CheckAsync(new SimulationRequest()
                 {
@@ -719,7 +719,7 @@ namespace FireflySoft.RateLimit.Core.Test
                     Parameters = new Dictionary<string, string>() { { "from", "sample" } }
                 });
 
-                if (i >= 11)
+                if (i >= 16)
                 {
                     var expected = now.Add(TimeSpan.FromSeconds(3));
                     Assert.AreEqual(expected, result.RuleCheckResults.First().ResetTime);
