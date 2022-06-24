@@ -164,7 +164,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
             return BuildCheckResult(target, rule, ret);
         }
 
-               /// <summary>
+        /// <summary>
         /// Take a peek at the result of the last processing of the specified target in the specified rule
         /// </summary>
         /// <param name="target"></param>
@@ -255,6 +255,7 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 IsLimit = ret[0] == 0 ? false : true,
                 Target = target,
                 Count = ret[1],
+                Remaining = rule.GetLimitThreshold() - ret[1],
                 Rule = rule,
                 ResetTime = resetTime,
             };

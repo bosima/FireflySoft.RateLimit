@@ -23,11 +23,16 @@ namespace FireflySoft.RateLimit.Core
 
         /// <summary>
         /// The number of requests passed in the current time window.
-        /// But when token bucket algorithm, it is the number of tokens remaining in the token bucket.
-        /// It needs to be changed in the future. Two new fields may be added.
         /// </summary>
         /// <value></value>
         public long Count { get; set; }
+
+        /// <summary>
+        /// The number of requests remaining in the current time window that will not be limited.
+        /// 
+        /// </summary>
+        /// <value></value>
+        public long Remaining { get; set; }
 
         /// <summary>
         /// The queue waiting time of the current request, which is only for the leaky bucket algorithm.

@@ -765,11 +765,11 @@ namespace FireflySoft.RateLimit.Core.Test
                         }
                 });
 
-                //Console.WriteLine($"{i},{result.RuleCheckResults.First().Count},{result.IsLimit}");
+                //Console.WriteLine($"{i},{result.RuleCheckResults.First().Remaining},{result.IsLimit}");
 
                 if (i == 10)
                 {
-                    Assert.AreEqual(0, result.RuleCheckResults.First().Count);
+                    Assert.AreEqual(0, result.RuleCheckResults.First().Remaining);
                 }
 
                 if (i == 10)
@@ -778,7 +778,7 @@ namespace FireflySoft.RateLimit.Core.Test
                 }
                 if (i == 11)
                 {
-                    Assert.AreEqual(4, result.RuleCheckResults.First().Count);
+                    Assert.AreEqual(4, result.RuleCheckResults.First().Remaining);
                 }
 
                 // trigger limit
@@ -793,7 +793,7 @@ namespace FireflySoft.RateLimit.Core.Test
                 }
                 if (i == 21)
                 {
-                    Assert.AreEqual(4, result.RuleCheckResults.First().Count);
+                    Assert.AreEqual(4, result.RuleCheckResults.First().Remaining);
                 }
 
                 if (i == 30)
@@ -802,7 +802,7 @@ namespace FireflySoft.RateLimit.Core.Test
                 }
                 if (i == 31)
                 {
-                    Assert.AreEqual(4, result.RuleCheckResults.First().Count);
+                    Assert.AreEqual(4, result.RuleCheckResults.First().Remaining);
                 }
             }
         }
@@ -832,7 +832,7 @@ namespace FireflySoft.RateLimit.Core.Test
                         }
                 });
 
-                //Console.WriteLine($"{i},{result.RuleCheckResults.First().Count},{result.IsLimit}");
+                //Console.WriteLine($"{i},{result.RuleCheckResults.First().Remaining},{result.IsLimit}");
 
                 if (i == 10)
                 {
@@ -840,7 +840,7 @@ namespace FireflySoft.RateLimit.Core.Test
                 }
                 if (i == 11)
                 {
-                    Assert.AreEqual(4, result.RuleCheckResults.First().Count);
+                    Assert.AreEqual(4, result.RuleCheckResults.First().Remaining);
                 }
 
                 if (i == 16)
@@ -854,7 +854,7 @@ namespace FireflySoft.RateLimit.Core.Test
                 }
                 if (i == 21)
                 {
-                    Assert.AreEqual(4, result.RuleCheckResults.First().Count);
+                    Assert.AreEqual(4, result.RuleCheckResults.First().Remaining);
                 }
 
                 if (i == 26)

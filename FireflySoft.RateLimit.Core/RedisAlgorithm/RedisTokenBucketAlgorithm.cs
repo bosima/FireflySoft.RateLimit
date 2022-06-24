@@ -127,7 +127,8 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
             {
                 IsLimit = ret[0] == 0 ? false : true,
                 Target = target,
-                Count = ret[1],
+                Count = currentRule.Capacity - ret[1],
+                Remaining = ret[1],
                 Rule = rule,
                 ResetTime = DateTimeOffset.FromUnixTimeMilliseconds(ret[2]).ToLocalTime(),
             };
@@ -156,7 +157,8 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
             {
                 IsLimit = ret[0] == 0 ? false : true,
                 Target = target,
-                Count = ret[1],
+                Count = currentRule.Capacity - ret[1],
+                Remaining = ret[1],
                 Rule = rule,
                 ResetTime = DateTimeOffset.FromUnixTimeMilliseconds(ret[2]).ToLocalTime(),
             };

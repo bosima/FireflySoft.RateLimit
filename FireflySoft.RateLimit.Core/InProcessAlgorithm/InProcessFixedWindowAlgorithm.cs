@@ -42,6 +42,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
                 IsLimit = result.IsLimit,
                 Target = target,
                 Count = result.Count,
+                Remaining = currentRule.GetLimitThreshold() - result.Count,
                 Rule = rule,
                 ResetTime = result.ResetTime,
             };
@@ -74,6 +75,7 @@ namespace FireflySoft.RateLimit.Core.InProcessAlgorithm
             {
                 IsLimit = result.IsLimit,
                 Count = result.Count,
+                Remaining = currentRule.GetLimitThreshold() - result.Count,
                 ResetTime = result.ResetTime,
                 Target = target,
                 Rule = rule,
