@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace aspnetcore6.Controllers;
+namespace RuleAutoUpdate.Controllers;
 
 [ApiController]
 [Route("[controller]")]

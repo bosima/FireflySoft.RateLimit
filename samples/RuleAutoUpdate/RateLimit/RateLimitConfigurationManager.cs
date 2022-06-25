@@ -1,6 +1,6 @@
 using System.Collections.ObjectModel;
 
-namespace aspnetcore6.RateLimit;
+namespace RuleAutoUpdate.RateLimit;
 
 public class RateLimitConfiguration
 {

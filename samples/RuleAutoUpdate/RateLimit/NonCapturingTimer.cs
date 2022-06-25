@@ -1,4 +1,4 @@
-namespace aspnetcore6.RateLimit;
+namespace RuleAutoUpdate.RateLimit;
 
 internal static class NonCapturingTimer
 {

@@ -2,7 +2,7 @@ using FireflySoft.RateLimit.Core;
 using FireflySoft.RateLimit.Core.InProcessAlgorithm;
 using FireflySoft.RateLimit.Core.Rule;
 
-namespace aspnetcore6.RateLimit;
+namespace RuleAutoUpdate.RateLimit;
 
 public class AutoUpdateAlgorithmManager
 {

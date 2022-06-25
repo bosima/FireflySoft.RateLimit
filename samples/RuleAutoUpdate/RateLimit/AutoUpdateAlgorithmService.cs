@@ -1,6 +1,6 @@
 using System;
 
-namespace aspnetcore6.RateLimit
+namespace RuleAutoUpdate.RateLimit
 {
     public static class AutoUpdateAlgorithmService
     {

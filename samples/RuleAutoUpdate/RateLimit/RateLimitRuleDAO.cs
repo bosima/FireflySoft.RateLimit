@@ -3,7 +3,7 @@ using System.Data;
 using Dapper;
 using MySql.Data.MySqlClient;
 
-namespace aspnetcore6.RateLimit;
+namespace RuleAutoUpdate.RateLimit;
 
 /* 
 First execute the sql in mysql.

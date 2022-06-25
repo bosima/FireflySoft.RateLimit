@@ -8,7 +8,6 @@
     - [ASP.NET Core 应用](#aspnet-core-应用)
     - [ASP.NET 应用](#aspnet-应用)
     - [其它类型应用](#其它类型应用)
-    - [待办](#待办)
 
 ## 介绍
 FireflySoft.RateLimit 是一个基于 .NET Standard 的限流类库，其内核简单轻巧，能够灵活应对各种需求的限流场景。
@@ -19,6 +18,8 @@ FireflySoft.RateLimit 是一个基于 .NET Standard 的限流类库，其内核�
 * 分布式友好：通过Redis存储支持分布式程序统一计数。
 * 限流目标灵活：可以从请求中提取各种数据用于设置限流目标。
 * 支持限流惩罚：可以在客户端触发限流后锁定一段时间不允许其访问。
+* 时间窗口增强：支持到毫秒级别；支持从秒、分钟、小时、日期等时间周期的起始点开始。
+* 实时限流跟踪：当前计数周期内已处理的请求数、剩余允许请求数，以及计数周期重置的时间。
 * 动态更改规则：支持程序运行时动态更改限流规则。
 * 自定义错误：可以自定义触发限流后的错误码和错误消息。
 * 普适性：原则上可以满足任何需要限流的场景。
@@ -31,10 +32,10 @@ FireflySoft.RateLimit 是一个基于 .NET Standard 的限流类库，其内核�
 | FireflySoft.RateLimit.AspNetCore         | ASP.NET Core 限流中间件，支持 .NET Core 2.0 及后续版本。 |
 | FireflySoft.RateLimit.Core.UnitTest      | FireflySoft.RateLimit.Core 的单元测试。                 |
 | FireflySoft.RateLimit.Core.BenchmarkTest | FireflySoft.RateLimit.Core 的基准测试。                 |
-| samples/console                          | 使用 FireflySoft.RateLmit.Core 的示例程序.              |
-| samples/aspnet                           | 使用 FireflySoft.RateLimit.AspNet 的示例程序。          |
-| samples/aspnetcore                       | 使用 FireflySoft.RateLimit.AspNetCore 的示例程序。      |
-| samples/aspnetcore6                      | 使用 FireflySoft.RateLimit.AspNetCore 的.NET6示例程序。 |
+| Samples/Console                          | 使用 FireflySoft.RateLmit.Core 的控制台示例程序.          |
+| Samples/AspNet                           | 使用 FireflySoft.RateLimit.AspNet 的普通示例程序。        |
+| Samples/AspNetCore                       | 使用 FireflySoft.RateLimit.AspNetCore 的普通示例程序。    |
+| Samples/RuleAutoUpdate                   | 使用 FireflySoft.RateLimit.AspNetCore 的自动更新限流规则的示例程序。 |
 
 ## 使用说明
 
@@ -205,7 +206,3 @@ var result = algorithm.Check(new SimulationRequest()
 ```
 
 SimulationRequest是一个自定义请求，你可以把它修改为任何适合自己的请求类型。
-
-### 待办
-* 同一个请求中的不同限流规则检查使用同一个当前时间。 
-* 让ASP.NET Core限流中间件返回当前计数信息。

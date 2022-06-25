@@ -1,4 +1,5 @@
 {
     "dotnet-test-explorer.testProjectPath": "**/*Test.@(csproj|vbproj|fsproj)",
-    "dotnet-test-explorer.testArguments": "/p:CollectCoverage=true /p:CoverletOutput=./TestResults/ /p:CoverletOutputFormat=opencover"
+    "dotnet-test-explorer.testArguments": "/p:CollectCoverage=true /p:CoverletOutput=./TestResults/ /p:CoverletOutputFormat=opencover",
+    "licenser.author": "bosima"
 }

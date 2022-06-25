@@ -8,7 +8,6 @@
     - [ASP.NET Core](#aspnet-core)
     - [ASP.NET](#aspnet)
     - [Others](#others)
-    - [Todo List](#todo-list)
 
 ## Introduction
 Fireflysoft.RateLimit is a rate limiting library based on .Net standard. Its core is simple and lightweight, and can flexibly meet the rate limiting needs of many scenarios.
@@ -16,12 +15,14 @@ Fireflysoft.RateLimit is a rate limiting library based on .Net standard. Its cor
 ## Features
 * Multiple rate limiting algorithms: built-in fixed window, sliding window, leaky bucket, token bucket, and can be extended.
 * Multiple counting storage: memory and Redis (including cluster).
-* Distributed friendly: Supports unified counting of distributed programs with Redis storage.
-* Flexible rate limiting targets: Each data can be extracted from the request to set rate limiting targets.
-* Support current limit penalty: the client can be locked for a period of time after the rate limit is triggered.
+* Distributed friendly: supports unified counting of distributed programs with Redis storage.
+* Flexible rate limiting targets: each data can be extracted from the request to set rate limiting targets.
+* Support rate limit penalty: the client can be locked for a period of time after the rate limit is triggered.
+* Time window enhancement: support to the millisecond level; support starting from the starting point of time periods such as seconds, minutes, hours, dates, etc.
+* Real-time tracking: the number of requests processed and the remaining allowed requests in the current counting cycle, as well as the reset time of the counting cycle.
 * Dynamically change the rules: support the dynamic change of the rate limiting rules when the program is running.
-* Custom error: You can customize the error code and error message after the current limit is triggered.
-* Universality: In principle, it can meet any scenario that requires rate limiting.
+* Custom error: you can customize the error code and error message after the current limit is triggered.
+* Universality: in principle, it can meet any scenario that requires rate limiting.
 
 ## Projects
 | Project                                  | Descriptioin                                           |
@@ -31,10 +32,10 @@ Fireflysoft.RateLimit is a rate limiting library based on .Net standard. Its cor
 | FireflySoft.RateLimit.AspNetCore         | ASP.NET Core rate-limit middleware.                    |
 | FireflySoft.RateLimit.Core.UnitTest      | Unit test for FireflySoft.RateLimit.Core.              |
 | FireflySoft.RateLimit.Core.BenchmarkTest | Benchmark test for FireflySoft.RateLimit.Core.         |
-| samples/console                          | FireflySoft.RateLmit.Core sample program.              |
-| samples/aspnet                           | FireflySoft.RateLimit.AspNet sample program.          |
-| samples/aspnetcore                       | FireflySoft.RateLimit.AspNetCore sample program.      |
-| samples/aspnetcore6                | FireflySoft.RateLimit.AspNetCore with .NET6 sample program. |
+| Samples/Console                          | FireflySoft.RateLmit.Core sample program.              |
+| Samples/AspNet                           | FireflySoft.RateLimit.AspNet sample program.          |
+| Samples/AspNetCore                       | FireflySoft.RateLimit.AspNetCore sample program.      |
+| Samples/RuleAutoUpdate                | A sample that can automatic update rate limiting rules. |
 ## Usage
 
 ### ASP.NET Core
@@ -200,7 +201,3 @@ var result = algorithm.Check(new SimulationRequest()
 ```
 
 SimulationRequest is a custom request that you can modify to any type.
-
-### Todo List
-* Use the same current time for different rules in the same request.
-* Let ASP.Net Core rate limiting middleware returns the current count information.

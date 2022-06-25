@@ -1,4 +1,4 @@
-using aspnetcore6.RateLimit;
+using RuleAutoUpdate.RateLimit;
 using FireflySoft.RateLimit.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);

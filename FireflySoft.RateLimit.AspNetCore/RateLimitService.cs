@@ -26,14 +26,7 @@ namespace FireflySoft.RateLimit.AspNetCore
 
             if (error == null)
             {
-                error = new HttpErrorResponse()
-                {
-                    HttpStatusCode = 429,
-                    BuildHttpContent = (context, checkResult) =>
-                    {
-                        return "too many requests";
-                    }
-                };
+                error = GetDefaultErrorResponse();
             }
 
             if (interceptor == null)
@@ -64,14 +57,7 @@ namespace FireflySoft.RateLimit.AspNetCore
 
             if (errorProvider == null)
             {
-                errorProvider = serviceProvider => new HttpErrorResponse()
-                {
-                    HttpStatusCode = 429,
-                    BuildHttpContent = (context, checkResult) =>
-                    {
-                        return "too many requests";
-                    }
-                };
+                errorProvider = serviceProvider => GetDefaultErrorResponse();
             }
 
             if (interceptorProvider == null)
@@ -83,6 +69,19 @@ namespace FireflySoft.RateLimit.AspNetCore
             services.AddSingleton<HttpErrorResponse>(errorProvider);
             services.AddSingleton<HttpInvokeInterceptor>(interceptorProvider);
             return services;
+        }
+
+
+        private static HttpErrorResponse GetDefaultErrorResponse()
+        {
+            return new HttpErrorResponse()
+            {
+                HttpStatusCode = 429,
+                BuildHttpContent = (context, checkResult) =>
+                {
+                    return "too many requests";
+                }
+            };
         }
     }
 }
