@@ -84,15 +84,15 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                     bucket_amount=capacity-amount
                 end
                 ret[2]=bucket_amount
-
+                ret[3]=last_time+inflow_unit
                 if(bucket_amount<0)
                 then
                     if lock_seconds>0 then
                         redis.call('set',lock_key,'1','EX',lock_seconds,'NX')
+                        ret[3]=current_time+lock_seconds*1000
                     end
                     ret[1]=1
                     ret[2]=0
-                    ret[3]=current_time+lock_seconds*1000
                     return ret
                 end
 
@@ -102,7 +102,6 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 else
                     redis.call('set',KEYS[1],bucket_amount,'PX',val_expire_ms)
                 end
-                ret[3]=last_time+inflow_unit
                 return ret");
         }
 

@@ -109,8 +109,8 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                     ret[1]=1
                     if lock_seconds>0 then
                         redis.call('set',lock_key,'1','EX',lock_seconds,'NX')
+                        ret[3]=lock_seconds*1000
                     end
-                    ret[3]=lock_seconds*1000
                 end
                 return ret";
 

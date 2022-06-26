@@ -80,13 +80,14 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                             end
                         end
                     else
+                        ret[4]=last_time+outflow_unit
                         if lock_seconds>0 then
                             redis.call('set',lock_key,'1','EX',lock_seconds,'NX')
+                            ret[4]=current_time+lock_seconds*1000
                         end
                         ret[1]=1
                         ret[2]=current_value-amount
                         ret[3]=-1
-                        ret[4]=lock_seconds*1000
                         return ret
                     end
                 else

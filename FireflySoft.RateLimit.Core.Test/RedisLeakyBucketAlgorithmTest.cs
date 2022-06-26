@@ -17,9 +17,9 @@ namespace FireflySoft.RateLimit.Core.Test
         [DataTestMethod]
         public void Common()
         {
-            var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 0);
+            var processor = GetAlgorithm(20, 10, TimeSpan.FromSeconds(1), 0);
 
-            for (int i = 1; i <= 80; i++)
+            for (int i = 1; i <= 50; i++)
             {
                 var checkResult = processor.Check(new SimulationRequest()
                 {
@@ -30,7 +30,7 @@ namespace FireflySoft.RateLimit.Core.Test
                         }
                 });
 
-                if (i == 41 || i >= 52)
+                if (i == 31 || i >= 42)
                 {
                     Assert.AreEqual(true, checkResult.IsLimit);
                 }
@@ -39,7 +39,7 @@ namespace FireflySoft.RateLimit.Core.Test
                     Assert.AreEqual(false, checkResult.IsLimit);
                 }
 
-                if (i == 41)
+                if (i == 31)
                 {
                     Thread.Sleep(1000);
                 }
@@ -136,6 +136,30 @@ namespace FireflySoft.RateLimit.Core.Test
                     expected = DateTimeOffset.Now.Add(TimeSpan.FromSeconds(3));
                 }
 
+                var result = processor.Check(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() { { "from", "sample" } }
+                });
+
+                if (i >= 16)
+                {
+                    Assert.IsTrue(expected.AddMilliseconds(10) >= result.RuleCheckResults.First().ResetTime);
+                    Assert.IsTrue(expected.AddMilliseconds(-10) <= result.RuleCheckResults.First().ResetTime);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public void ResetTime_TriggerLimitNoLock_ReturnPeriodExpireTime()
+        {
+            var outflowUnit = TimeSpan.FromMilliseconds(1000);
+            var processor = GetAlgorithm(10, 5, outflowUnit, 0);
+            DateTimeOffset expected = DateTimeOffset.Now.Add(outflowUnit);
+
+            for (int i = 0; i < 20; i++)
+            {
                 var result = processor.Check(new SimulationRequest()
                 {
                     RequestId = Guid.NewGuid().ToString(),
@@ -697,9 +721,9 @@ namespace FireflySoft.RateLimit.Core.Test
         [DataTestMethod]
         public async Task CommonAsync()
         {
-            var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 1);
+            var processor = GetAlgorithm(20, 10, TimeSpan.FromSeconds(1), 1);
 
-            for (int i = 1; i <= 80; i++)
+            for (int i = 1; i <= 50; i++)
             {
                 var checkResult = await processor.CheckAsync(new SimulationRequest()
                 {
@@ -710,7 +734,7 @@ namespace FireflySoft.RateLimit.Core.Test
                         }
                 });
 
-                if (i == 41 || i >= 52)
+                if (i == 31 || i >= 42)
                 {
                     Assert.AreEqual(true, checkResult.IsLimit);
                 }
@@ -719,7 +743,7 @@ namespace FireflySoft.RateLimit.Core.Test
                     Assert.AreEqual(false, checkResult.IsLimit);
                 }
 
-                if (i == 41)
+                if (i == 31)
                 {
                     await Task.Delay(1000);
                 }
@@ -816,6 +840,30 @@ namespace FireflySoft.RateLimit.Core.Test
                     expected = DateTimeOffset.Now.Add(TimeSpan.FromSeconds(3));
                 }
 
+                var result = await processor.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() { { "from", "sample" } }
+                });
+
+                if (i >= 16)
+                {
+                    Assert.IsTrue(expected.AddMilliseconds(10) >= result.RuleCheckResults.First().ResetTime);
+                    Assert.IsTrue(expected.AddMilliseconds(-10) <= result.RuleCheckResults.First().ResetTime);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public async Task ResetTimeAsync_TriggerLimitNoLock_ReturnPeriodExpireTime()
+        {
+            var outflowUnit = TimeSpan.FromMilliseconds(1000);
+            var processor = GetAlgorithm(10, 5, outflowUnit, 0);
+            DateTimeOffset expected = DateTimeOffset.Now.Add(outflowUnit);
+
+            for (int i = 0; i < 20; i++)
+            {
                 var result = await processor.CheckAsync(new SimulationRequest()
                 {
                     RequestId = Guid.NewGuid().ToString(),

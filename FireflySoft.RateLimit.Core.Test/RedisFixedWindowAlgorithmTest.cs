@@ -150,6 +150,37 @@ namespace FireflySoft.RateLimit.Core.Test
         }
 
         [DataTestMethod]
+        public void ResetTime_TriggerLimitNoLock_ReturnPeriodExpireTime()
+        {
+            var statWindow = TimeSpan.FromSeconds(1);
+            var lockSeconds = 0;
+            var processor = GetAlgorithm(statWindow, StartTimeType.FromCurrent, 10, lockSeconds);
+            DateTimeOffset expected = DateTimeOffset.MinValue;
+
+            for (int i = 0; i < 20; i++)
+            {
+                var result = processor.Check(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() { { "from", "sample" } }
+                });
+
+                if (i == 0)
+                {
+                    expected = DateTimeOffset.Now.Add(statWindow);
+                }
+
+                if (i >= 11)
+                {
+                    Assert.AreNotEqual(expected, DateTimeOffset.MinValue);
+                    Assert.IsTrue(expected.AddMilliseconds(10) >= result.RuleCheckResults.First().ResetTime);
+                    Assert.IsTrue(expected.AddMilliseconds(-10) <= result.RuleCheckResults.First().ResetTime);
+                }
+            }
+        }
+
+        [DataTestMethod]
         public void StartTimeType_FromNaturalPeriodBeign_Common()
         {
             var processor = GetAlgorithm(TimeSpan.FromSeconds(1), StartTimeType.FromNaturalPeriodBeign, 10, 0);
@@ -681,6 +712,39 @@ namespace FireflySoft.RateLimit.Core.Test
                 }
 
                 if (i >= 21)
+                {
+                    Assert.AreNotEqual(expected, DateTimeOffset.MinValue);
+                    Assert.IsTrue(expected.AddMilliseconds(10) >= result.RuleCheckResults.First().ResetTime);
+                    Assert.IsTrue(expected.AddMilliseconds(-10) <= result.RuleCheckResults.First().ResetTime);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public async Task ResetTimeAsync_TriggerLimitNoLock_ReturnPeriodExpireTime()
+        {
+            var statWindow = TimeSpan.FromSeconds(1);
+            var lockSeconds = 0;
+            var processor = GetAlgorithm(statWindow, StartTimeType.FromCurrent, 10, lockSeconds);
+            DateTimeOffset expected = DateTimeOffset.MinValue;
+
+            for (int i = 0; i < 20; i++)
+            {
+                var result = await processor.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() { { "from", "sample" } }
+                });
+
+                if (i == 0)
+                {
+                    expected = DateTimeOffset.Now.Add(statWindow);
+                }
+
+                Console.WriteLine($"{result.RuleCheckResults.First().ResetTime.ToString("ss.fff")},{expected.ToString("ss.fff")}");
+
+                if (i >= 11)
                 {
                     Assert.AreNotEqual(expected, DateTimeOffset.MinValue);
                     Assert.IsTrue(expected.AddMilliseconds(10) >= result.RuleCheckResults.First().ResetTime);

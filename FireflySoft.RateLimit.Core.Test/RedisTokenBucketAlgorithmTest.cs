@@ -152,6 +152,30 @@ namespace FireflySoft.RateLimit.Core.Test
         }
 
         [DataTestMethod]
+        public void ResetTime_TriggerLimitNoLock_ReturnPeriodExpireTime()
+        {
+            var outflowUnit = TimeSpan.FromMilliseconds(1000);
+            var processor = GetAlgorithm(10, 5, outflowUnit, 0);
+            DateTimeOffset expected = DateTimeOffset.Now.Add(outflowUnit);
+
+            for (int i = 0; i < 20; i++)
+            {
+                var result = processor.Check(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() { { "from", "sample" } }
+                });
+
+                if (i >= 10)
+                {
+                    Assert.IsTrue(expected.AddMilliseconds(10) >= result.RuleCheckResults.First().ResetTime);
+                    Assert.IsTrue(expected.AddMilliseconds(-10) <= result.RuleCheckResults.First().ResetTime);
+                }
+            }
+        }
+
+        [DataTestMethod]
         public void Lock_LockThreeSeconds_Common()
         {
             var processor = GetAlgorithm(30, 10, TimeSpan.FromSeconds(1), 3);
@@ -435,6 +459,30 @@ namespace FireflySoft.RateLimit.Core.Test
                     expected = DateTimeOffset.Now.Add(TimeSpan.FromSeconds(3));
                 }
 
+                var result = await processor.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() { { "from", "sample" } }
+                });
+
+                if (i >= 10)
+                {
+                    Assert.IsTrue(expected.AddMilliseconds(10) >= result.RuleCheckResults.First().ResetTime);
+                    Assert.IsTrue(expected.AddMilliseconds(-10) <= result.RuleCheckResults.First().ResetTime);
+                }
+            }
+        }
+
+        [DataTestMethod]
+        public async Task ResetTimeAsync_TriggerLimitNoLock_ReturnPeriodExpireTime()
+        {
+            var outflowUnit = TimeSpan.FromMilliseconds(1000);
+            var processor = GetAlgorithm(10, 5, outflowUnit, 0);
+            DateTimeOffset expected = DateTimeOffset.Now.Add(outflowUnit);
+
+            for (int i = 0; i < 20; i++)
+            {
                 var result = await processor.CheckAsync(new SimulationRequest()
                 {
                     RequestId = Guid.NewGuid().ToString(),

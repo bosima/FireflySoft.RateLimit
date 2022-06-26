@@ -101,14 +101,15 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                 end
 
                 ret[2]=amount+periods_amount
-                
+                ret[3]=cur_period+1
+
                 if (limit_number>=0 and ret[2]>limit_number) then
                     if lock_seconds>0 then 
                         redis.call('set',lock_key,'1','EX',lock_seconds,'NX')
+                        ret[3]=lock_seconds*1000
                     end
                     ret[1]=1
                     ret[2]=periods_amount
-                    ret[3]=lock_seconds*1000
                     return ret
                 end
 
@@ -119,7 +120,6 @@ namespace FireflySoft.RateLimit.Core.RedisAlgorithm
                     redis.call('PEXPIRE',cur_period_key,period_expire_ms)
                     redis.call('PEXPIRE',st_key,st_expire_ms)
                 end
-                ret[3]=cur_period+1
                 return ret");
         }
 
