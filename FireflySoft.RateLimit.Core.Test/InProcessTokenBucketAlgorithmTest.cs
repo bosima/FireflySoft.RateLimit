@@ -150,6 +150,32 @@ namespace FireflySoft.RateLimit.Core.Test
         }
 
         [DataTestMethod]
+        public void ResetTime_TriggerLimitNoLock_ReturnPeriodExpireTime()
+        {
+            var now = DateTimeOffset.Parse("2022-1-1 00:00:00.000");
+            var outflowUnit = TimeSpan.FromMilliseconds(100);
+            var stubTimeProvider = new TestTimeProvider(now, TimeSpan.FromMilliseconds(1));
+            var processor = GetAlgorithm(stubTimeProvider, 10, 5, outflowUnit, 0);
+            DateTimeOffset expected = stubTimeProvider.GetCurrentLocalTime().Add(outflowUnit);
+
+            for (int i = 0; i < 20; i++)
+            {
+                var result = processor.Check(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() { { "from", "sample" } }
+                });
+
+                if (i >= 10)
+                {
+                    Assert.AreEqual(expected, result.RuleCheckResults.First().ResetTime);
+                    Assert.AreEqual(expected, result.RuleCheckResults.First().ResetTime);
+                }
+            }
+        }
+
+        [DataTestMethod]
         public void Lock_LockThreeSeconds_Common()
         {
             var stubTimeProvider = new TestTimeProvider(TimeSpan.FromMilliseconds(1));

@@ -158,6 +158,33 @@ namespace FireflySoft.RateLimit.Core.Test
         }
 
         [DataTestMethod]
+        public async Task ResetTimeAsync_TriggerLimitNoLock_ReturnPeriodExpireTime()
+        {
+            var now = DateTimeOffset.Parse("2022-1-1 00:00:00.000");
+            var statWindow = TimeSpan.FromMilliseconds(300);
+            var statPeriod = TimeSpan.FromMilliseconds(100);
+            var stubTimeProvider = new TestTimeProvider(now, TimeSpan.FromMilliseconds(1));
+            var processor = GetAlgorithm(stubTimeProvider, statWindow, statPeriod, StartTimeType.FromCurrent, 10, 0);
+            var expected = stubTimeProvider.GetCurrentLocalTime().Add(statPeriod);
+
+            for (int i = 0; i < 10; i++)
+            {
+                var result = await processor.CheckAsync(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() { { "from", "sample" } }
+                });
+
+                if (i >= 11)
+                {
+                    Assert.AreEqual(expected, result.RuleCheckResults.First().ResetTime);
+                    Assert.AreEqual(expected, result.RuleCheckResults.First().ResetTime);
+                }
+            }
+        }
+
+        [DataTestMethod]
         public void Lock_LockThreeSeconds_Common()
         {
             var stubTimeProvider = new TestTimeProvider(TimeSpan.FromMilliseconds(1));

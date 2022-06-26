@@ -122,9 +122,9 @@ namespace FireflySoft.RateLimit.Core.Test
         public void ResetTime_TriggerLimit_ReturnLockExpireTime()
         {
             var now = DateTimeOffset.Now;
-            var statWondow = TimeSpan.FromMilliseconds(60);
+            var statWindow = TimeSpan.FromMilliseconds(60);
             var stubTimeProvider = new TestTimeProvider(now, TimeSpan.FromMilliseconds(1));
-            var processor = GetAlgorithm(stubTimeProvider, statWondow, StartTimeType.FromCurrent, 50, 3);
+            var processor = GetAlgorithm(stubTimeProvider, statWindow, StartTimeType.FromCurrent, 50, 3);
 
             for (int i = 0; i < 60; i++)
             {
@@ -140,6 +140,39 @@ namespace FireflySoft.RateLimit.Core.Test
                     var expected = now.Add(TimeSpan.FromSeconds(3));
                     Assert.AreEqual(expected, result.RuleCheckResults.First().ResetTime);
                 }
+            }
+        }
+
+        [DataTestMethod]
+        public void ResetTime_TriggerLimitNoLock_ReturnPeriodExpireTime()
+        {
+            var statWindow = TimeSpan.FromSeconds(1);
+            var now = DateTimeOffset.Now;
+            var stubTimeProvider = new TestTimeProvider(now, TimeSpan.FromMilliseconds(1));
+            var processor = GetAlgorithm(stubTimeProvider, statWindow, StartTimeType.FromCurrent, 10, 0);
+            DateTimeOffset expected = DateTimeOffset.MinValue;
+
+            for (int i = 0; i < 20; i++)
+            {
+                var result = processor.Check(new SimulationRequest()
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    RequestResource = "home",
+                    Parameters = new Dictionary<string, string>() { { "from", "sample" } }
+                });
+
+                if (i == 0)
+                {
+                    expected = stubTimeProvider.GetCurrentLocalTime().Add(statWindow);
+                }
+
+                if (i >= 11)
+                {
+                    Assert.AreNotEqual(expected, DateTimeOffset.MinValue);
+                    Assert.AreEqual(expected, result.RuleCheckResults.First().ResetTime);
+                    Assert.AreEqual(expected,result.RuleCheckResults.First().ResetTime);
+                }
+                stubTimeProvider.Increment();
             }
         }
 
@@ -666,7 +699,7 @@ namespace FireflySoft.RateLimit.Core.Test
             Assert.AreEqual(0, firstResult.Count);
             Assert.AreEqual(false, firstResult.IsLimit);
         }
-        
+
         [DataTestMethod]
         public async Task PeekAsync_ExistKey_Common()
         {
