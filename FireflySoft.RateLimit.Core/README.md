@@ -17,6 +17,8 @@ Fireflysoft.RateLimit is a rate limiting library based on .Net standard. Its cor
 
 ## Usage
 
+**If you need to use it in ASP.NET Core, it is recommended to install the package FireflySoft.RateLimit.AspNetCore.**
+
 Use *IAlgorithm* to filter every request, process the return value of *Check* method.
 
 ```csharp
