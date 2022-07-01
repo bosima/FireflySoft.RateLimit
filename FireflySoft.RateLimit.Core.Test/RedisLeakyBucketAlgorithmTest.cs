@@ -309,19 +309,19 @@ namespace FireflySoft.RateLimit.Core.Test
         [DataTestMethod]
         public void StartTimeType_FromNaturalPeriodBeign_Common()
         {
-            var processor = GetAlgorithm(20, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromNaturalPeriodBeign);
+            var processor = GetAlgorithm(10, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromNaturalPeriodBeign);
 
             while (true)
             {
-                if (DateTimeOffset.Now.Millisecond < 600)
+               if (DateTimeOffset.Now.Millisecond < 400 ||  DateTimeOffset.Now.Millisecond > 500)
                 {
-                    Thread.Sleep(15);
+                    SpinWait.SpinUntil(() => false, 10);
                     continue;
                 }
                 break;
             }
 
-            for (int i = 1; i <= 80; i++)
+            for (int i = 1; i <= 50; i++)
             {
                 var checkResult = processor.Check(new SimulationRequest()
                 {
@@ -332,7 +332,9 @@ namespace FireflySoft.RateLimit.Core.Test
                         }
                 });
 
-                if (i == 31 || i == 42 || i >= 53)
+                //Console.WriteLine($"{DateTimeOffset.Now.ToString("mm:ss.fff")},{i},{checkResult.RuleCheckResults.First().Count}");
+
+                if (i == 21 || i == 32 || i >= 43)
                 {
                     Assert.AreEqual(true, checkResult.IsLimit);
                 }
@@ -341,12 +343,12 @@ namespace FireflySoft.RateLimit.Core.Test
                     Assert.AreEqual(false, checkResult.IsLimit);
                 }
 
-                if (i == 31)
+                if (i == 21)
                 {
-                    Thread.Sleep(400);
+                    Thread.Sleep(600);
                 }
 
-                if (i == 42)
+                if (i == 32)
                 {
                     Thread.Sleep(1000);
                 }
@@ -521,14 +523,14 @@ namespace FireflySoft.RateLimit.Core.Test
         {
             var redisClient = RedisClientHelper.GetClient();
             var ruleId = "UpdateRules_NarrowOutflowUnit_LoseLimit";
-            var rule = CreateRules(ruleId, 20, 10, 600);
+            var rule = CreateRules(ruleId, 10, 10, 800);
             IAlgorithm algorithm = new RedisLeakyBucketAlgorithm(rule, redisClient, updatable: true);
 
-            for (int i = 1; i <= 50; i++)
+            for (int i = 1; i <= 40; i++)
             {
-                if (i == 41)
+                if (i == 31)
                 {
-                    var newRule = CreateRules(ruleId, 20, 10, 400);
+                    var newRule = CreateRules(ruleId, 10, 10, 400);
                     algorithm.UpdateRules(newRule);
                 }
 
@@ -541,18 +543,18 @@ namespace FireflySoft.RateLimit.Core.Test
                         }
                 });
 
-                if (i < 31)
+                if (i < 21)
                 {
                     Assert.AreEqual(false, result.IsLimit);
                 }
 
-                if (i >= 31 && i <= 40)
+                if (i >= 21 && i <= 30)
                 {
                     Assert.AreEqual(true, result.IsLimit);
                 }
 
                 // lose limit
-                if (i >= 41)
+                if (i >= 31)
                 {
                     Assert.AreEqual(false, result.IsLimit);
                 }
@@ -1013,11 +1015,11 @@ namespace FireflySoft.RateLimit.Core.Test
         [DataTestMethod]
         public async Task StartTimeTypeAsync_FromNaturalPeriodBeign_Common()
         {
-            var processor = GetAlgorithm(20, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromNaturalPeriodBeign);
+            var processor = GetAlgorithm(10, 10, TimeSpan.FromSeconds(1), 0, StartTimeType.FromNaturalPeriodBeign);
 
             while (true)
             {
-                if (DateTimeOffset.Now.Millisecond < 400 && DateTimeOffset.Now.Millisecond > 500)
+                if (DateTimeOffset.Now.Millisecond < 400 ||  DateTimeOffset.Now.Millisecond > 500)
                 {
                     SpinWait.SpinUntil(() => false, 10);
                     continue;
@@ -1025,7 +1027,7 @@ namespace FireflySoft.RateLimit.Core.Test
                 break;
             }
 
-            for (int i = 1; i <= 80; i++)
+            for (int i = 1; i <= 50; i++)
             {
                 var checkResult = await processor.CheckAsync(new SimulationRequest()
                 {
@@ -1036,7 +1038,7 @@ namespace FireflySoft.RateLimit.Core.Test
                         }
                 });
 
-                if (i == 31 || i == 42 || i >= 53)
+                if (i == 21 || i == 32 || i >= 43)
                 {
                     Assert.AreEqual(true, checkResult.IsLimit);
                 }
@@ -1045,12 +1047,12 @@ namespace FireflySoft.RateLimit.Core.Test
                     Assert.AreEqual(false, checkResult.IsLimit);
                 }
 
-                if (i == 31)
+                if (i == 21)
                 {
                     Thread.Sleep(600);
                 }
 
-                if (i == 42)
+                if (i == 32)
                 {
                     Thread.Sleep(1000);
                 }
@@ -1225,14 +1227,14 @@ namespace FireflySoft.RateLimit.Core.Test
         {
             var redisClient = RedisClientHelper.GetClient();
             var ruleId = "UpdateRulesAsync_NarrowOutflowUnit_LoseLimit";
-            var rule = CreateRules(ruleId, 20, 10, 600);
+            var rule = CreateRules(ruleId, 10, 10, 600);
             IAlgorithm algorithm = new RedisLeakyBucketAlgorithm(rule, redisClient, updatable: true);
 
-            for (int i = 1; i <= 50; i++)
+            for (int i = 1; i <= 40; i++)
             {
-                if (i == 41)
+                if (i == 31)
                 {
-                    var newRule = CreateRules(ruleId, 20, 10, 400);
+                    var newRule = CreateRules(ruleId, 10, 10, 400);
                     await algorithm.UpdateRulesAsync(newRule);
                 }
 
@@ -1245,18 +1247,18 @@ namespace FireflySoft.RateLimit.Core.Test
                         }
                 });
 
-                if (i < 31)
+                if (i < 21)
                 {
                     Assert.AreEqual(false, result.IsLimit);
                 }
 
-                if (i >= 31 && i <= 40)
+                if (i >= 21 && i <= 30)
                 {
                     Assert.AreEqual(true, result.IsLimit);
                 }
 
                 // lose limit
-                if (i >= 41)
+                if (i >= 31)
                 {
                     Assert.AreEqual(false, result.IsLimit);
                 }

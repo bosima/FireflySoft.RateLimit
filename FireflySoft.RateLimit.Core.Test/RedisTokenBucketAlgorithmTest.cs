@@ -720,6 +720,8 @@ namespace FireflySoft.RateLimit.Core.Test
                         }
                 });
 
+                Console.WriteLine($"{DateTimeOffset.Now.ToString("mm:ss.fff")},{i},{result.RuleCheckResults.First().Count}");
+
                 if (i < 11)
                 {
                     Assert.AreEqual(false, result.IsLimit);
@@ -729,9 +731,10 @@ namespace FireflySoft.RateLimit.Core.Test
                 {
                     Assert.AreEqual(true, result.IsLimit);
                 }
+                
                 if (i == 20)
                 {
-                    SpinWait.SpinUntil(() => { return false; }, 600);
+                    Thread.Sleep(600);
                 }
 
                 // lose limit

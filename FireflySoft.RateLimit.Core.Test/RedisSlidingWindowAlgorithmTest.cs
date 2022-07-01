@@ -1465,7 +1465,7 @@ namespace FireflySoft.RateLimit.Core.Test
         {
             var ruleId = "UpdateRulesAsync_ChangeStatPeriod_InheritPeriods";
 
-            var rule = CreateRules(50, ruleId, 1000, 200);
+            var rule = CreateRules(50, ruleId, 1600, 200);
             var redisClient = RedisClientHelper.GetClient();
             IAlgorithm algorithm = new RedisSlidingWindowAlgorithm(rule, redisClient, updatable: true);
 
@@ -1476,9 +1476,9 @@ namespace FireflySoft.RateLimit.Core.Test
                     Thread.Sleep(200);
                 }
 
-                if (i == 42)
+                if (i == 41)
                 {
-                    var newRule = CreateRules(50, ruleId, 1000, 100);
+                    var newRule = CreateRules(50, ruleId, 1600, 100);
                     await algorithm.UpdateRulesAsync(newRule);
                 }
 
@@ -1491,7 +1491,12 @@ namespace FireflySoft.RateLimit.Core.Test
                         }
                 });
 
-                //Console.WriteLine($"{DateTimeOffset.Now.ToString("mm:ss.fff")},{i},{result.RuleCheckResults.First().Count}");
+                Console.WriteLine($"{DateTimeOffset.Now.ToString("mm:ss.fff")},{i},{result.RuleCheckResults.First().Count}");
+
+                if (i == 41)
+                {
+                    Assert.AreEqual(41, result.RuleCheckResults.First().Count);
+                }
 
                 if (i == 50)
                 {
