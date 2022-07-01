@@ -3,15 +3,14 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageId>FireflySoft.RateLimit.Core</PackageId>
-    <Version>2.1.0</Version>
+    <Version>3.0.0</Version>
     <Authors>bossma</Authors>
     <PackageProjectUrl>https://github.com/bosima/FireflySoft.RateLimit</PackageProjectUrl>
     <PackageReleaseNotes>
-    Add ConfigureAwait(false) for async method;
-    Improve the processing logic when updating the limit rules;
-    Unified Count value returned by the leaky bucket;
-    Add peek method to view the current count value;
-    Fix some bugs.
+1. Break change: Modify the Count returned by the token bucket algorithm to the cumulative number of visits in the current time window to be consistent with other algorithms.
+2. Add a property 'Maintaining' to 'RuleCheckResult', which represents the number of remaining allowed requests in the current time window.
+3. Add a property 'ResetTime' to 'RuleCheckResult', which represents the next reset time of the rate limit time window of the current algorithm.
+4. Some other optimizations.
     </PackageReleaseNotes>
     <PackageTags>Rate Limit;Fixed Window;Sliding Window;Leaky Bucket;Token Bucket</PackageTags>
     <Description>
@@ -20,12 +19,14 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <AssemblyVersion>2.1.0.0</AssemblyVersion>
-    <FileVersion>2.1.0.0</FileVersion>
+    <AssemblyVersion>3.0.0.0</AssemblyVersion>
+    <FileVersion>3.0.0.0</FileVersion>
+  </PropertyGroup>
+    <PropertyGroup>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
   <ItemGroup>
-    <Content Include="FireflySoft-RateLimit.md" />
-    <None Include="..\README.md" Pack="true" PackagePath="\"/>
+    <None Include="README.md" Pack="true" PackagePath="\"/>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="ConfigureAwaitChecker.Analyzer" Version="5.0.0.1">

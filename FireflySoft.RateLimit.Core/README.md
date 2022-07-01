@@ -1,3 +1,5 @@
+Github: https://github.com/bosima/FireflySoft.RateLimit
+
 ## Introduction
 Fireflysoft.RateLimit is a rate limiting library based on .Net standard. Its core is simple and lightweight, and can flexibly meet the rate limiting needs of many scenarios.
 
@@ -15,41 +17,40 @@ Fireflysoft.RateLimit is a rate limiting library based on .Net standard. Its cor
 
 ## Usage
 
-The following code calls the rate-limit [middleware](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/middleware/?view=aspnetcore-3.1) from Startup.Configure:
+Use *IAlgorithm* to filter every request, process the return value of *Check* method.
 
 ```csharp
-public void ConfigureServices(IServiceCollection services)
-{
-    ...
-
-    services.AddRateLimit(new InProcessFixedWindowAlgorithm(
-        new[] {
-            new FixedWindowRule()
+// Rule
+var fixedWindowRules = new FixedWindowRule[]
+    {
+        new FixedWindowRule()
+        {
+            Id = "3",
+            StatWindow=TimeSpan.FromSeconds(1),
+            LimitNumber=30,
+            ExtractTarget = (request) =>
             {
-                ExtractTarget = context =>
-                {
-                    return (context as HttpContext).Request.Path.Value;
-                },
-                CheckRuleMatching = context =>
-                {
-                    return true;
-                },
-                Name="default limit rule",
-                LimitNumber=30,
-                StatWindow=TimeSpan.FromSeconds(1)
+                return (request as SimulationRequest).RequestResource;
+            },
+            CheckRuleMatching = (request) =>
+            {
+                return true;
+            },
+        }
+    };
+
+// Algorithm
+IAlgorithm algorithm = new InProcessFixedWindowAlgorithm(fixedWindowRules);
+
+// Check
+var result = algorithm.Check(new SimulationRequest()
+    {
+        RequestId = Guid.NewGuid().ToString(),
+        RequestResource = "home",
+        Parameters = new Dictionary<string, string>() {
+                    { "from","sample" },
             }
-        })
-    );
-
-    ...
-}
-
-public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
-{
-    ...
-
-    app.UseRateLimit();
-
-    ...
-}
+    });
 ```
+
+SimulationRequest is a custom request that you can modify to any type.

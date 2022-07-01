@@ -4,12 +4,11 @@
     <TargetFrameworks>netcoreapp3.1;net5;net6</TargetFrameworks>
     <OutputType>Library</OutputType>
     <PackageId>FireflySoft.RateLimit.AspNetCore</PackageId>
-    <Version>2.1.0</Version>
+    <Version>3.0.0</Version>
     <Authors>bossma</Authors>
     <PackageProjectUrl>https://github.com/bosima/FireflySoft.RateLimit</PackageProjectUrl>
-    <PackageReleaseNotes>Add an overload to the 'AddRateLimit' method to allow the service instance to be obtained through 'IServiceLocator';
-    Add ConfigureAwait(false) for async method;
-    Upgrade the underlying SDK.
+    <PackageReleaseNotes>
+Return X-RateLimit-XXX in HTTP response.
     </PackageReleaseNotes>
     <PackageTags>ASP.NET Core;Rate Limit;Fixed Window;Sliding Window;Leaky Bucket;Token Bucket</PackageTags>
     <Description>
@@ -19,8 +18,8 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <IsPackable>true</IsPackable>
-    <AssemblyVersion>2.1.0.0</AssemblyVersion>
-    <FileVersion>2.1.0.0</FileVersion>
+    <AssemblyVersion>3.0.0.0</AssemblyVersion>
+    <FileVersion>3.0.0.0</FileVersion>
   </PropertyGroup>
   
   <ItemGroup>
