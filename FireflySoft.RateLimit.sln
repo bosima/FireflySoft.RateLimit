@@ -4,15 +4,15 @@ VisualStudioVersion = 16.0.30804.86
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FireflySoft.RateLimit.Core", "FireflySoft.RateLimit.Core\FireflySoft.RateLimit.Core.csproj", "{EC3C2079-1284-49F1-8F38-67B5A71B0483}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "console", "samples\console\console.csproj", "{27FF49FD-09AD-4ABE-B8B9-F387034D3AF6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Console", "samples\console\console.csproj", "{27FF49FD-09AD-4ABE-B8B9-F387034D3AF6}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FireflySoft.RateLimit.AspNetCore", "FireflySoft.RateLimit.AspNetCore\FireflySoft.RateLimit.AspNetCore.csproj", "{265730D4-995C-4228-9BD7-AE902A82284D}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "aspnetcore", "samples\aspnetcore\aspnetcore.csproj", "{4DDD46C7-81AF-443E-BEB1-2DBF0F467229}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AspNetCore", "samples\aspnetcore\aspnetcore.csproj", "{4DDD46C7-81AF-443E-BEB1-2DBF0F467229}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FireflySoft.RateLimit.AspNet", "FireflySoft.RateLimit.AspNet\FireflySoft.RateLimit.AspNet.csproj", "{9CBEAEB7-8BE1-4824-9F0F-98B206B3A549}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "aspnet", "samples\aspnet\aspnet.csproj", "{3D7CF23D-24FE-4526-9159-2301EBB81170}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspNet", "samples\aspnet\aspnet.csproj", "{3D7CF23D-24FE-4526-9159-2301EBB81170}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FireflySoft.RateLimit.Core.Test", "FireflySoft.RateLimit.Core.Test\FireflySoft.RateLimit.Core.Test.csproj", "{977FB204-41B8-41AE-85A6-C2F865C98415}"
 EndProject
@@ -20,7 +20,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FireflySoft.RateLmit.Core.B
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{7854209F-39A0-4CA6-88AF-7A3721902060}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "aspnetcore6", "samples\aspnetcore6\aspnetcore6.csproj", "{72AFDDE1-809F-4A08-A810-0509A0C4BE74}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RuleAutoUpdate", "samples\RuleAutoUpdate\RuleAutoUpdate.csproj", "{72AFDDE1-809F-4A08-A810-0509A0C4BE74}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IPOrClientId", "Samples\IPOrClientId\IPOrClientId.csproj", "{33676BCA-452A-49FE-8FB4-8CFB0D2ACBAC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -64,6 +66,10 @@ Global
 		{72AFDDE1-809F-4A08-A810-0509A0C4BE74}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{72AFDDE1-809F-4A08-A810-0509A0C4BE74}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{72AFDDE1-809F-4A08-A810-0509A0C4BE74}.Release|Any CPU.Build.0 = Release|Any CPU
+		{33676BCA-452A-49FE-8FB4-8CFB0D2ACBAC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{33676BCA-452A-49FE-8FB4-8CFB0D2ACBAC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{33676BCA-452A-49FE-8FB4-8CFB0D2ACBAC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{33676BCA-452A-49FE-8FB4-8CFB0D2ACBAC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -76,5 +82,6 @@ Global
 		{3D7CF23D-24FE-4526-9159-2301EBB81170} = {7854209F-39A0-4CA6-88AF-7A3721902060}
 		{4DDD46C7-81AF-443E-BEB1-2DBF0F467229} = {7854209F-39A0-4CA6-88AF-7A3721902060}
 		{72AFDDE1-809F-4A08-A810-0509A0C4BE74} = {7854209F-39A0-4CA6-88AF-7A3721902060}
+		{33676BCA-452A-49FE-8FB4-8CFB0D2ACBAC} = {7854209F-39A0-4CA6-88AF-7A3721902060}
 	EndGlobalSection
 EndGlobal

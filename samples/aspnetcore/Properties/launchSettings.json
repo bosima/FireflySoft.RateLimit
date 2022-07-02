@@ -12,16 +12,7 @@
     "IIS Express": {
       "commandName": "IISExpress",
       "launchBrowser": true,
-      "launchUrl": "weatherforecast",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
-      }
-    },
-    "FireflySoft.RateLimit.AspNetCore.Sample": {
-      "commandName": "Project",
-      "launchBrowser": true,
-      "launchUrl": "weatherforecast",
-      "applicationUrl": "http://localhost:36270;https://localhost:12324",
+      "launchUrl": "weatherforecast/today",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }

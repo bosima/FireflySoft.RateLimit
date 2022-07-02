@@ -7,13 +7,9 @@
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
-  <PropertyGroup Condition=" '$(RunConfiguration)' == 'aspnetcore6' " />
   <ItemGroup>
-    <PackageReference Include="Dapper" Version="2.0.123" />
-    <PackageReference Include="MySql.Data" Version="8.0.27" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\FireflySoft.RateLimit.AspNetCore\FireflySoft.RateLimit.AspNetCore.csproj" />
   </ItemGroup>
